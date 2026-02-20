@@ -1,0 +1,13 @@
+<Window x:Class="FigCrafterApp.Views.FloatWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FigCrafterApp.Views"
+        mc:Ignorable="d"
+        Title="{Binding Title}" Height="600" Width="800"
+        Background="#FF1E1E1E" Foreground="White">
+    <Grid>
+        <local:CanvasView/>
+    </Grid>
+</Window>
