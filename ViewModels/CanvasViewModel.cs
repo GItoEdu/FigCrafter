@@ -51,7 +51,8 @@ namespace FigCrafterApp.ViewModels
             get => _widthMm;
             set
             {
-                if (SetProperty(ref _widthMm, value))
+                var clampedValue = Math.Max(1.0, Math.Min(value, 4000.0));
+                if (SetProperty(ref _widthMm, clampedValue))
                 {
                     OnPropertyChanged(nameof(WidthPx));
                 }
@@ -63,7 +64,8 @@ namespace FigCrafterApp.ViewModels
             get => _heightMm;
             set
             {
-                if (SetProperty(ref _heightMm, value))
+                var clampedValue = Math.Max(1.0, Math.Min(value, 4000.0));
+                if (SetProperty(ref _heightMm, clampedValue))
                 {
                     OnPropertyChanged(nameof(HeightPx));
                 }

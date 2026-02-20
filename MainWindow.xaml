@@ -134,10 +134,10 @@
                 <TextBox Text="{Binding ActiveDocument.Title, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
 
                 <TextBlock Text="幅 (mm)" Margin="0,15,0,5" Foreground="Gray"/>
-                <TextBox Text="{Binding ActiveDocument.WidthMm, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                <TextBox Text="{Binding ActiveDocument.WidthMm, UpdateSourceTrigger=PropertyChanged, Delay=500}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
 
                 <TextBlock Text="高さ (mm)" Margin="0,15,0,5" Foreground="Gray"/>
-                <TextBox Text="{Binding ActiveDocument.HeightMm, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                <TextBox Text="{Binding ActiveDocument.HeightMm, UpdateSourceTrigger=PropertyChanged, Delay=500}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
 
                 <Separator Margin="0,20" Background="#FF3E3E42"/>
                 
