@@ -172,6 +172,14 @@
                     </StackPanel.Style>
 
                     <TextBlock Text="オブジェクトプロパティ" FontWeight="Bold" Margin="0,5,0,10" Foreground="White"/>
+
+                    <TextBlock Text="重ね順:" Margin="0,0,0,5" Foreground="Gray"/>
+                    <UniformGrid Columns="2" Margin="0,0,0,10">
+                        <Button Content="最前面へ" Command="{Binding DataContext.ActiveDocument.BringToFrontCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                        <Button Content="前面へ" Command="{Binding DataContext.ActiveDocument.BringForwardCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                        <Button Content="背面へ" Command="{Binding DataContext.ActiveDocument.SendBackwardCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                        <Button Content="最背面へ" Command="{Binding DataContext.ActiveDocument.SendToBackCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                    </UniformGrid>
                     
                     <Grid Margin="0,5">
                         <Grid.ColumnDefinitions>

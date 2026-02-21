@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows.Input;
 using SkiaSharp;
 using FigCrafterApp.Models;
 
@@ -26,6 +27,11 @@ namespace FigCrafterApp.ViewModels
         private GraphicObject? _selectedObject;
 
         public event EventHandler? InvalidateRequested;
+
+        public ICommand BringToFrontCommand { get; }
+        public ICommand SendToBackCommand { get; }
+        public ICommand BringForwardCommand { get; }
+        public ICommand SendBackwardCommand { get; }
 
         public void Invalidate() => InvalidateRequested?.Invoke(this, EventArgs.Empty);
 
@@ -84,11 +90,59 @@ namespace FigCrafterApp.ViewModels
 
         public CanvasViewModel()
         {
+            BringToFrontCommand = new RelayCommand(_ => BringToFront());
+            SendToBackCommand = new RelayCommand(_ => SendToBack());
+            BringForwardCommand = new RelayCommand(_ => BringForward());
+            SendBackwardCommand = new RelayCommand(_ => SendBackward());
         }
 
-        public CanvasViewModel(string title)
+        public CanvasViewModel(string title) : this()
         {
             Title = title;
+        }
+
+        private void BringToFront()
+        {
+            if (SelectedObject == null) return;
+            int index = GraphicObjects.IndexOf(SelectedObject);
+            if (index >= 0 && index < GraphicObjects.Count - 1)
+            {
+                GraphicObjects.Move(index, GraphicObjects.Count - 1);
+                Invalidate();
+            }
+        }
+
+        private void SendToBack()
+        {
+            if (SelectedObject == null) return;
+            int index = GraphicObjects.IndexOf(SelectedObject);
+            if (index > 0)
+            {
+                GraphicObjects.Move(index, 0);
+                Invalidate();
+            }
+        }
+
+        private void BringForward()
+        {
+            if (SelectedObject == null) return;
+            int index = GraphicObjects.IndexOf(SelectedObject);
+            if (index >= 0 && index < GraphicObjects.Count - 1)
+            {
+                GraphicObjects.Move(index, index + 1);
+                Invalidate();
+            }
+        }
+
+        private void SendBackward()
+        {
+            if (SelectedObject == null) return;
+            int index = GraphicObjects.IndexOf(SelectedObject);
+            if (index > 0)
+            {
+                GraphicObjects.Move(index, index - 1);
+                Invalidate();
+            }
         }
     }
 }
