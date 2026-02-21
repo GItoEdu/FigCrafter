@@ -56,7 +56,27 @@ namespace FigCrafterApp.ViewModels
         public GraphicObject? SelectedObject
         {
             get => _selectedObject;
-            set => SetProperty(ref _selectedObject, value);
+            set
+            {
+                if (_selectedObject != null)
+                {
+                    _selectedObject.PropertyChanged -= OnSelectedObjectPropertyChanged;
+                }
+                
+                if (SetProperty(ref _selectedObject, value))
+                {
+                    if (_selectedObject != null)
+                    {
+                        _selectedObject.PropertyChanged += OnSelectedObjectPropertyChanged;
+                    }
+                }
+            }
+        }
+
+        private void OnSelectedObjectPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            // 選択オブジェクトのプロパティ変更時は再描画を要求する
+            Invalidate();
         }
 
         public double WidthMm
