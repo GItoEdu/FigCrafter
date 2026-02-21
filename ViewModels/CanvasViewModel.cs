@@ -23,6 +23,7 @@ namespace FigCrafterApp.ViewModels
         private double _heightMm = 297; // A4高さ
         private DrawingTool _currentTool = DrawingTool.Select;
         private ObservableCollection<GraphicObject> _graphicObjects = new();
+        private GraphicObject? _selectedObject;
 
         public event EventHandler? InvalidateRequested;
 
@@ -44,6 +45,12 @@ namespace FigCrafterApp.ViewModels
         {
             get => _graphicObjects;
             set => SetProperty(ref _graphicObjects, value);
+        }
+
+        public GraphicObject? SelectedObject
+        {
+            get => _selectedObject;
+            set => SetProperty(ref _selectedObject, value);
         }
 
         public double WidthMm

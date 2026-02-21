@@ -98,6 +98,8 @@ namespace FigCrafterApp.Views
                     if (_selectedObject != null) _selectedObject.IsSelected = false;
                     _selectedObject = hitObject;
                     if (_selectedObject != null) _selectedObject.IsSelected = true;
+                    
+                    vm.SelectedObject = _selectedObject; // ViewModel と同期
                     SkiaElement.InvalidateVisual();
                 }
                 
@@ -125,6 +127,7 @@ namespace FigCrafterApp.Views
                 if (_selectedObject != null) _selectedObject.IsSelected = false;
                 _selectedObject = textObj;
                 _selectedObject.IsSelected = true;
+                vm.SelectedObject = _selectedObject; // ViewModel と同期
                 
                 vm.CurrentTool = DrawingTool.Select;
                 SkiaElement.InvalidateVisual();

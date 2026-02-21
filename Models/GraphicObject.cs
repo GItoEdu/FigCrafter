@@ -1,17 +1,43 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using SkiaSharp;
 
 namespace FigCrafterApp.Models
 {
-    public abstract class GraphicObject
+    public abstract class GraphicObject : INotifyPropertyChanged
     {
-        public float X { get; set; }
-        public float Y { get; set; }
-        public float Width { get; set; }
-        public float Height { get; set; }
-        public SKColor FillColor { get; set; } = SKColors.Blue;
-        public SKColor StrokeColor { get; set; } = SKColors.Black;
-        public float StrokeWidth { get; set; } = 1;
-        public bool IsSelected { get; set; } = false;
+        private float _x;
+        private float _y;
+        private float _width;
+        private float _height;
+        private SKColor _fillColor = SKColors.Blue;
+        private SKColor _strokeColor = SKColors.Black;
+        private float _strokeWidth = 1;
+        private bool _isSelected = false;
+
+        public float X { get => _x; set => SetProperty(ref _x, value); }
+        public float Y { get => _y; set => SetProperty(ref _y, value); }
+        public float Width { get => _width; set => SetProperty(ref _width, value); }
+        public float Height { get => _height; set => SetProperty(ref _height, value); }
+        public SKColor FillColor { get => _fillColor; set => SetProperty(ref _fillColor, value); }
+        public SKColor StrokeColor { get => _strokeColor; set => SetProperty(ref _strokeColor, value); }
+        public float StrokeWidth { get => _strokeWidth; set => SetProperty(ref _strokeWidth, value); }
+        public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+        {
+            if (EqualityComparer<T>.Default.Equals(field, value)) return false;
+            field = value;
+            OnPropertyChanged(propertyName);
+            return true;
+        }
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
 
         public abstract void Draw(SKCanvas canvas);
         public abstract bool HitTest(SKPoint point);
@@ -157,8 +183,11 @@ namespace FigCrafterApp.Models
 
     public class LineObject : GraphicObject
     {
-        public float EndX { get; set; }
-        public float EndY { get; set; }
+        private float _endX;
+        private float _endY;
+
+        public float EndX { get => _endX; set => SetProperty(ref _endX, value); }
+        public float EndY { get => _endY; set => SetProperty(ref _endY, value); }
 
         public override void Draw(SKCanvas canvas)
         {
@@ -221,9 +250,13 @@ namespace FigCrafterApp.Models
 
     public class TextObject : GraphicObject
     {
-        public string Text { get; set; } = "Text";
-        public string FontFamily { get; set; } = "Arial";
-        public float FontSize { get; set; } = 24;
+        private string _text = "Text";
+        private string _fontFamily = "Arial";
+        private float _fontSize = 24;
+
+        public string Text { get => _text; set => SetProperty(ref _text, value); }
+        public string FontFamily { get => _fontFamily; set => SetProperty(ref _fontFamily, value); }
+        public float FontSize { get => _fontSize; set => SetProperty(ref _fontSize, value); }
 
         public override void Draw(SKCanvas canvas)
         {

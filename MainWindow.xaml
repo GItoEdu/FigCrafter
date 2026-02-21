@@ -16,6 +16,7 @@
 
     <Window.Resources>
         <local:EnumToBoolConverter x:Key="EnumToBoolConverter"/>
+        <local:SKColorToSolidColorBrushConverter x:Key="SKColorToSolidColorBrushConverter"/>
         <!-- タブのスタイル定義（ダークモード用） -->
         <Style TargetType="TabItem">
             <Setter Property="Background" Value="#FF2D2D30"/>
@@ -154,6 +155,95 @@
                     <RadioButton Content="テキスト" Style="{StaticResource ToolButtonStyle}" 
                                  IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Text}}"/>
                 </UniformGrid>
+
+                <Separator Margin="0,15" Background="#FF3E3E42"/>
+
+                <!-- 選択オブジェクトのプロパティパネル -->
+                <StackPanel DataContext="{Binding ActiveDocument.SelectedObject}">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+
+                    <TextBlock Text="オブジェクトプロパティ" FontWeight="Bold" Margin="0,5,0,10" Foreground="White"/>
+                    
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="60"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="X座標:" Foreground="Gray" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding X, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                    </Grid>
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="60"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Y座標:" Foreground="Gray" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Y, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                    </Grid>
+                    
+                    <!-- テキストオブジェクト専用UI -->
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=TextObject}" Value="Visible">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Text="テキスト内容:" Margin="0,10,0,5" Foreground="Gray"/>
+                        <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5" TextWrapping="Wrap" AcceptsReturn="True" Height="60"/>
+                        <Grid Margin="0,10,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="フォント:" Foreground="Gray" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Text="{Binding FontFamily, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                        </Grid>
+                        <Grid Margin="0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="サイズ:" Foreground="Gray" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <TextBlock Text="線の太さ:" Margin="0,10,0,5" Foreground="Gray"/>
+                    <TextBox Text="{Binding StrokeWidth, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                    
+                    <TextBlock Text="塗り色 (ARGB):" Margin="0,10,0,5" Foreground="Gray"/>
+                    <!-- 簡易実装として文字列入力で妥協せずコンバータを通じた直接入力は難しいため、将来的にカラーピッカーにする前提で一旦RGB文字列等の実装をするか、ここでは簡略化して TextBox で扱う事は難しいので、とりあえず後回しにし、表示のみまたは固定ボタン等にするか... -->
+                    <!-- TODO: 実際に色を変更するための簡易UI -->
+                    <UniformGrid Columns="4" Margin="0,5">
+                        <Button Background="SkyBlue" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="SkyBlue" Height="20" Margin="2" BorderThickness="0"/>
+                        <Button Background="Salmon" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Salmon" Height="20" Margin="2" BorderThickness="0"/>
+                        <Button Background="LightGreen" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightGreen" Height="20" Margin="2" BorderThickness="0"/>
+                        <Button Background="Transparent" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Transparent" Height="20" Margin="2" BorderThickness="1" BorderBrush="Gray" Content="✕" Foreground="White"/>
+                    </UniformGrid>
+
+                    <TextBlock Text="枠線色:" Margin="0,10,0,5" Foreground="Gray"/>
+                    <UniformGrid Columns="4" Margin="0,5">
+                        <Button Background="Black" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Black" Height="20" Margin="2" BorderThickness="0"/>
+                        <Button Background="Red" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Red" Height="20" Margin="2" BorderThickness="0"/>
+                        <Button Background="Blue" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Blue" Height="20" Margin="2" BorderThickness="0"/>
+                        <Button Background="Transparent" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Transparent" Height="20" Margin="2" BorderThickness="1" BorderBrush="Gray" Content="✕" Foreground="White"/>
+                    </UniformGrid>
+                    
+                </StackPanel>
             </StackPanel>
         </Grid>
 

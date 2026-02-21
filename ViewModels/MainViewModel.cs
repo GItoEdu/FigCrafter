@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using SkiaSharp;
+using FigCrafterApp.Models;
 
 namespace FigCrafterApp.ViewModels
 {
@@ -24,11 +26,17 @@ namespace FigCrafterApp.ViewModels
         public ICommand CloseDocumentCommand { get; }
         public ICommand FloatDocumentCommand { get; }
 
+        public ICommand ChangeFillColorCommand { get; }
+        public ICommand ChangeStrokeColorCommand { get; }
+
         public MainViewModel()
         {
             NewDocumentCommand = new RelayCommand(p => AddNewDocument());
             CloseDocumentCommand = new RelayCommand(p => CloseDocument(p as CanvasViewModel));
             FloatDocumentCommand = new RelayCommand(p => FloatDocument(p as CanvasViewModel));
+
+            ChangeFillColorCommand = new RelayCommand(p => ChangeSelectedObjectColor(p?.ToString(), true));
+            ChangeStrokeColorCommand = new RelayCommand(p => ChangeSelectedObjectColor(p?.ToString(), false));
 
             // 初期ドキュメントを追加
             AddNewDocument();
@@ -66,6 +74,33 @@ namespace FigCrafterApp.ViewModels
                 var floatWindow = new FigCrafterApp.Views.FloatWindow(doc);
                 floatWindow.Show();
             }
+        }
+
+        private void ChangeSelectedObjectColor(string? colorName, bool isFill)
+        {
+            if (string.IsNullOrEmpty(colorName) || ActiveDocument?.SelectedObject == null) return;
+
+            SKColor color = SKColors.Transparent;
+            switch (colorName.ToLower())
+            {
+                case "skyblue": color = SKColors.SkyBlue; break;
+                case "salmon": color = SKColors.Salmon; break;
+                case "lightgreen": color = SKColors.LightGreen; break;
+                case "black": color = SKColors.Black; break;
+                case "red": color = SKColors.Red; break;
+                case "blue": color = SKColors.Blue; break;
+                case "transparent": color = SKColors.Transparent; break;
+            }
+
+            if (isFill)
+            {
+                ActiveDocument.SelectedObject.FillColor = color;
+            }
+            else
+            {
+                ActiveDocument.SelectedObject.StrokeColor = color;
+            }
+            ActiveDocument.Invalidate();
         }
     }
 
