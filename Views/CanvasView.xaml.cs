@@ -12,6 +12,7 @@ namespace FigCrafterApp.Views
     {
         private GraphicObject? _tempObject;
         private SKPoint _startPoint;
+        private GraphicObject? _selectedObject; // 現在選択中のオブジェクト
 
         public CanvasView()
         {
@@ -53,10 +54,60 @@ namespace FigCrafterApp.Views
 
         private void SkiaElement_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (DataContext is not CanvasViewModel vm || vm.CurrentTool == DrawingTool.Select) return;
+            if (DataContext is not CanvasViewModel vm) return;
 
             var p = e.GetPosition(SkiaElement);
             _startPoint = new SKPoint((float)p.X, (float)p.Y);
+
+            if (vm.CurrentTool == DrawingTool.Select)
+            {
+                // 選択ツール: 逆順（前面から背面）でHitTest
+                GraphicObject? hitObject = null;
+                for (int i = vm.GraphicObjects.Count - 1; i >= 0; i--)
+                {
+                    if (vm.GraphicObjects[i].HitTest(_startPoint))
+                    {
+                        hitObject = vm.GraphicObjects[i];
+                        break;
+                    }
+                }
+
+                // 選択状態の更新
+                if (_selectedObject != hitObject)
+                {
+                    if (_selectedObject != null) _selectedObject.IsSelected = false;
+                    _selectedObject = hitObject;
+                    if (_selectedObject != null) _selectedObject.IsSelected = true;
+                    SkiaElement.InvalidateVisual();
+                }
+                
+                // ※移動処理の起点は別タスクで実装するため、ここでは選択のみ
+                return;
+            }
+
+            if (vm.CurrentTool == DrawingTool.Text)
+            {
+                // テキストツール: クリック位置にテキストを配置
+                var textObj = new TextObject 
+                { 
+                    X = _startPoint.X, 
+                    Y = _startPoint.Y, 
+                    FillColor = SKColors.Black 
+                };
+                
+                // 一旦固定文字列。後ほどインプレース編集など拡張可能
+                vm.GraphicObjects.Add(textObj);
+                
+                // 配置後に選択状態にする
+                if (_selectedObject != null) _selectedObject.IsSelected = false;
+                _selectedObject = textObj;
+                _selectedObject.IsSelected = true;
+                
+                // ツールを選択に戻す
+                vm.CurrentTool = DrawingTool.Select;
+                SkiaElement.InvalidateVisual();
+                return;
+            }
 
             switch (vm.CurrentTool)
             {
