@@ -353,4 +353,113 @@ namespace FigCrafterApp.Models
             return clone;
         }
     }
+
+    public class GroupObject : GraphicObject
+    {
+        private List<GraphicObject> _children = new();
+
+        public List<GraphicObject> Children
+        {
+            get => _children;
+            set => _children = value;
+        }
+
+        /// <summary>
+        /// 子オブジェクトのバウンディングボックスからグループの座標・サイズを再計算
+        /// </summary>
+        public void RecalculateBounds()
+        {
+            if (_children.Count == 0) return;
+
+            float minX = float.MaxValue, minY = float.MaxValue;
+            float maxX = float.MinValue, maxY = float.MinValue;
+
+            foreach (var child in _children)
+            {
+                if (child is LineObject line)
+                {
+                    minX = Math.Min(minX, Math.Min(line.X, line.EndX));
+                    minY = Math.Min(minY, Math.Min(line.Y, line.EndY));
+                    maxX = Math.Max(maxX, Math.Max(line.X, line.EndX));
+                    maxY = Math.Max(maxY, Math.Max(line.Y, line.EndY));
+                }
+                else
+                {
+                    minX = Math.Min(minX, child.X);
+                    minY = Math.Min(minY, child.Y);
+                    maxX = Math.Max(maxX, child.X + child.Width);
+                    maxY = Math.Max(maxY, child.Y + child.Height);
+                }
+            }
+
+            X = minX;
+            Y = minY;
+            Width = maxX - minX;
+            Height = maxY - minY;
+        }
+
+        public override void Draw(SKCanvas canvas)
+        {
+            // 子オブジェクトを描画（絶対座標で保持）
+            foreach (var child in _children)
+            {
+                child.Draw(canvas);
+            }
+
+            if (IsSelected)
+            {
+                RecalculateBounds();
+                // グループのバウンディングボックスを描画
+                using var paint = new SKPaint
+                {
+                    Color = SKColors.LimeGreen,
+                    Style = SKPaintStyle.Stroke,
+                    StrokeWidth = 1,
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 6, 3 }, 0),
+                    IsAntialias = true
+                };
+                var rect = new SKRect(X, Y, X + Width, Y + Height);
+                canvas.DrawRect(rect, paint);
+
+                // 四隅のハンドル
+                using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
+                using var handleStrokePaint = new SKPaint { Color = SKColors.LimeGreen, Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = true };
+                float handleSize = 6;
+                var points = new[]
+                {
+                    new SKPoint(rect.Left, rect.Top),
+                    new SKPoint(rect.Right, rect.Top),
+                    new SKPoint(rect.Right, rect.Bottom),
+                    new SKPoint(rect.Left, rect.Bottom)
+                };
+                foreach (var pt in points)
+                {
+                    var handleRect = new SKRect(pt.X - handleSize / 2, pt.Y - handleSize / 2, pt.X + handleSize / 2, pt.Y + handleSize / 2);
+                    canvas.DrawRect(handleRect, handlePaint);
+                    canvas.DrawRect(handleRect, handleStrokePaint);
+                }
+            }
+        }
+
+        public override bool HitTest(SKPoint point)
+        {
+            // 子オブジェクトのいずれかにヒットすればグループにヒット
+            foreach (var child in _children)
+            {
+                if (child.HitTest(point)) return true;
+            }
+            return false;
+        }
+
+        public override GraphicObject Clone()
+        {
+            var clone = new GroupObject();
+            CopyPropertiesTo(clone);
+            foreach (var child in _children)
+            {
+                clone._children.Add(child.Clone());
+            }
+            return clone;
+        }
+    }
 }

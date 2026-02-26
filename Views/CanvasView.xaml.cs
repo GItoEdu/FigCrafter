@@ -253,6 +253,11 @@ namespace FigCrafterApp.Views
                     lineObj.EndX += dx;
                     lineObj.EndY += dy;
                 }
+                else if (_selectedObject is GroupObject groupObj)
+                {
+                    // グループ内の子オブジェクトも連動して移動
+                    MoveChildrenRecursive(groupObj, dx, dy);
+                }
 
                 SkiaElement.InvalidateVisual();
                 return;
@@ -426,6 +431,27 @@ namespace FigCrafterApp.Views
             return selectionRect.Contains(objRect);
         }
 
+        /// <summary>
+        /// グループ内の子オブジェクトを再帰的に移動
+        /// </summary>
+        private void MoveChildrenRecursive(GroupObject group, float dx, float dy)
+        {
+            foreach (var child in group.Children)
+            {
+                child.X += dx;
+                child.Y += dy;
+                if (child is LineObject line)
+                {
+                    line.EndX += dx;
+                    line.EndY += dy;
+                }
+                else if (child is GroupObject nestedGroup)
+                {
+                    MoveChildrenRecursive(nestedGroup, dx, dy);
+                }
+            }
+        }
+
         private void CanvasView_KeyDown(object sender, KeyEventArgs e)
         {
             if (DataContext is not CanvasViewModel vm) return;
@@ -452,6 +478,26 @@ namespace FigCrafterApp.Views
                 {
                     vm.PasteCommand.Execute(null);
                     // ペースト後の選択状態をCanvasView側にも反映
+                    _selectedObject = vm.SelectedObject;
+                }
+                e.Handled = true;
+            }
+            else if (e.Key == Key.G && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                // Ctrl+G: グループ化
+                if (vm.GroupCommand.CanExecute(null))
+                {
+                    vm.GroupCommand.Execute(null);
+                    _selectedObject = vm.SelectedObject;
+                }
+                e.Handled = true;
+            }
+            else if (e.Key == Key.G && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
+            {
+                // Ctrl+Shift+G: グループ解除
+                if (vm.UngroupCommand.CanExecute(null))
+                {
+                    vm.UngroupCommand.Execute(null);
                     _selectedObject = vm.SelectedObject;
                 }
                 e.Handled = true;

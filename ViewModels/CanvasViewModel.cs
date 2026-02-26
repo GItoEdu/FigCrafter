@@ -43,6 +43,8 @@ namespace FigCrafterApp.ViewModels
         public ICommand AlignBottomCommand { get; }
         public ICommand AlignCenterHCommand { get; }
         public ICommand AlignCenterVCommand { get; }
+        public ICommand GroupCommand { get; }
+        public ICommand UngroupCommand { get; }
 
         public void Invalidate() => InvalidateRequested?.Invoke(this, EventArgs.Empty);
 
@@ -203,6 +205,8 @@ namespace FigCrafterApp.ViewModels
             AlignBottomCommand = new RelayCommand(_ => AlignSelected(AlignDirection.Bottom));
             AlignCenterHCommand = new RelayCommand(_ => AlignSelected(AlignDirection.CenterH));
             AlignCenterVCommand = new RelayCommand(_ => AlignSelected(AlignDirection.CenterV));
+            GroupCommand = new RelayCommand(_ => GroupSelected());
+            UngroupCommand = new RelayCommand(_ => UngroupSelected());
         }
 
         public CanvasViewModel(string title) : this()
@@ -486,6 +490,69 @@ namespace FigCrafterApp.ViewModels
             using var data = image.Encode(SKEncodedImageFormat.Png, 100);
             using var stream = System.IO.File.OpenWrite(filePath);
             data.SaveTo(stream);
+        }
+
+        // --- グループ化 ---
+        private void GroupSelected()
+        {
+            if (_selectedObjects.Count < 2) return;
+
+            var group = new GroupObject();
+            var objectsToGroup = _selectedObjects.ToList();
+
+            // 元の重ね順で最も下にあるオブジェクトの位置を取得
+            int minIndex = objectsToGroup.Min(o => GraphicObjects.IndexOf(o));
+
+            // 子オブジェクトをグループに追加し、キャンバスから除去
+            foreach (var obj in objectsToGroup)
+            {
+                obj.IsSelected = false;
+                group.Children.Add(obj);
+                GraphicObjects.Remove(obj);
+            }
+
+            group.RecalculateBounds();
+
+            // 元の重ね順位置にグループを挿入
+            int insertIndex = Math.Min(minIndex, GraphicObjects.Count);
+            GraphicObjects.Insert(insertIndex, group);
+
+            // グループを選択状態にする
+            _selectedObjects.Clear();
+            group.IsSelected = true;
+            _selectedObjects.Add(group);
+            SelectedObject = group;
+            Invalidate();
+        }
+
+        private void UngroupSelected()
+        {
+            // 選択中の GroupObject を解除
+            var groupsToUngroup = _selectedObjects.OfType<GroupObject>().ToList();
+            if (groupsToUngroup.Count == 0) return;
+
+            ClearSelection();
+
+            foreach (var group in groupsToUngroup)
+            {
+                int index = GraphicObjects.IndexOf(group);
+                if (index < 0) continue;
+
+                GraphicObjects.Remove(group);
+
+                // 子オブジェクトを元の位置に挿入
+                int insertAt = Math.Min(index, GraphicObjects.Count);
+                foreach (var child in group.Children)
+                {
+                    child.IsSelected = true;
+                    GraphicObjects.Insert(insertAt, child);
+                    _selectedObjects.Add(child);
+                    insertAt++;
+                }
+            }
+
+            SelectedObject = _selectedObjects.Count > 0 ? _selectedObjects[^1] : null;
+            Invalidate();
         }
     }
 }

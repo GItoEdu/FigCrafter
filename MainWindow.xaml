@@ -283,6 +283,14 @@
 
                     <Separator Margin="0,15" Background="#FF3E3E42"/>
 
+                    <TextBlock Text="グループ:" Margin="0,0,0,5" Foreground="Gray"/>
+                    <UniformGrid Columns="2" Margin="0,0,0,5">
+                        <Button Content="📦 グループ化" Command="{Binding DataContext.ActiveDocument.GroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                        <Button Content="📤 解除" Command="{Binding DataContext.ActiveDocument.UngroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                    </UniformGrid>
+
+                    <Separator Margin="0,15" Background="#FF3E3E42"/>
+
                     <Button Content="🗑 選択オブジェクトを削除" Command="{Binding DataContext.ActiveDocument.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,5" Padding="5" Background="#FF6B2222" Foreground="White" BorderThickness="0"/>
                     
                 </StackPanel>
