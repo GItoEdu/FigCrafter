@@ -10,6 +10,7 @@ namespace FigCrafterApp.Models
         private float _y;
         private float _width;
         private float _height;
+        private float _rotation; // 回転角 (度)
         private SKColor _fillColor = SKColors.Blue;
         private SKColor _strokeColor = SKColors.Black;
         private float _strokeWidth = 1;
@@ -19,6 +20,7 @@ namespace FigCrafterApp.Models
         public float Y { get => _y; set => SetProperty(ref _y, value); }
         public float Width { get => _width; set => SetProperty(ref _width, value); }
         public float Height { get => _height; set => SetProperty(ref _height, value); }
+        public float Rotation { get => _rotation; set => SetProperty(ref _rotation, value); }
         public SKColor FillColor { get => _fillColor; set => SetProperty(ref _fillColor, value); }
         public SKColor StrokeColor { get => _strokeColor; set => SetProperty(ref _strokeColor, value); }
         public float StrokeWidth { get => _strokeWidth; set => SetProperty(ref _strokeWidth, value); }
@@ -52,9 +54,53 @@ namespace FigCrafterApp.Models
             target.Y = Y;
             target.Width = Width;
             target.Height = Height;
+            target.Rotation = Rotation;
             target.FillColor = FillColor;
             target.StrokeColor = StrokeColor;
             target.StrokeWidth = StrokeWidth;
+        }
+
+        /// <summary>
+        /// オブジェクトの中心を原点としてキャンバスに回転を適用する
+        /// 呼び出し元で必ず canvas.Save() / canvas.Restore() を行うこと
+        /// </summary>
+        protected void TransformCanvas(SKCanvas canvas)
+        {
+            if (Rotation != 0)
+            {
+                float cx = X + Width / 2;
+                float cy = Y + Height / 2;
+                canvas.Translate(cx, cy);
+                canvas.RotateDegrees(Rotation);
+                canvas.Translate(-cx, -cy);
+            }
+        }
+
+        /// <summary>
+        /// スクリーン座標系の点をオブジェクトのローカル（回転前）座標系に逆変換する
+        /// HitTest 等で使用する
+        /// </summary>
+        protected SKPoint UntransformPoint(SKPoint point)
+        {
+            if (Rotation == 0) return point;
+
+            float cx = X + Width / 2;
+            float cy = Y + Height / 2;
+
+            // 中心を原点に移動
+            float dx = point.X - cx;
+            float dy = point.Y - cy;
+
+            // 逆回転
+            float rad = -Rotation * (float)Math.PI / 180.0f;
+            float cos = (float)Math.Cos(rad);
+            float sin = (float)Math.Sin(rad);
+
+            float nx = dx * cos - dy * sin;
+            float ny = dx * sin + dy * cos;
+
+            // 元の位置に戻す
+            return new SKPoint(nx + cx, ny + cy);
         }
     }
 
@@ -62,6 +108,9 @@ namespace FigCrafterApp.Models
     {
         public override void Draw(SKCanvas canvas)
         {
+            canvas.Save();
+            TransformCanvas(canvas);
+
             using var paint = new SKPaint
             {
                 Color = FillColor,
@@ -79,12 +128,15 @@ namespace FigCrafterApp.Models
             {
                 DrawSelectionBox(canvas, new SKRect(X, Y, X + Width, Y + Height));
             }
+
+            canvas.Restore();
         }
 
         public override bool HitTest(SKPoint point)
         {
+            var p = UntransformPoint(point);
             var rect = new SKRect(X, Y, X + Width, Y + Height);
-            return rect.Contains(point.X, point.Y);
+            return rect.Contains(p.X, p.Y);
         }
 
         public override GraphicObject Clone()
@@ -143,6 +195,9 @@ namespace FigCrafterApp.Models
     {
         public override void Draw(SKCanvas canvas)
         {
+            canvas.Save();
+            TransformCanvas(canvas);
+
             using var paint = new SKPaint
             {
                 Color = FillColor,
@@ -160,10 +215,13 @@ namespace FigCrafterApp.Models
             {
                 DrawSelectionBox(canvas, new SKRect(X, Y, X + Width, Y + Height));
             }
+
+            canvas.Restore();
         }
 
         public override bool HitTest(SKPoint point)
         {
+            var p = UntransformPoint(point);
             float cx = X + Width / 2;
             float cy = Y + Height / 2;
             float rx = Width / 2;
@@ -172,8 +230,8 @@ namespace FigCrafterApp.Models
             if (rx <= 0 || ry <= 0) return false;
 
             // 楕円方程式: (x - cx)^2 / rx^2 + (y - cy)^2 / ry^2 <= 1
-            float dx = point.X - cx;
-            float dy = point.Y - cy;
+            float dx = p.X - cx;
+            float dy = p.Y - cy;
             return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.0f;
         }
 
@@ -224,6 +282,9 @@ namespace FigCrafterApp.Models
 
         public override void Draw(SKCanvas canvas)
         {
+            canvas.Save();
+            TransformCanvas(canvas);
+
             using var paint = new SKPaint
             {
                 Color = StrokeColor,
@@ -288,6 +349,8 @@ namespace FigCrafterApp.Models
                     canvas.DrawRect(handleRect, handleStrokePaint);
                 }
             }
+
+            canvas.Restore();
         }
 
         private void DrawArrowHead(SKCanvas canvas, SKPaint paint, float x, float y, float angle, float length, float arrowAngle)
@@ -308,15 +371,16 @@ namespace FigCrafterApp.Models
 
         public override bool HitTest(SKPoint point)
         {
+            var p = UntransformPoint(point);
             // 点と線分の距離
             float lenSq = (EndX - X) * (EndX - X) + (EndY - Y) * (EndY - Y);
-            if (lenSq == 0) return Math.Abs(point.X - X) < 5 && Math.Abs(point.Y - Y) < 5;
+            if (lenSq == 0) return Math.Abs(p.X - X) < 5 && Math.Abs(p.Y - Y) < 5;
 
-            float t = Math.Max(0, Math.Min(1, ((point.X - X) * (EndX - X) + (point.Y - Y) * (EndY - Y)) / lenSq));
+            float t = Math.Max(0, Math.Min(1, ((p.X - X) * (EndX - X) + (p.Y - Y) * (EndY - Y)) / lenSq));
             float projX = X + t * (EndX - X);
             float projY = Y + t * (EndY - Y);
 
-            float distSq = (point.X - projX) * (point.X - projX) + (point.Y - projY) * (point.Y - projY);
+            float distSq = (p.X - projX) * (p.X - projX) + (p.Y - projY) * (p.Y - projY);
             // 許容幅 5px
             float threshold = Math.Max(5.0f, StrokeWidth / 2 + 2);
             return distSq <= threshold * threshold;
@@ -344,6 +408,9 @@ namespace FigCrafterApp.Models
 
         public override void Draw(SKCanvas canvas)
         {
+            canvas.Save();
+            TransformCanvas(canvas);
+
             using var paint = new SKPaint
             {
                 Color = FillColor,
@@ -373,10 +440,14 @@ namespace FigCrafterApp.Models
                 var rect = new SKRect(X, Y, X + bounds.Width, Y + bounds.Height);
                 canvas.DrawRect(rect, highlightPaint);
             }
+
+            canvas.Restore();
         }
 
         public override bool HitTest(SKPoint point)
         {
+            var p = UntransformPoint(point);
+
             using var paint = new SKPaint
             {
                 Typeface = SKTypeface.FromFamilyName(FontFamily),
@@ -386,7 +457,7 @@ namespace FigCrafterApp.Models
             paint.MeasureText(Text, ref bounds);
 
             var rect = new SKRect(X, Y, X + bounds.Width, Y + bounds.Height);
-            return rect.Contains(point.X, point.Y);
+            return rect.Contains(p.X, p.Y);
         }
 
         public override GraphicObject Clone()
@@ -446,6 +517,9 @@ namespace FigCrafterApp.Models
 
         public override void Draw(SKCanvas canvas)
         {
+            canvas.Save();
+            TransformCanvas(canvas);
+
             // 子オブジェクトを描画（絶対座標で保持）
             foreach (var child in _children)
             {
@@ -485,14 +559,17 @@ namespace FigCrafterApp.Models
                     canvas.DrawRect(handleRect, handleStrokePaint);
                 }
             }
+
+            canvas.Restore();
         }
 
         public override bool HitTest(SKPoint point)
         {
+            var p = UntransformPoint(point);
             // 子オブジェクトのいずれかにヒットすればグループにヒット
             foreach (var child in _children)
             {
-                if (child.HitTest(point)) return true;
+                if (child.HitTest(p)) return true;
             }
             return false;
         }
@@ -531,6 +608,9 @@ namespace FigCrafterApp.Models
         {
             if (_imageData == null) return;
 
+            canvas.Save();
+            TransformCanvas(canvas);
+
             var destRect = new SKRect(X, Y, X + Width, Y + Height);
             canvas.DrawBitmap(_imageData, destRect);
 
@@ -565,12 +645,15 @@ namespace FigCrafterApp.Models
                     canvas.DrawRect(hr, handleStrokePaint);
                 }
             }
+
+            canvas.Restore();
         }
 
         public override bool HitTest(SKPoint point)
         {
+            var p = UntransformPoint(point);
             var rect = new SKRect(X, Y, X + Width, Y + Height);
-            return rect.Contains(point.X, point.Y);
+            return rect.Contains(p.X, p.Y);
         }
 
         public override GraphicObject Clone()
