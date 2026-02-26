@@ -529,15 +529,42 @@ namespace FigCrafterApp.Views
                 var skBitmap = TryGetImageFromClipboard();
                 if (skBitmap != null)
                 {
+                    // 画像オブジェクト
                     var imageObj = new ImageObject
                     {
                         X = 10,
                         Y = 10,
                         ImageData = skBitmap
                     };
-                    vm.GraphicObjects.Add(imageObj);
-                    vm.SelectObject(imageObj);
-                    _selectedObject = imageObj;
+                    
+                    // 枠線オブジェクト (透明背景、黒枠線)
+                    var borderObj = new RectangleObject
+                    {
+                        X = 10,
+                        Y = 10,
+                        Width = imageObj.Width,
+                        Height = imageObj.Height,
+                        FillColor = SKColors.Transparent,
+                        StrokeColor = SKColors.Black,
+                        StrokeWidth = 2
+                    };
+
+                    // グループオブジェクト
+                    var groupObj = new GroupObject
+                    {
+                        X = 10,
+                        Y = 10,
+                        Width = imageObj.Width,
+                        Height = imageObj.Height
+                    };
+                    
+                    // 子要素として追加
+                    groupObj.Children.Add(imageObj);
+                    groupObj.Children.Add(borderObj);
+
+                    vm.GraphicObjects.Add(groupObj);
+                    vm.SelectObject(groupObj);
+                    _selectedObject = groupObj;
                     SkiaElement.InvalidateVisual();
                 }
                 else if (vm.PasteCommand.CanExecute(null))
