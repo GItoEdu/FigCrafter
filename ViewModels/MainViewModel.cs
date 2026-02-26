@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using Microsoft.Win32;
 using SkiaSharp;
 using FigCrafterApp.Models;
 
@@ -28,6 +29,7 @@ namespace FigCrafterApp.ViewModels
 
         public ICommand ChangeFillColorCommand { get; }
         public ICommand ChangeStrokeColorCommand { get; }
+        public ICommand ExportPngCommand { get; }
 
         public MainViewModel()
         {
@@ -37,6 +39,7 @@ namespace FigCrafterApp.ViewModels
 
             ChangeFillColorCommand = new RelayCommand(p => ChangeSelectedObjectColor(p?.ToString(), true));
             ChangeStrokeColorCommand = new RelayCommand(p => ChangeSelectedObjectColor(p?.ToString(), false));
+            ExportPngCommand = new RelayCommand(p => ExportPng());
 
             // 初期ドキュメントを追加
             AddNewDocument();
@@ -101,6 +104,33 @@ namespace FigCrafterApp.ViewModels
                 ActiveDocument.SelectedObject.StrokeColor = color;
             }
             ActiveDocument.Invalidate();
+        }
+
+        private void ExportPng()
+        {
+            if (ActiveDocument == null) return;
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "PNGファイル (*.png)|*.png",
+                FileName = $"{ActiveDocument.Title}.png",
+                Title = "PNG書き出し"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    // ファイル名に"_transparent"が含まれていれば透過背景（将来的にはUIでチェックボックス化）
+                    bool transparent = dialog.FileName.Contains("_transparent", StringComparison.OrdinalIgnoreCase);
+                    ActiveDocument.ExportPng(dialog.FileName, transparent);
+                    System.Windows.MessageBox.Show($"PNGを保存しました:\n{dialog.FileName}", "PNG書き出し", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"PNGの保存に失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
         }
     }
 

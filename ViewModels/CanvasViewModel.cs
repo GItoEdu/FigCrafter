@@ -439,5 +439,53 @@ namespace FigCrafterApp.ViewModels
 
             Invalidate();
         }
+
+        // --- PNG書き出し ---
+        /// <summary>
+        /// キャンバスの内容をPNGファイルとして書き出す
+        /// </summary>
+        public void ExportPng(string filePath, bool transparentBackground)
+        {
+            int width = (int)Math.Ceiling(WidthPx);
+            int height = (int)Math.Ceiling(HeightPx);
+
+            using var bitmap = new SKBitmap(width, height);
+            using var canvas = new SKCanvas(bitmap);
+
+            // 背景
+            if (transparentBackground)
+            {
+                canvas.Clear(SKColors.Transparent);
+            }
+            else
+            {
+                canvas.Clear(SKColors.White);
+            }
+
+            // 選択ハイライトを一時的に解除して描画
+            var selectedStates = new List<(GraphicObject obj, bool wasSelected)>();
+            foreach (var obj in GraphicObjects)
+            {
+                selectedStates.Add((obj, obj.IsSelected));
+                obj.IsSelected = false;
+            }
+
+            foreach (var obj in GraphicObjects)
+            {
+                obj.Draw(canvas);
+            }
+
+            // 選択状態を復元
+            foreach (var (obj, wasSelected) in selectedStates)
+            {
+                obj.IsSelected = wasSelected;
+            }
+
+            // PNG保存
+            using var image = SKImage.FromBitmap(bitmap);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            using var stream = System.IO.File.OpenWrite(filePath);
+            data.SaveTo(stream);
+        }
     }
 }
