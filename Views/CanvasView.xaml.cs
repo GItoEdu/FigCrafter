@@ -201,6 +201,27 @@ namespace FigCrafterApp.Views
             var dy = currentPoint.Y - _lastMousePos.Y;
             _lastMousePos = currentPoint;
 
+            // リサイズ中でなければカーソル更新
+            if (!_isResizing && !_isDragging && !_isRangeSelecting && _selectedObject != null)
+            {
+                int hoverHandle = GetHandleHitIndex(_selectedObject, currentPoint);
+                if (_selectedObject is LineObject)
+                {
+                    SkiaElement.Cursor = hoverHandle >= 0 ? System.Windows.Input.Cursors.Cross : System.Windows.Input.Cursors.Arrow;
+                }
+                else
+                {
+                    SkiaElement.Cursor = hoverHandle switch
+                    {
+                        0 => System.Windows.Input.Cursors.SizeNWSE, // TopLeft
+                        1 => System.Windows.Input.Cursors.SizeNESW, // TopRight
+                        2 => System.Windows.Input.Cursors.SizeNWSE, // BottomRight
+                        3 => System.Windows.Input.Cursors.SizeNESW, // BottomLeft
+                        _ => System.Windows.Input.Cursors.Arrow
+                    };
+                }
+            }
+
             if (_isResizing && _selectedObject != null)
             {
                 if (_selectedObject is LineObject lineObj)
@@ -503,32 +524,24 @@ namespace FigCrafterApp.Views
             }
             else if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control)
             {
-                // クリップボードに画像があれば画像をペースト
-                if (System.Windows.Clipboard.ContainsImage())
+                // クリップボードから画像をペースト（複数形式に対応）
+                var skBitmap = TryGetImageFromClipboard();
+                if (skBitmap != null)
                 {
-                    var bitmapSource = System.Windows.Clipboard.GetImage();
-                    if (bitmapSource != null)
+                    var imageObj = new ImageObject
                     {
-                        var skBitmap = ConvertBitmapSourceToSKBitmap(bitmapSource);
-                        if (skBitmap != null)
-                        {
-                            var imageObj = new ImageObject
-                            {
-                                X = 10,
-                                Y = 10,
-                                ImageData = skBitmap
-                            };
-                            vm.GraphicObjects.Add(imageObj);
-                            vm.SelectObject(imageObj);
-                            _selectedObject = imageObj;
-                            SkiaElement.InvalidateVisual();
-                        }
-                    }
+                        X = 10,
+                        Y = 10,
+                        ImageData = skBitmap
+                    };
+                    vm.GraphicObjects.Add(imageObj);
+                    vm.SelectObject(imageObj);
+                    _selectedObject = imageObj;
+                    SkiaElement.InvalidateVisual();
                 }
                 else if (vm.PasteCommand.CanExecute(null))
                 {
                     vm.PasteCommand.Execute(null);
-                    // ペースト後の選択状態をCanvasView側にも反映
                     _selectedObject = vm.SelectedObject;
                 }
                 e.Handled = true;
@@ -553,6 +566,65 @@ namespace FigCrafterApp.Views
                 }
                 e.Handled = true;
             }
+        }
+
+        /// <summary>
+        /// クリップボードから画像を取得（複数形式に対応）
+        /// </summary>
+        private SKBitmap? TryGetImageFromClipboard()
+        {
+            try
+            {
+                // 1) WPF標準の画像形式
+                if (System.Windows.Clipboard.ContainsImage())
+                {
+                    var bitmapSource = System.Windows.Clipboard.GetImage();
+                    if (bitmapSource != null)
+                    {
+                        var result = ConvertBitmapSourceToSKBitmap(bitmapSource);
+                        if (result != null) return result;
+                    }
+                }
+
+                // 2) DIB形式（ImageJ等のアプリケーション対応）
+                var dataObject = System.Windows.Clipboard.GetDataObject();
+                if (dataObject != null)
+                {
+                    // "DeviceIndependentBitmap" を試行
+                    if (dataObject.GetDataPresent(System.Windows.DataFormats.Dib) ||
+                        dataObject.GetDataPresent(System.Windows.DataFormats.Bitmap))
+                    {
+                        // DataFormats.Bitmap を使って BitmapSource として取得を試行
+                        var data = dataObject.GetData(System.Windows.DataFormats.Bitmap);
+                        if (data is System.Windows.Media.Imaging.BitmapSource bmpSrc)
+                        {
+                            var result = ConvertBitmapSourceToSKBitmap(bmpSrc);
+                            if (result != null) return result;
+                        }
+                    }
+
+                    // 3) ファイルドロップ形式（画像ファイルパス）
+                    if (dataObject.GetDataPresent(System.Windows.DataFormats.FileDrop))
+                    {
+                        var files = dataObject.GetData(System.Windows.DataFormats.FileDrop) as string[];
+                        if (files != null && files.Length > 0)
+                        {
+                            var filePath = files[0];
+                            var ext = System.IO.Path.GetExtension(filePath).ToLower();
+                            if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".gif" || ext == ".tif" || ext == ".tiff")
+                            {
+                                using var stream = System.IO.File.OpenRead(filePath);
+                                return SKBitmap.Decode(stream);
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // クリップボードアクセスに失敗した場合は null
+            }
+            return null;
         }
 
         /// <summary>
