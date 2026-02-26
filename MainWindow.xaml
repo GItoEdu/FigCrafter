@@ -128,7 +128,8 @@
             </TabControl>
 
             <!-- Sidebar -->
-            <StackPanel Grid.Column="1" Background="#FF252526">
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Background="#FF252526">
+            <StackPanel Margin="10">
                 <TextBlock Text="アートボード設定" FontWeight="Bold" Margin="0,0,0,15" Foreground="White" FontSize="14"/>
                 
                 <TextBlock Text="キャンバス名" Margin="0,5" Foreground="Gray"/>
@@ -285,6 +286,7 @@
                     
                 </StackPanel>
             </StackPanel>
+            </ScrollViewer>
         </Grid>
 
         <!-- Status Bar -->
