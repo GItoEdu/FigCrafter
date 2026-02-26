@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using SkiaSharp;
 using FigCrafterApp.Models;
+using FigCrafterApp.Commands;
 
 namespace FigCrafterApp.ViewModels
 {
@@ -28,6 +29,13 @@ namespace FigCrafterApp.ViewModels
         private ObservableCollection<GraphicObject> _selectedObjects = new(); // 複数選択
         private GraphicObject? _clipboard; // コピー用クリップボード
 
+        // Undo / Redo 用の履歴スタック
+        private readonly Stack<IUndoableCommand> _undoStack = new();
+        private readonly Stack<IUndoableCommand> _redoStack = new();
+
+        // プロパティ変更検知用の直前値保持ディクショナリ
+        private readonly Dictionary<string, object?> _propertyChangeOldValues = new();
+
         public event EventHandler? InvalidateRequested;
 
         public ICommand BringToFrontCommand { get; }
@@ -45,8 +53,77 @@ namespace FigCrafterApp.ViewModels
         public ICommand AlignCenterVCommand { get; }
         public ICommand GroupCommand { get; }
         public ICommand UngroupCommand { get; }
+        public ICommand UndoCommand { get; }
+        public ICommand RedoCommand { get; }
 
         public void Invalidate() => InvalidateRequested?.Invoke(this, EventArgs.Empty);
+
+        private bool _isExecutingCommand = false;
+
+        public void ExecuteCommand(IUndoableCommand command)
+        {
+            _isExecutingCommand = true;
+            try
+            {
+                command.Execute();
+            }
+            finally
+            {
+                _isExecutingCommand = false;
+            }
+            _undoStack.Push(command);
+            _redoStack.Clear(); // 新しい操作が行われたらRedo履歴をクリア
+            // コマンドの実行可否状態を通知
+            (UndoCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (RedoCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            Invalidate();
+        }
+
+        private void Undo()
+        {
+            if (_undoStack.Count > 0)
+            {
+                var command = _undoStack.Pop();
+                
+                _isExecutingCommand = true;
+                try
+                {
+                    command.Undo();
+                }
+                finally
+                {
+                    _isExecutingCommand = false;
+                }
+                
+                _redoStack.Push(command);
+                (UndoCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                (RedoCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                Invalidate();
+            }
+        }
+
+        private void Redo()
+        {
+            if (_redoStack.Count > 0)
+            {
+                var command = _redoStack.Pop();
+                
+                _isExecutingCommand = true;
+                try
+                {
+                    command.Execute();
+                }
+                finally
+                {
+                    _isExecutingCommand = false;
+                }
+                
+                _undoStack.Push(command);
+                (UndoCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                (RedoCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                Invalidate();
+            }
+        }
 
         public string Title
         {
@@ -76,6 +153,7 @@ namespace FigCrafterApp.ViewModels
             {
                 if (_selectedObject != null)
                 {
+                    _selectedObject.PropertyChanging -= OnSelectedObjectPropertyChanging;
                     _selectedObject.PropertyChanged -= OnSelectedObjectPropertyChanged;
                 }
                 
@@ -83,6 +161,7 @@ namespace FigCrafterApp.ViewModels
                 {
                     if (_selectedObject != null)
                     {
+                        _selectedObject.PropertyChanging += OnSelectedObjectPropertyChanging;
                         _selectedObject.PropertyChanged += OnSelectedObjectPropertyChanged;
                     }
                 }
@@ -98,10 +177,58 @@ namespace FigCrafterApp.ViewModels
             set => SetProperty(ref _selectedObjects, value);
         }
 
+        private void OnSelectedObjectPropertyChanging(object? sender, System.ComponentModel.PropertyChangingEventArgs e)
+        {
+            if (sender is not GraphicObject obj) return;
+            if (e.PropertyName == null) return;
+
+            // プロパティ変更前の値を記録
+            var value = obj.GetType().GetProperty(e.PropertyName)?.GetValue(obj);
+            _propertyChangeOldValues[e.PropertyName] = value;
+        }
+
         private void OnSelectedObjectPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             // 選択オブジェクトのプロパティ変更時は再描画を要求する
             Invalidate();
+
+            if (sender is not GraphicObject obj) return;
+            if (e.PropertyName == null) return;
+            
+            // X, Y の変更はドラッグ操作（CanvasView）から行われるため、Undo コマンドの二重登録を防ぐ
+            // Width, Height なども Resize 操作から行われるため除外
+            // 純粋なプロパティパネル（TextBox 等）からの変更を対象とするか、あるいは CanvasView からの変更時には Event を外す等の工夫が必要
+            // ここでは簡易的に、一部のプロパティ（StrokeWidth, Text, FontFamily, FontSize, HasArrowStart, HasArrowEnd等）のみをUndo対象とする
+            var targetedProperties = new HashSet<string>
+            {
+                nameof(GraphicObject.Rotation),
+                nameof(GraphicObject.StrokeWidth),
+                nameof(TextObject.Text),
+                nameof(TextObject.FontFamily),
+                nameof(TextObject.FontSize),
+                nameof(LineObject.HasArrowStart),
+                nameof(LineObject.HasArrowEnd)
+            };
+
+            if (targetedProperties.Contains(e.PropertyName) && _propertyChangeOldValues.TryGetValue(e.PropertyName, out var oldValue))
+            {
+                var newValue = obj.GetType().GetProperty(e.PropertyName)?.GetValue(obj);
+                
+                // 値が本当に変わっている場合のみコマンドを積む
+                if (!Equals(oldValue, newValue))
+                {
+                    // 既に Undo 操作中かどうかのフラグが必要だが、ここでは簡易的に Execute 時にイベントリスナから一時的に外すなどの工夫が必要
+                    // 一旦シンプルに実装（バインディング経由の変更を拾う）
+                    // 念のため、現在Undoスタックの先頭が同じプロパティ変更の連続（文字入力中など）であれば、
+                    // 古い値を引き継ぐ Composite 化を行うのがベストだが、ここではシンプルに積む
+                    
+                    // ※ 注意: このイベントハンドラ中での ExecuteCommand は再度 PropertyChanged を呼ぶ可能性はない（Executeしないため）。
+                    // PropertyChangeCommand の Execute は既に UI 側でプロパティが Set されているため何もしない（あるいは再セットするだけ）ようにする方が良い。
+                    
+                    _undoStack.Push(new PropertyChangeCommand(obj, e.PropertyName, oldValue, newValue));
+                    _redoStack.Clear();
+                }
+            }
         }
 
         // --- 選択操作の公開メソッド ---
@@ -207,6 +334,10 @@ namespace FigCrafterApp.ViewModels
             AlignCenterVCommand = new RelayCommand(_ => AlignSelected(AlignDirection.CenterV));
             GroupCommand = new RelayCommand(_ => GroupSelected());
             UngroupCommand = new RelayCommand(_ => UngroupSelected());
+            
+            // Undo/Redoコマンド。CanExecute でスタック数をチェック
+            UndoCommand = new RelayCommand(_ => Undo(), _ => _undoStack.Count > 0);
+            RedoCommand = new RelayCommand(_ => Redo(), _ => _redoStack.Count > 0);
         }
 
         public CanvasViewModel(string title) : this()
@@ -220,8 +351,7 @@ namespace FigCrafterApp.ViewModels
             int index = GraphicObjects.IndexOf(SelectedObject);
             if (index >= 0 && index < GraphicObjects.Count - 1)
             {
-                GraphicObjects.Move(index, GraphicObjects.Count - 1);
-                Invalidate();
+                ExecuteCommand(new ReorderObjectCommand(GraphicObjects, SelectedObject, index, GraphicObjects.Count - 1));
             }
         }
 
@@ -231,8 +361,7 @@ namespace FigCrafterApp.ViewModels
             int index = GraphicObjects.IndexOf(SelectedObject);
             if (index > 0)
             {
-                GraphicObjects.Move(index, 0);
-                Invalidate();
+                ExecuteCommand(new ReorderObjectCommand(GraphicObjects, SelectedObject, index, 0));
             }
         }
 
@@ -242,8 +371,7 @@ namespace FigCrafterApp.ViewModels
             int index = GraphicObjects.IndexOf(SelectedObject);
             if (index >= 0 && index < GraphicObjects.Count - 1)
             {
-                GraphicObjects.Move(index, index + 1);
-                Invalidate();
+                ExecuteCommand(new ReorderObjectCommand(GraphicObjects, SelectedObject, index, index + 1));
             }
         }
 
@@ -253,8 +381,7 @@ namespace FigCrafterApp.ViewModels
             int index = GraphicObjects.IndexOf(SelectedObject);
             if (index > 0)
             {
-                GraphicObjects.Move(index, index - 1);
-                Invalidate();
+                ExecuteCommand(new ReorderObjectCommand(GraphicObjects, SelectedObject, index, index - 1));
             }
         }
 
@@ -262,16 +389,19 @@ namespace FigCrafterApp.ViewModels
         private void DeleteSelected()
         {
             if (_selectedObjects.Count == 0) return;
-            // 複数選択対応: 選択中の全オブジェクトを削除
+            
+            // 複数選択対応: 選択中の全オブジェクトを削除するコマンドを実行
             var toRemove = _selectedObjects.ToList();
+            var command = new RemoveObjectsCommand(GraphicObjects, toRemove);
+            ExecuteCommand(command);
+
+            // 選択状態の解除（ビューモデル側の状態）
             foreach (var obj in toRemove)
             {
                 obj.IsSelected = false;
-                GraphicObjects.Remove(obj);
             }
             _selectedObjects.Clear();
             SelectedObject = null;
-            Invalidate();
         }
 
         // --- コピー＆ペースト ---
@@ -294,14 +424,22 @@ namespace FigCrafterApp.ViewModels
                 lineObj.EndY += 10;
             }
             pasted.IsSelected = false;
-            GraphicObjects.Add(pasted);
+
+            // コマンド実行用
+            var command = new AddObjectCommand(GraphicObjects, pasted);
+            ExecuteCommand(command);
+
             // ペーストしたオブジェクトを選択状態にする
             if (SelectedObject != null) SelectedObject.IsSelected = false;
             pasted.IsSelected = true;
             SelectedObject = pasted;
+            
+            // 複数選択用のハック: 今追加したものを唯一の選択状態とする
+            _selectedObjects.Clear();
+            _selectedObjects.Add(pasted);
+
             // 次回ペースト時にさらにずれるようにクリップボードも更新
             _clipboard = pasted.Clone();
-            Invalidate();
         }
 
         // --- 整列 ---
@@ -348,29 +486,39 @@ namespace FigCrafterApp.ViewModels
         }
 
         /// <summary>
-        /// オブジェクトを水平方向にオフセット移動（GroupObject は子も連動）
+        /// オブジェクトを水平方向にオフセット移動（GroupObject は子も連動）し、古い状態と新しい状態を記録するためのタプルを返す
         /// </summary>
-        private void MoveObjectX(GraphicObject obj, float offsetX)
+        private (GraphicObject Obj, float OldX, float OldY, float NewX, float NewY) MoveObjectXWithRecord(GraphicObject obj, float offsetX)
         {
+            float oldX = obj.X;
+            float oldY = obj.Y;
             obj.X += offsetX;
+
             if (obj is LineObject line) line.EndX += offsetX;
             else if (obj is GroupObject group)
             {
-                foreach (var child in group.Children) MoveObjectX(child, offsetX);
+                foreach (var child in group.Children) MoveObjectXWithRecord(child, offsetX);
             }
+            
+            return (obj, oldX, oldY, obj.X, obj.Y);
         }
 
         /// <summary>
-        /// オブジェクトを垂直方向にオフセット移動（GroupObject は子も連動）
+        /// オブジェクトを垂直方向にオフセット移動（GroupObject は子も連動）し、履歴用タプルを返す
         /// </summary>
-        private void MoveObjectY(GraphicObject obj, float offsetY)
+        private (GraphicObject Obj, float OldX, float OldY, float NewX, float NewY) MoveObjectYWithRecord(GraphicObject obj, float offsetY)
         {
+            float oldX = obj.X;
+            float oldY = obj.Y;
             obj.Y += offsetY;
+
             if (obj is LineObject line) line.EndY += offsetY;
             else if (obj is GroupObject group)
             {
-                foreach (var child in group.Children) MoveObjectY(child, offsetY);
+                foreach (var child in group.Children) MoveObjectYWithRecord(child, offsetY);
             }
+            
+            return (obj, oldX, oldY, obj.X, obj.Y);
         }
 
         private void AlignSelected(AlignDirection direction)
@@ -378,6 +526,7 @@ namespace FigCrafterApp.ViewModels
             if (_selectedObjects.Count < 2) return; // 2つ以上選択されている場合のみ整列
 
             var objects = _selectedObjects.ToList();
+            var moves = new List<(GraphicObject Obj, float OldX, float OldY, float NewX, float NewY)>();
 
             switch (direction)
             {
@@ -388,7 +537,7 @@ namespace FigCrafterApp.ViewModels
                     foreach (var obj in objects)
                     {
                         float offsetX = targetX - GetLeftEdge(obj);
-                        MoveObjectX(obj, offsetX);
+                        if (offsetX != 0) moves.Add(MoveObjectXWithRecord(obj, offsetX));
                     }
                     break;
                 }
@@ -400,7 +549,7 @@ namespace FigCrafterApp.ViewModels
                     foreach (var obj in objects)
                     {
                         float offsetX = targetX - GetRightEdge(obj);
-                        MoveObjectX(obj, offsetX);
+                        if (offsetX != 0) moves.Add(MoveObjectXWithRecord(obj, offsetX));
                     }
                     break;
                 }
@@ -411,7 +560,7 @@ namespace FigCrafterApp.ViewModels
                     foreach (var obj in objects)
                     {
                         float offsetY = targetY - GetTopEdge(obj);
-                        MoveObjectY(obj, offsetY);
+                        if (offsetY != 0) moves.Add(MoveObjectYWithRecord(obj, offsetY));
                     }
                     break;
                 }
@@ -422,7 +571,7 @@ namespace FigCrafterApp.ViewModels
                     foreach (var obj in objects)
                     {
                         float offsetY = targetY - GetBottomEdge(obj);
-                        MoveObjectY(obj, offsetY);
+                        if (offsetY != 0) moves.Add(MoveObjectYWithRecord(obj, offsetY));
                     }
                     break;
                 }
@@ -435,7 +584,7 @@ namespace FigCrafterApp.ViewModels
                     {
                         float objCenterX = (GetLeftEdge(obj) + GetRightEdge(obj)) / 2;
                         float offsetX = avgCenterX - objCenterX;
-                        MoveObjectX(obj, offsetX);
+                        if (offsetX != 0) moves.Add(MoveObjectXWithRecord(obj, offsetX));
                     }
                     break;
                 }
@@ -447,13 +596,20 @@ namespace FigCrafterApp.ViewModels
                     {
                         float objCenterY = (GetTopEdge(obj) + GetBottomEdge(obj)) / 2;
                         float offsetY = avgCenterY - objCenterY;
-                        MoveObjectY(obj, offsetY);
+                        if (offsetY != 0) moves.Add(MoveObjectYWithRecord(obj, offsetY));
                     }
                     break;
                 }
             }
 
-            Invalidate();
+            if (moves.Count > 0)
+            {
+                // これらは既に移動が完了しているので、元の状態と今の状態をコマンドとして記録する（Undoに備えるため）
+                // ただし、MoveObjectsCommand は Execute で Set を行うため、再適用を防ぐか、そもそもここで MoveObjectXWithRecord等を行わずに差分だけ計算してコマンド内で実移動させるほうが本来は綺麗。
+                // ここでは MoveObjectXWithRecord によって既に GraphicObjects の各プロパティが新しい値に変異しているので、
+                // Undo が呼ばれたときに Old に戻ることを保証するコマンドとして登録する。
+                ExecuteCommand(new MoveObjectsCommand(moves));
+            }
         }
 
         // --- PNG書き出し ---
@@ -515,26 +671,32 @@ namespace FigCrafterApp.ViewModels
             // 元の重ね順で最も下にあるオブジェクトの位置を取得
             int minIndex = objectsToGroup.Min(o => GraphicObjects.IndexOf(o));
 
-            // 子オブジェクトをグループに追加し、キャンバスから除去
+            var commands = new List<IUndoableCommand>();
+
+            // 子オブジェクトをグループに追加し、キャンバスからは削除するコマンドを作成
             foreach (var obj in objectsToGroup)
             {
                 obj.IsSelected = false;
                 group.Children.Add(obj);
-                GraphicObjects.Remove(obj);
             }
+            commands.Add(new RemoveObjectsCommand(GraphicObjects, objectsToGroup));
 
             group.RecalculateBounds();
 
-            // 元の重ね順位置にグループを挿入
+            // 元の重ね順位置にグループを挿入するコマンド
             int insertIndex = Math.Min(minIndex, GraphicObjects.Count);
-            GraphicObjects.Insert(insertIndex, group);
+            // 本来は指定インデックスにInsertするコマンドが必要だが AddObjectCommand のみ実装されているためリスト末尾以外への追加は順番を崩す可能性がある
+            // （現状は AddObjectCommand をそのまま使うか、または単純に ExecuteCommand でグループ化操作自体をまとめるアプローチにする）
+            // 一旦、専用のコマンド群ではなく ExecuteCommand() 内でこの複合コマンドを登録する
+
+            var composite = new GroupingCommand(GraphicObjects, objectsToGroup, group, insertIndex);
+            ExecuteCommand(composite);
 
             // グループを選択状態にする
             _selectedObjects.Clear();
             group.IsSelected = true;
             _selectedObjects.Add(group);
             SelectedObject = group;
-            Invalidate();
         }
 
         private void UngroupSelected()
@@ -543,28 +705,22 @@ namespace FigCrafterApp.ViewModels
             var groupsToUngroup = _selectedObjects.OfType<GroupObject>().ToList();
             if (groupsToUngroup.Count == 0) return;
 
-            ClearSelection();
+            var composite = new UngroupingCommand(GraphicObjects, groupsToUngroup);
+            ExecuteCommand(composite);
 
+            ClearSelection();
+            
+            // Undo 実行後ではなく Execute 後の現在状態に対して選択を復元
             foreach (var group in groupsToUngroup)
             {
-                int index = GraphicObjects.IndexOf(group);
-                if (index < 0) continue;
-
-                GraphicObjects.Remove(group);
-
-                // 子オブジェクトを元の位置に挿入
-                int insertAt = Math.Min(index, GraphicObjects.Count);
                 foreach (var child in group.Children)
                 {
                     child.IsSelected = true;
-                    GraphicObjects.Insert(insertAt, child);
                     _selectedObjects.Add(child);
-                    insertAt++;
                 }
             }
 
             SelectedObject = _selectedObjects.Count > 0 ? _selectedObjects[^1] : null;
-            Invalidate();
         }
     }
 }

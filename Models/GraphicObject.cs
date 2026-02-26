@@ -4,7 +4,7 @@ using SkiaSharp;
 
 namespace FigCrafterApp.Models
 {
-    public abstract class GraphicObject : INotifyPropertyChanged
+    public abstract class GraphicObject : INotifyPropertyChanged, INotifyPropertyChanging
     {
         private float _x;
         private float _y;
@@ -27,13 +27,20 @@ namespace FigCrafterApp.Models
         public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
 
         public event PropertyChangedEventHandler? PropertyChanged;
+        public event PropertyChangingEventHandler? PropertyChanging;
 
         protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
         {
             if (EqualityComparer<T>.Default.Equals(field, value)) return false;
+            OnPropertyChanging(propertyName);
             field = value;
             OnPropertyChanged(propertyName);
             return true;
+        }
+
+        protected virtual void OnPropertyChanging([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(propertyName));
         }
 
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)

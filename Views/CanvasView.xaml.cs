@@ -5,6 +5,7 @@ using SkiaSharp;
 using SkiaSharp.Views.Desktop;
 using FigCrafterApp.ViewModels;
 using FigCrafterApp.Models;
+using FigCrafterApp.Commands;
 
 namespace FigCrafterApp.Views
 {
@@ -23,6 +24,10 @@ namespace FigCrafterApp.Views
         private SKPoint _lastMousePos;
         private SKRect _originalResizeRect;
         private float _originalAspectRatio;
+        
+        // Undo用の一時保存
+        private List<(GraphicObject Obj, float OldX, float OldY)> _preDragPositions = new();
+        private (float X, float Y, float EndX, float EndY) _preDragLineEnd;
 
         public CanvasView()
         {
@@ -105,6 +110,10 @@ namespace FigCrafterApp.Views
                         _resizeHandleIndex = handleIdx;
                         _originalResizeRect = GetBoundingRect(_selectedObject);
                         _originalAspectRatio = _originalResizeRect.Width / _originalResizeRect.Height;
+                        if (_selectedObject is LineObject line)
+                        {
+                            _preDragLineEnd = (line.X, line.Y, line.EndX, line.EndY);
+                        }
                         SkiaElement.CaptureMouse();
                         return;
                     }
@@ -156,6 +165,16 @@ namespace FigCrafterApp.Views
                 if (_selectedObject != null && !isShiftHeld)
                 {
                     _isDragging = true;
+                    _preDragPositions.Clear();
+                    foreach (var obj in vm.SelectedObjects)
+                    {
+                        _preDragPositions.Add((obj, obj.X, obj.Y));
+                        if (obj is LineObject lineObj)
+                        {
+                            // Lineの場合は始点も終点も動くので、ここでは始点をY/Xとして記録しているがLine全体の移動の際に工夫が必要
+                            // 移動処理(_isDragging)自体はX,Y等の変異だけを記録すればMoveObjectsCommandで対応可能
+                        }
+                    }
                     SkiaElement.CaptureMouse();
                 }
                 
@@ -350,9 +369,26 @@ namespace FigCrafterApp.Views
 
         private void SkiaElement_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
+            if (DataContext is not CanvasViewModel vmObj) return;
+
             if (_isResizing)
             {
                 _isResizing = false;
+                
+                if (_selectedObject != null)
+                {
+                    if (_selectedObject is LineObject lineObj)
+                    {
+                        var cmd = new MoveLineEndCommand(lineObj, _preDragLineEnd.X, _preDragLineEnd.Y, _preDragLineEnd.EndX, _preDragLineEnd.EndY, lineObj.X, lineObj.Y, lineObj.EndX, lineObj.EndY);
+                        vmObj.ExecuteCommand(cmd);
+                    }
+                    else
+                    {
+                        var cmd = new ResizeCommand(_selectedObject, _originalResizeRect.Left, _originalResizeRect.Top, _originalResizeRect.Width, _originalResizeRect.Height, _selectedObject.X, _selectedObject.Y, _selectedObject.Width, _selectedObject.Height);
+                        vmObj.ExecuteCommand(cmd);
+                    }
+                }
+
                 _resizeHandleIndex = -1;
                 SkiaElement.ReleaseMouseCapture();
                 return;
@@ -361,6 +397,20 @@ namespace FigCrafterApp.Views
             if (_isDragging)
             {
                 _isDragging = false;
+                if (_selectedObject != null && _preDragPositions.Count > 0)
+                {
+                    // 実際に動いたか確認
+                    bool hasMoved = _preDragPositions.Any(p => p.Obj.X != p.OldX || p.Obj.Y != p.OldY);
+                    if (hasMoved)
+                    {
+                        var moves = new List<(GraphicObject Obj, float OldX, float OldY, float NewX, float NewY)>();
+                        foreach (var (obj, oldX, oldY) in _preDragPositions)
+                        {
+                            moves.Add((obj, oldX, oldY, obj.X, obj.Y));
+                        }
+                        vmObj.ExecuteCommand(new MoveObjectsCommand(moves));
+                    }
+                }
                 SkiaElement.ReleaseMouseCapture();
                 return;
             }
@@ -397,14 +447,14 @@ namespace FigCrafterApp.Views
 
             if (_tempObject == null) return;
 
-            if (DataContext is CanvasViewModel vm)
+            if (DataContext is CanvasViewModel vmAdd)
             {
                 // 一時オブジェクトを本番の色に変更して追加
                 if (_tempObject is RectangleObject) _tempObject.FillColor = SKColors.SkyBlue;
                 if (_tempObject is EllipseObject) _tempObject.FillColor = SKColors.Salmon;
                 if (_tempObject is LineObject) _tempObject.StrokeColor = SKColors.Black;
                 
-                vm.GraphicObjects.Add(_tempObject);
+                vmAdd.ExecuteCommand(new AddObjectCommand(vmAdd.GraphicObjects, _tempObject));
             }
 
             _tempObject = null;

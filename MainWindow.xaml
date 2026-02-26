@@ -78,6 +78,9 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#FF333333">
             <Button Content="新規プロジェクト" Command="{Binding NewDocumentCommand}" Margin="10,5" Padding="10,2" Background="#FF007ACC" Foreground="White" BorderThickness="0"/>
             <Button Content="📷 PNG書き出し" Command="{Binding ExportPngCommand}" Margin="5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+            <!-- ActiveDocument の Undo/Redo コマンドにバインド -->
+            <Button Content="↩ 取り消し" Command="{Binding ActiveDocument.UndoCommand}" Margin="15,5,5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="元に戻す"/>
+            <Button Content="↪ やり直し" Command="{Binding ActiveDocument.RedoCommand}" Margin="5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="やり直す"/>
         </StackPanel>
 
         <!-- Tabbed Interface -->
