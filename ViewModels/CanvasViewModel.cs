@@ -313,6 +313,7 @@ namespace FigCrafterApp.ViewModels
         private float GetLeftEdge(GraphicObject obj)
         {
             if (obj is LineObject line) return Math.Min(line.X, line.EndX);
+            if (obj is GroupObject group) { group.RecalculateBounds(); return group.X; }
             return obj.X;
         }
 
@@ -322,6 +323,7 @@ namespace FigCrafterApp.ViewModels
         private float GetRightEdge(GraphicObject obj)
         {
             if (obj is LineObject line) return Math.Max(line.X, line.EndX);
+            if (obj is GroupObject group) { group.RecalculateBounds(); return group.X + group.Width; }
             return obj.X + obj.Width;
         }
 
@@ -331,6 +333,7 @@ namespace FigCrafterApp.ViewModels
         private float GetTopEdge(GraphicObject obj)
         {
             if (obj is LineObject line) return Math.Min(line.Y, line.EndY);
+            if (obj is GroupObject group) { group.RecalculateBounds(); return group.Y; }
             return obj.Y;
         }
 
@@ -340,25 +343,34 @@ namespace FigCrafterApp.ViewModels
         private float GetBottomEdge(GraphicObject obj)
         {
             if (obj is LineObject line) return Math.Max(line.Y, line.EndY);
+            if (obj is GroupObject group) { group.RecalculateBounds(); return group.Y + group.Height; }
             return obj.Y + obj.Height;
         }
 
         /// <summary>
-        /// オブジェクトを水平方向にオフセット移動
+        /// オブジェクトを水平方向にオフセット移動（GroupObject は子も連動）
         /// </summary>
         private void MoveObjectX(GraphicObject obj, float offsetX)
         {
             obj.X += offsetX;
             if (obj is LineObject line) line.EndX += offsetX;
+            else if (obj is GroupObject group)
+            {
+                foreach (var child in group.Children) MoveObjectX(child, offsetX);
+            }
         }
 
         /// <summary>
-        /// オブジェクトを垂直方向にオフセット移動
+        /// オブジェクトを垂直方向にオフセット移動（GroupObject は子も連動）
         /// </summary>
         private void MoveObjectY(GraphicObject obj, float offsetY)
         {
             obj.Y += offsetY;
             if (obj is LineObject line) line.EndY += offsetY;
+            else if (obj is GroupObject group)
+            {
+                foreach (var child in group.Children) MoveObjectY(child, offsetY);
+            }
         }
 
         private void AlignSelected(AlignDirection direction)
