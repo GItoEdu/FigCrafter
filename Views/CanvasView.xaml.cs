@@ -474,7 +474,29 @@ namespace FigCrafterApp.Views
             }
             else if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control)
             {
-                if (vm.PasteCommand.CanExecute(null))
+                // クリップボードに画像があれば画像をペースト
+                if (System.Windows.Clipboard.ContainsImage())
+                {
+                    var bitmapSource = System.Windows.Clipboard.GetImage();
+                    if (bitmapSource != null)
+                    {
+                        var skBitmap = ConvertBitmapSourceToSKBitmap(bitmapSource);
+                        if (skBitmap != null)
+                        {
+                            var imageObj = new ImageObject
+                            {
+                                X = 10,
+                                Y = 10,
+                                ImageData = skBitmap
+                            };
+                            vm.GraphicObjects.Add(imageObj);
+                            vm.SelectObject(imageObj);
+                            _selectedObject = imageObj;
+                            SkiaElement.InvalidateVisual();
+                        }
+                    }
+                }
+                else if (vm.PasteCommand.CanExecute(null))
                 {
                     vm.PasteCommand.Execute(null);
                     // ペースト後の選択状態をCanvasView側にも反映
@@ -501,6 +523,48 @@ namespace FigCrafterApp.Views
                     _selectedObject = vm.SelectedObject;
                 }
                 e.Handled = true;
+            }
+        }
+
+        /// <summary>
+        /// WPF の BitmapSource を SkiaSharp の SKBitmap に変換
+        /// </summary>
+        private SKBitmap? ConvertBitmapSourceToSKBitmap(System.Windows.Media.Imaging.BitmapSource bitmapSource)
+        {
+            try
+            {
+                // Bgra32 に変換
+                var formatted = new System.Windows.Media.Imaging.FormatConvertedBitmap(
+                    bitmapSource,
+                    System.Windows.Media.PixelFormats.Bgra32,
+                    null, 0);
+
+                int width = formatted.PixelWidth;
+                int height = formatted.PixelHeight;
+                int stride = width * 4;
+                byte[] pixels = new byte[stride * height];
+                formatted.CopyPixels(pixels, stride, 0);
+
+                var skBitmap = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+                var handle = System.Runtime.InteropServices.GCHandle.Alloc(pixels, System.Runtime.InteropServices.GCHandleType.Pinned);
+                try
+                {
+                    skBitmap.InstallPixels(
+                        new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul),
+                        handle.AddrOfPinnedObject(),
+                        stride);
+                    // InstallPixels は参照を共有するのでコピーを作成
+                    return skBitmap.Copy();
+                }
+                finally
+                {
+                    handle.Free();
+                    skBitmap.Dispose();
+                }
+            }
+            catch
+            {
+                return null;
             }
         }
     }

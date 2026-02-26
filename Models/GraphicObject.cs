@@ -462,4 +462,86 @@ namespace FigCrafterApp.Models
             return clone;
         }
     }
+
+    public class ImageObject : GraphicObject, IDisposable
+    {
+        private SKBitmap? _imageData;
+
+        public SKBitmap? ImageData
+        {
+            get => _imageData;
+            set
+            {
+                _imageData = value;
+                if (_imageData != null)
+                {
+                    Width = _imageData.Width;
+                    Height = _imageData.Height;
+                }
+            }
+        }
+
+        public override void Draw(SKCanvas canvas)
+        {
+            if (_imageData == null) return;
+
+            var destRect = new SKRect(X, Y, X + Width, Y + Height);
+            canvas.DrawBitmap(_imageData, destRect);
+
+            if (IsSelected)
+            {
+                // 選択枠
+                using var paint = new SKPaint
+                {
+                    Color = SKColors.DodgerBlue,
+                    Style = SKPaintStyle.Stroke,
+                    StrokeWidth = 1,
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 4, 4 }, 0),
+                    IsAntialias = true
+                };
+                canvas.DrawRect(destRect, paint);
+
+                // ハンドル
+                using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
+                using var handleStrokePaint = new SKPaint { Color = SKColors.DodgerBlue, Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = true };
+                float hs = 6;
+                var points = new[]
+                {
+                    new SKPoint(destRect.Left, destRect.Top),
+                    new SKPoint(destRect.Right, destRect.Top),
+                    new SKPoint(destRect.Right, destRect.Bottom),
+                    new SKPoint(destRect.Left, destRect.Bottom)
+                };
+                foreach (var pt in points)
+                {
+                    var hr = new SKRect(pt.X - hs / 2, pt.Y - hs / 2, pt.X + hs / 2, pt.Y + hs / 2);
+                    canvas.DrawRect(hr, handlePaint);
+                    canvas.DrawRect(hr, handleStrokePaint);
+                }
+            }
+        }
+
+        public override bool HitTest(SKPoint point)
+        {
+            var rect = new SKRect(X, Y, X + Width, Y + Height);
+            return rect.Contains(point.X, point.Y);
+        }
+
+        public override GraphicObject Clone()
+        {
+            var clone = new ImageObject();
+            CopyPropertiesTo(clone);
+            if (_imageData != null)
+            {
+                clone._imageData = _imageData.Copy();
+            }
+            return clone;
+        }
+
+        public void Dispose()
+        {
+            _imageData?.Dispose();
+            _imageData = null;
+        }
+    }
 }
