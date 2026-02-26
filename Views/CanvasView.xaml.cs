@@ -21,6 +21,8 @@ namespace FigCrafterApp.Views
         private SKRect _selectionRect; // 範囲選択の矩形
         private int _resizeHandleIndex = -1;
         private SKPoint _lastMousePos;
+        private SKRect _originalResizeRect;
+        private float _originalAspectRatio;
 
         public CanvasView()
         {
@@ -101,6 +103,8 @@ namespace FigCrafterApp.Views
                     {
                         _isResizing = true;
                         _resizeHandleIndex = handleIdx;
+                        _originalResizeRect = GetBoundingRect(_selectedObject);
+                        _originalAspectRatio = _originalResizeRect.Width / _originalResizeRect.Height;
                         SkiaElement.CaptureMouse();
                         return;
                     }
@@ -243,8 +247,6 @@ namespace FigCrafterApp.Views
                     // 矩形・楽円・テキスト・画像などのリサイズ
                     var rect = GetBoundingRect(_selectedObject);
                     float left = rect.Left, top = rect.Top, right = rect.Right, bottom = rect.Bottom;
-                    float origWidth = rect.Width;
-                    float origHeight = rect.Height;
 
                     switch (_resizeHandleIndex)
                     {
@@ -254,21 +256,20 @@ namespace FigCrafterApp.Views
                         case 3: left += dx; bottom += dy; break;   // BottomLeft
                     }
 
-                    // Shiftが押されている場合は縦横比を維持
-                    if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && origWidth > 0 && origHeight > 0)
+                    // Shiftが押されている場合は縦横比を維持（後からShiftを押しても対応）
+                    if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && _originalAspectRatio > 0)
                     {
                         float newWidth = Math.Abs(right - left);
                         float newHeight = Math.Abs(bottom - top);
-                        float aspectRatio = origWidth / origHeight;
 
                         // ドラッグ量の大きい方を基準に調整
                         if (Math.Abs(dx) >= Math.Abs(dy))
                         {
-                            newHeight = newWidth / aspectRatio;
+                            newHeight = newWidth / _originalAspectRatio;
                         }
                         else
                         {
-                            newWidth = newHeight * aspectRatio;
+                            newWidth = newHeight * _originalAspectRatio;
                         }
 
                         // ハンドルの位置に応じて座標を再計算
@@ -575,7 +576,22 @@ namespace FigCrafterApp.Views
         {
             try
             {
-                // 1) WPF標準の画像形式
+                var dataObject = System.Windows.Clipboard.GetDataObject();
+                if (dataObject == null) return null;
+
+                // 1) PNG ストリーム直接デコード（最も確実・ImageJ対応）
+                if (dataObject.GetDataPresent("PNG"))
+                {
+                    var pngData = dataObject.GetData("PNG") as System.IO.MemoryStream;
+                    if (pngData != null)
+                    {
+                        pngData.Position = 0;
+                        var result = SKBitmap.Decode(pngData);
+                        if (result != null) return result;
+                    }
+                }
+
+                // 2) WPF標準の画像形式（PngBitmapEncoder経由で変換）
                 if (System.Windows.Clipboard.ContainsImage())
                 {
                     var bitmapSource = System.Windows.Clipboard.GetImage();
@@ -586,36 +602,28 @@ namespace FigCrafterApp.Views
                     }
                 }
 
-                // 2) DIB形式（ImageJ等のアプリケーション対応）
-                var dataObject = System.Windows.Clipboard.GetDataObject();
-                if (dataObject != null)
+                // 3) DIB/Bitmap 形式
+                if (dataObject.GetDataPresent(System.Windows.DataFormats.Bitmap))
                 {
-                    // "DeviceIndependentBitmap" を試行
-                    if (dataObject.GetDataPresent(System.Windows.DataFormats.Dib) ||
-                        dataObject.GetDataPresent(System.Windows.DataFormats.Bitmap))
+                    var data = dataObject.GetData(System.Windows.DataFormats.Bitmap);
+                    if (data is System.Windows.Media.Imaging.BitmapSource bmpSrc)
                     {
-                        // DataFormats.Bitmap を使って BitmapSource として取得を試行
-                        var data = dataObject.GetData(System.Windows.DataFormats.Bitmap);
-                        if (data is System.Windows.Media.Imaging.BitmapSource bmpSrc)
-                        {
-                            var result = ConvertBitmapSourceToSKBitmap(bmpSrc);
-                            if (result != null) return result;
-                        }
+                        var result = ConvertBitmapSourceToSKBitmap(bmpSrc);
+                        if (result != null) return result;
                     }
+                }
 
-                    // 3) ファイルドロップ形式（画像ファイルパス）
-                    if (dataObject.GetDataPresent(System.Windows.DataFormats.FileDrop))
+                // 4) ファイルドロップ形式
+                if (dataObject.GetDataPresent(System.Windows.DataFormats.FileDrop))
+                {
+                    var files = dataObject.GetData(System.Windows.DataFormats.FileDrop) as string[];
+                    if (files != null && files.Length > 0)
                     {
-                        var files = dataObject.GetData(System.Windows.DataFormats.FileDrop) as string[];
-                        if (files != null && files.Length > 0)
+                        var ext = System.IO.Path.GetExtension(files[0]).ToLower();
+                        if (ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".tif" or ".tiff")
                         {
-                            var filePath = files[0];
-                            var ext = System.IO.Path.GetExtension(filePath).ToLower();
-                            if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".gif" || ext == ".tif" || ext == ".tiff")
-                            {
-                                using var stream = System.IO.File.OpenRead(filePath);
-                                return SKBitmap.Decode(stream);
-                            }
+                            using var stream = System.IO.File.OpenRead(files[0]);
+                            return SKBitmap.Decode(stream);
                         }
                     }
                 }
@@ -628,35 +636,19 @@ namespace FigCrafterApp.Views
         }
 
         /// <summary>
-        /// WPF の BitmapSource を SkiaSharp の SKBitmap に変換（16bit画像含む全フォーマット対応）
+        /// WPF の BitmapSource を SkiaSharp の SKBitmap に変換（PngBitmapEncoder 経由で全フォーマット対応）
         /// </summary>
         private SKBitmap? ConvertBitmapSourceToSKBitmap(System.Windows.Media.Imaging.BitmapSource bitmapSource)
         {
             try
             {
-                // あらゆるピクセルフォーマットを Bgra32 に変換（16bit Gray, Rgba64 等に対応）
-                System.Windows.Media.Imaging.BitmapSource source = bitmapSource;
-                if (bitmapSource.Format != System.Windows.Media.PixelFormats.Bgra32 &&
-                    bitmapSource.Format != System.Windows.Media.PixelFormats.Pbgra32)
-                {
-                    source = new System.Windows.Media.Imaging.FormatConvertedBitmap(
-                        bitmapSource,
-                        System.Windows.Media.PixelFormats.Bgra32,
-                        null, 0);
-                }
-
-                int width = source.PixelWidth;
-                int height = source.PixelHeight;
-                int stride = width * 4;
-                byte[] pixels = new byte[stride * height];
-                source.CopyPixels(pixels, stride, 0);
-
-                // SKBitmap を Bgra8888 で作成し、直接ピクセルをセット
-                var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
-                var skBitmap = new SKBitmap(info);
-                var ptr = skBitmap.GetPixels();
-                System.Runtime.InteropServices.Marshal.Copy(pixels, 0, ptr, pixels.Length);
-                return skBitmap;
+                // BitmapSource → PNG メモリストリーム → SKBitmap
+                var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmapSource));
+                using var ms = new System.IO.MemoryStream();
+                encoder.Save(ms);
+                ms.Position = 0;
+                return SKBitmap.Decode(ms);
             }
             catch
             {
