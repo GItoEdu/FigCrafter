@@ -219,9 +219,11 @@ namespace FigCrafterApp.Views
                 }
                 else
                 {
-                    // 矩形・楕円・テキスト（必要に応じて）などのリサイズ
+                    // 矩形・楽円・テキスト・画像などのリサイズ
                     var rect = GetBoundingRect(_selectedObject);
                     float left = rect.Left, top = rect.Top, right = rect.Right, bottom = rect.Bottom;
+                    float origWidth = rect.Width;
+                    float origHeight = rect.Height;
 
                     switch (_resizeHandleIndex)
                     {
@@ -229,6 +231,33 @@ namespace FigCrafterApp.Views
                         case 1: right += dx; top += dy; break;     // TopRight
                         case 2: right += dx; bottom += dy; break;  // BottomRight
                         case 3: left += dx; bottom += dy; break;   // BottomLeft
+                    }
+
+                    // Shiftが押されている場合は縦横比を維持
+                    if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && origWidth > 0 && origHeight > 0)
+                    {
+                        float newWidth = Math.Abs(right - left);
+                        float newHeight = Math.Abs(bottom - top);
+                        float aspectRatio = origWidth / origHeight;
+
+                        // ドラッグ量の大きい方を基準に調整
+                        if (Math.Abs(dx) >= Math.Abs(dy))
+                        {
+                            newHeight = newWidth / aspectRatio;
+                        }
+                        else
+                        {
+                            newWidth = newHeight * aspectRatio;
+                        }
+
+                        // ハンドルの位置に応じて座標を再計算
+                        switch (_resizeHandleIndex)
+                        {
+                            case 0: left = right - newWidth; top = bottom - newHeight; break;
+                            case 1: right = left + newWidth; top = bottom - newHeight; break;
+                            case 2: right = left + newWidth; bottom = top + newHeight; break;
+                            case 3: left = right - newWidth; bottom = top + newHeight; break;
+                        }
                     }
 
                     // 幅・高さが負にならないよう調整
@@ -527,40 +556,35 @@ namespace FigCrafterApp.Views
         }
 
         /// <summary>
-        /// WPF の BitmapSource を SkiaSharp の SKBitmap に変換
+        /// WPF の BitmapSource を SkiaSharp の SKBitmap に変換（16bit画像含む全フォーマット対応）
         /// </summary>
         private SKBitmap? ConvertBitmapSourceToSKBitmap(System.Windows.Media.Imaging.BitmapSource bitmapSource)
         {
             try
             {
-                // Bgra32 に変換
-                var formatted = new System.Windows.Media.Imaging.FormatConvertedBitmap(
-                    bitmapSource,
-                    System.Windows.Media.PixelFormats.Bgra32,
-                    null, 0);
+                // あらゆるピクセルフォーマットを Bgra32 に変換（16bit Gray, Rgba64 等に対応）
+                System.Windows.Media.Imaging.BitmapSource source = bitmapSource;
+                if (bitmapSource.Format != System.Windows.Media.PixelFormats.Bgra32 &&
+                    bitmapSource.Format != System.Windows.Media.PixelFormats.Pbgra32)
+                {
+                    source = new System.Windows.Media.Imaging.FormatConvertedBitmap(
+                        bitmapSource,
+                        System.Windows.Media.PixelFormats.Bgra32,
+                        null, 0);
+                }
 
-                int width = formatted.PixelWidth;
-                int height = formatted.PixelHeight;
+                int width = source.PixelWidth;
+                int height = source.PixelHeight;
                 int stride = width * 4;
                 byte[] pixels = new byte[stride * height];
-                formatted.CopyPixels(pixels, stride, 0);
+                source.CopyPixels(pixels, stride, 0);
 
-                var skBitmap = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
-                var handle = System.Runtime.InteropServices.GCHandle.Alloc(pixels, System.Runtime.InteropServices.GCHandleType.Pinned);
-                try
-                {
-                    skBitmap.InstallPixels(
-                        new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul),
-                        handle.AddrOfPinnedObject(),
-                        stride);
-                    // InstallPixels は参照を共有するのでコピーを作成
-                    return skBitmap.Copy();
-                }
-                finally
-                {
-                    handle.Free();
-                    skBitmap.Dispose();
-                }
+                // SKBitmap を Bgra8888 で作成し、直接ピクセルをセット
+                var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+                var skBitmap = new SKBitmap(info);
+                var ptr = skBitmap.GetPixels();
+                System.Runtime.InteropServices.Marshal.Copy(pixels, 0, ptr, pixels.Length);
+                return skBitmap;
             }
             catch
             {
