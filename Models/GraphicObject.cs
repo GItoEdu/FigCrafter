@@ -214,9 +214,13 @@ namespace FigCrafterApp.Models
     {
         private float _endX;
         private float _endY;
+        private bool _hasArrowStart;
+        private bool _hasArrowEnd;
 
         public float EndX { get => _endX; set => SetProperty(ref _endX, value); }
         public float EndY { get => _endY; set => SetProperty(ref _endY, value); }
+        public bool HasArrowStart { get => _hasArrowStart; set => SetProperty(ref _hasArrowStart, value); }
+        public bool HasArrowEnd { get => _hasArrowEnd; set => SetProperty(ref _hasArrowEnd, value); }
 
         public override void Draw(SKCanvas canvas)
         {
@@ -228,6 +232,32 @@ namespace FigCrafterApp.Models
                 IsAntialias = true
             };
             canvas.DrawLine(X, Y, EndX, EndY, paint);
+
+            // 矢印の描画
+            if (HasArrowStart || HasArrowEnd)
+            {
+                float dx = EndX - X;
+                float dy = EndY - Y;
+                float angle = (float)Math.Atan2(dy, dx);
+                float arrowLength = 15f + StrokeWidth;
+                float arrowAngle = (float)(Math.PI / 6); // 30度
+
+                using var arrowPaint = new SKPaint
+                {
+                    Color = StrokeColor,
+                    Style = SKPaintStyle.Fill,
+                    IsAntialias = true
+                };
+
+                if (HasArrowEnd)
+                {
+                    DrawArrowHead(canvas, arrowPaint, EndX, EndY, angle + (float)Math.PI, arrowLength, arrowAngle);
+                }
+                if (HasArrowStart)
+                {
+                    DrawArrowHead(canvas, arrowPaint, X, Y, angle, arrowLength, arrowAngle);
+                }
+            }
 
             if (IsSelected)
             {
@@ -258,6 +288,22 @@ namespace FigCrafterApp.Models
                     canvas.DrawRect(handleRect, handleStrokePaint);
                 }
             }
+        }
+
+        private void DrawArrowHead(SKCanvas canvas, SKPaint paint, float x, float y, float angle, float length, float arrowAngle)
+        {
+            float x1 = x + length * (float)Math.Cos(angle + arrowAngle);
+            float y1 = y + length * (float)Math.Sin(angle + arrowAngle);
+            float x2 = x + length * (float)Math.Cos(angle - arrowAngle);
+            float y2 = y + length * (float)Math.Sin(angle - arrowAngle);
+
+            using var path = new SKPath();
+            path.MoveTo(x, y);
+            path.LineTo(x1, y1);
+            path.LineTo(x2, y2);
+            path.Close();
+
+            canvas.DrawPath(path, paint);
         }
 
         public override bool HitTest(SKPoint point)

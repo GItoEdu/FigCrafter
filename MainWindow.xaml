@@ -216,6 +216,23 @@
                         <TextBox Grid.Column="1" Text="{Binding Height, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
                     </Grid>
                     
+                    <!-- 直線オブジェクト専用UI -->
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=LineObject}" Value="Visible">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Text="矢印設定:" Margin="0,10,0,5" Foreground="Gray"/>
+                        <CheckBox Content="始点に矢印を表示" IsChecked="{Binding HasArrowStart, UpdateSourceTrigger=PropertyChanged}" Foreground="White" Margin="0,5"/>
+                        <CheckBox Content="終点に矢印を表示" IsChecked="{Binding HasArrowEnd, UpdateSourceTrigger=PropertyChanged}" Foreground="White" Margin="0,5"/>
+                    </StackPanel>
+
                     <!-- テキストオブジェクト専用UI -->
                     <StackPanel>
                         <StackPanel.Style>
