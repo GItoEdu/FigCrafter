@@ -25,6 +25,8 @@ namespace FigCrafterApp.ViewModels
         private DrawingTool _currentTool = DrawingTool.Select;
         private ObservableCollection<GraphicObject> _graphicObjects = new();
         private GraphicObject? _selectedObject;
+        private ObservableCollection<GraphicObject> _selectedObjects = new(); // 複数選択
+        private GraphicObject? _clipboard; // コピー用クリップボード
 
         public event EventHandler? InvalidateRequested;
 
@@ -32,6 +34,15 @@ namespace FigCrafterApp.ViewModels
         public ICommand SendToBackCommand { get; }
         public ICommand BringForwardCommand { get; }
         public ICommand SendBackwardCommand { get; }
+        public ICommand DeleteSelectedCommand { get; }
+        public ICommand CopyCommand { get; }
+        public ICommand PasteCommand { get; }
+        public ICommand AlignLeftCommand { get; }
+        public ICommand AlignRightCommand { get; }
+        public ICommand AlignTopCommand { get; }
+        public ICommand AlignBottomCommand { get; }
+        public ICommand AlignCenterHCommand { get; }
+        public ICommand AlignCenterVCommand { get; }
 
         public void Invalidate() => InvalidateRequested?.Invoke(this, EventArgs.Empty);
 
@@ -53,6 +64,9 @@ namespace FigCrafterApp.ViewModels
             set => SetProperty(ref _graphicObjects, value);
         }
 
+        /// <summary>
+        /// プロパティパネル用の単一選択オブジェクト（最後に選択されたもの）
+        /// </summary>
         public GraphicObject? SelectedObject
         {
             get => _selectedObject;
@@ -73,10 +87,76 @@ namespace FigCrafterApp.ViewModels
             }
         }
 
+        /// <summary>
+        /// 複数選択されたオブジェクトのコレクション
+        /// </summary>
+        public ObservableCollection<GraphicObject> SelectedObjects
+        {
+            get => _selectedObjects;
+            set => SetProperty(ref _selectedObjects, value);
+        }
+
         private void OnSelectedObjectPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             // 選択オブジェクトのプロパティ変更時は再描画を要求する
             Invalidate();
+        }
+
+        // --- 選択操作の公開メソッド ---
+
+        /// <summary>
+        /// 単一選択（既存の選択をクリアして1つだけ選択）
+        /// </summary>
+        public void SelectObject(GraphicObject? obj)
+        {
+            ClearSelection();
+            if (obj != null)
+            {
+                obj.IsSelected = true;
+                _selectedObjects.Add(obj);
+                SelectedObject = obj;
+            }
+            else
+            {
+                SelectedObject = null;
+            }
+            Invalidate();
+        }
+
+        /// <summary>
+        /// トグル選択（Shift+クリック用：追加 or 解除）
+        /// </summary>
+        public void ToggleSelectObject(GraphicObject obj)
+        {
+            if (_selectedObjects.Contains(obj))
+            {
+                // 選択解除
+                obj.IsSelected = false;
+                _selectedObjects.Remove(obj);
+                // SelectedObject を更新（残っていれば最後の要素）
+                SelectedObject = _selectedObjects.Count > 0 ? _selectedObjects[^1] : null;
+            }
+            else
+            {
+                // 追加選択
+                obj.IsSelected = true;
+                _selectedObjects.Add(obj);
+                SelectedObject = obj;
+            }
+            Invalidate();
+        }
+
+        /// <summary>
+        /// 全選択解除
+        /// </summary>
+        public void ClearSelection()
+        {
+            foreach (var obj in _selectedObjects)
+            {
+                obj.IsSelected = false;
+            }
+            _selectedObjects.Clear();
+            SelectedObject = null;
         }
 
         public double WidthMm
@@ -114,6 +194,15 @@ namespace FigCrafterApp.ViewModels
             SendToBackCommand = new RelayCommand(_ => SendToBack());
             BringForwardCommand = new RelayCommand(_ => BringForward());
             SendBackwardCommand = new RelayCommand(_ => SendBackward());
+            DeleteSelectedCommand = new RelayCommand(_ => DeleteSelected());
+            CopyCommand = new RelayCommand(_ => CopySelected());
+            PasteCommand = new RelayCommand(_ => Paste());
+            AlignLeftCommand = new RelayCommand(_ => AlignSelected(AlignDirection.Left));
+            AlignRightCommand = new RelayCommand(_ => AlignSelected(AlignDirection.Right));
+            AlignTopCommand = new RelayCommand(_ => AlignSelected(AlignDirection.Top));
+            AlignBottomCommand = new RelayCommand(_ => AlignSelected(AlignDirection.Bottom));
+            AlignCenterHCommand = new RelayCommand(_ => AlignSelected(AlignDirection.CenterH));
+            AlignCenterVCommand = new RelayCommand(_ => AlignSelected(AlignDirection.CenterV));
         }
 
         public CanvasViewModel(string title) : this()
@@ -163,6 +252,192 @@ namespace FigCrafterApp.ViewModels
                 GraphicObjects.Move(index, index - 1);
                 Invalidate();
             }
+        }
+
+        // --- 削除 ---
+        private void DeleteSelected()
+        {
+            if (_selectedObjects.Count == 0) return;
+            // 複数選択対応: 選択中の全オブジェクトを削除
+            var toRemove = _selectedObjects.ToList();
+            foreach (var obj in toRemove)
+            {
+                obj.IsSelected = false;
+                GraphicObjects.Remove(obj);
+            }
+            _selectedObjects.Clear();
+            SelectedObject = null;
+            Invalidate();
+        }
+
+        // --- コピー＆ペースト ---
+        private void CopySelected()
+        {
+            if (SelectedObject == null) return;
+            _clipboard = SelectedObject.Clone();
+        }
+
+        private void Paste()
+        {
+            if (_clipboard == null) return;
+            var pasted = _clipboard.Clone();
+            // ペースト位置を少しずらす
+            pasted.X += 10;
+            pasted.Y += 10;
+            if (pasted is LineObject lineObj)
+            {
+                lineObj.EndX += 10;
+                lineObj.EndY += 10;
+            }
+            pasted.IsSelected = false;
+            GraphicObjects.Add(pasted);
+            // ペーストしたオブジェクトを選択状態にする
+            if (SelectedObject != null) SelectedObject.IsSelected = false;
+            pasted.IsSelected = true;
+            SelectedObject = pasted;
+            // 次回ペースト時にさらにずれるようにクリップボードも更新
+            _clipboard = pasted.Clone();
+            Invalidate();
+        }
+
+        // --- 整列 ---
+        private enum AlignDirection { Left, Right, Top, Bottom, CenterH, CenterV }
+
+        /// <summary>
+        /// オブジェクトの左端X座標を取得
+        /// </summary>
+        private float GetLeftEdge(GraphicObject obj)
+        {
+            if (obj is LineObject line) return Math.Min(line.X, line.EndX);
+            return obj.X;
+        }
+
+        /// <summary>
+        /// オブジェクトの右端X座標を取得
+        /// </summary>
+        private float GetRightEdge(GraphicObject obj)
+        {
+            if (obj is LineObject line) return Math.Max(line.X, line.EndX);
+            return obj.X + obj.Width;
+        }
+
+        /// <summary>
+        /// オブジェクトの上端Y座標を取得
+        /// </summary>
+        private float GetTopEdge(GraphicObject obj)
+        {
+            if (obj is LineObject line) return Math.Min(line.Y, line.EndY);
+            return obj.Y;
+        }
+
+        /// <summary>
+        /// オブジェクトの下端Y座標を取得
+        /// </summary>
+        private float GetBottomEdge(GraphicObject obj)
+        {
+            if (obj is LineObject line) return Math.Max(line.Y, line.EndY);
+            return obj.Y + obj.Height;
+        }
+
+        /// <summary>
+        /// オブジェクトを水平方向にオフセット移動
+        /// </summary>
+        private void MoveObjectX(GraphicObject obj, float offsetX)
+        {
+            obj.X += offsetX;
+            if (obj is LineObject line) line.EndX += offsetX;
+        }
+
+        /// <summary>
+        /// オブジェクトを垂直方向にオフセット移動
+        /// </summary>
+        private void MoveObjectY(GraphicObject obj, float offsetY)
+        {
+            obj.Y += offsetY;
+            if (obj is LineObject line) line.EndY += offsetY;
+        }
+
+        private void AlignSelected(AlignDirection direction)
+        {
+            if (_selectedObjects.Count < 2) return; // 2つ以上選択されている場合のみ整列
+
+            var objects = _selectedObjects.ToList();
+
+            switch (direction)
+            {
+                case AlignDirection.Left:
+                {
+                    // 基準: 最も左端にあるオブジェクトのX
+                    float targetX = objects.Min(o => GetLeftEdge(o));
+                    foreach (var obj in objects)
+                    {
+                        float offsetX = targetX - GetLeftEdge(obj);
+                        MoveObjectX(obj, offsetX);
+                    }
+                    break;
+                }
+
+                case AlignDirection.Right:
+                {
+                    // 基準: 最も右端にあるオブジェクトのX
+                    float targetX = objects.Max(o => GetRightEdge(o));
+                    foreach (var obj in objects)
+                    {
+                        float offsetX = targetX - GetRightEdge(obj);
+                        MoveObjectX(obj, offsetX);
+                    }
+                    break;
+                }
+
+                case AlignDirection.Top:
+                {
+                    float targetY = objects.Min(o => GetTopEdge(o));
+                    foreach (var obj in objects)
+                    {
+                        float offsetY = targetY - GetTopEdge(obj);
+                        MoveObjectY(obj, offsetY);
+                    }
+                    break;
+                }
+
+                case AlignDirection.Bottom:
+                {
+                    float targetY = objects.Max(o => GetBottomEdge(o));
+                    foreach (var obj in objects)
+                    {
+                        float offsetY = targetY - GetBottomEdge(obj);
+                        MoveObjectY(obj, offsetY);
+                    }
+                    break;
+                }
+
+                case AlignDirection.CenterH:
+                {
+                    // 基準: 全オブジェクトの水平中心の平均
+                    float avgCenterX = objects.Average(o => (GetLeftEdge(o) + GetRightEdge(o)) / 2);
+                    foreach (var obj in objects)
+                    {
+                        float objCenterX = (GetLeftEdge(obj) + GetRightEdge(obj)) / 2;
+                        float offsetX = avgCenterX - objCenterX;
+                        MoveObjectX(obj, offsetX);
+                    }
+                    break;
+                }
+
+                case AlignDirection.CenterV:
+                {
+                    float avgCenterY = objects.Average(o => (GetTopEdge(o) + GetBottomEdge(o)) / 2);
+                    foreach (var obj in objects)
+                    {
+                        float objCenterY = (GetTopEdge(obj) + GetBottomEdge(obj)) / 2;
+                        float offsetY = avgCenterY - objCenterY;
+                        MoveObjectY(obj, offsetY);
+                    }
+                    break;
+                }
+            }
+
+            Invalidate();
         }
     }
 }

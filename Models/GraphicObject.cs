@@ -41,6 +41,21 @@ namespace FigCrafterApp.Models
 
         public abstract void Draw(SKCanvas canvas);
         public abstract bool HitTest(SKPoint point);
+        public abstract GraphicObject Clone();
+
+        /// <summary>
+        /// 共通プロパティを対象オブジェクトにコピーするヘルパー
+        /// </summary>
+        protected void CopyPropertiesTo(GraphicObject target)
+        {
+            target.X = X;
+            target.Y = Y;
+            target.Width = Width;
+            target.Height = Height;
+            target.FillColor = FillColor;
+            target.StrokeColor = StrokeColor;
+            target.StrokeWidth = StrokeWidth;
+        }
     }
 
     public class RectangleObject : GraphicObject
@@ -70,6 +85,13 @@ namespace FigCrafterApp.Models
         {
             var rect = new SKRect(X, Y, X + Width, Y + Height);
             return rect.Contains(point.X, point.Y);
+        }
+
+        public override GraphicObject Clone()
+        {
+            var clone = new RectangleObject();
+            CopyPropertiesTo(clone);
+            return clone;
         }
 
         protected void DrawSelectionBox(SKCanvas canvas, SKRect rect)
@@ -153,6 +175,13 @@ namespace FigCrafterApp.Models
             float dx = point.X - cx;
             float dy = point.Y - cy;
             return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.0f;
+        }
+
+        public override GraphicObject Clone()
+        {
+            var clone = new EllipseObject();
+            CopyPropertiesTo(clone);
+            return clone;
         }
 
         protected void DrawSelectionBox(SKCanvas canvas, SKRect rect)
@@ -246,6 +275,15 @@ namespace FigCrafterApp.Models
             float threshold = Math.Max(5.0f, StrokeWidth / 2 + 2);
             return distSq <= threshold * threshold;
         }
+
+        public override GraphicObject Clone()
+        {
+            var clone = new LineObject();
+            CopyPropertiesTo(clone);
+            clone.EndX = EndX;
+            clone.EndY = EndY;
+            return clone;
+        }
     }
 
     public class TextObject : GraphicObject
@@ -303,6 +341,16 @@ namespace FigCrafterApp.Models
 
             var rect = new SKRect(X, Y, X + bounds.Width, Y + bounds.Height);
             return rect.Contains(point.X, point.Y);
+        }
+
+        public override GraphicObject Clone()
+        {
+            var clone = new TextObject();
+            CopyPropertiesTo(clone);
+            clone.Text = Text;
+            clone.FontFamily = FontFamily;
+            clone.FontSize = FontSize;
+            return clone;
         }
     }
 }

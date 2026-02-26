@@ -266,6 +266,22 @@
                         <Button Background="Blue" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Blue" Height="20" Margin="2" BorderThickness="0"/>
                         <Button Background="Transparent" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Transparent" Height="20" Margin="2" BorderThickness="1" BorderBrush="Gray" Content="✕" Foreground="White"/>
                     </UniformGrid>
+
+                    <Separator Margin="0,15" Background="#FF3E3E42"/>
+
+                    <TextBlock Text="整列:" Margin="0,0,0,5" Foreground="Gray"/>
+                    <UniformGrid Columns="3" Margin="0,0,0,5">
+                        <Button Content="⬅ 左" Command="{Binding DataContext.ActiveDocument.AlignLeftCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                        <Button Content="↔ 中央" Command="{Binding DataContext.ActiveDocument.AlignCenterHCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                        <Button Content="➡ 右" Command="{Binding DataContext.ActiveDocument.AlignRightCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                        <Button Content="⬆ 上" Command="{Binding DataContext.ActiveDocument.AlignTopCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                        <Button Content="↕ 中央" Command="{Binding DataContext.ActiveDocument.AlignCenterVCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                        <Button Content="⬇ 下" Command="{Binding DataContext.ActiveDocument.AlignBottomCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                    </UniformGrid>
+
+                    <Separator Margin="0,15" Background="#FF3E3E42"/>
+
+                    <Button Content="🗑 選択オブジェクトを削除" Command="{Binding DataContext.ActiveDocument.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,5" Padding="5" Background="#FF6B2222" Foreground="White" BorderThickness="0"/>
                     
                 </StackPanel>
             </StackPanel>

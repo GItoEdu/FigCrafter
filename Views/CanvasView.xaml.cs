@@ -17,12 +17,16 @@ namespace FigCrafterApp.Views
         // ドラッグ・変形の状態管理用
         private bool _isDragging = false;
         private bool _isResizing = false;
-        private int _resizeHandleIndex = -1; // 0:TopLeft, 1:TopRight, 2:BottomRight, 3:BottomLeft
+        private bool _isRangeSelecting = false; // 範囲選択中フラグ
+        private SKRect _selectionRect; // 範囲選択の矩形
+        private int _resizeHandleIndex = -1;
         private SKPoint _lastMousePos;
 
         public CanvasView()
         {
             InitializeComponent();
+            // マウスクリック時にキーボードフォーカスを取得
+            this.MouseDown += (s, e) => Keyboard.Focus(this);
         }
 
         private void SkiaElement_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -56,6 +60,27 @@ namespace FigCrafterApp.Views
             }
 
             _tempObject?.Draw(canvas);
+
+            // 範囲選択矩形の描画
+            if (_isRangeSelecting)
+            {
+                using var fillPaint = new SKPaint
+                {
+                    Color = new SKColor(0, 122, 204, 40), // 半透明の青
+                    Style = SKPaintStyle.Fill,
+                    IsAntialias = true
+                };
+                using var strokePaint = new SKPaint
+                {
+                    Color = new SKColor(0, 122, 204, 180),
+                    Style = SKPaintStyle.Stroke,
+                    StrokeWidth = 1,
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 4, 4 }, 0),
+                    IsAntialias = true
+                };
+                canvas.DrawRect(_selectionRect, fillPaint);
+                canvas.DrawRect(_selectionRect, strokePaint);
+            }
         }
 
         private void SkiaElement_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -92,18 +117,39 @@ namespace FigCrafterApp.Views
                     }
                 }
 
-                // 選択状態の更新
-                if (_selectedObject != hitObject)
+                bool isShiftHeld = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+
+                if (hitObject != null)
                 {
-                    if (_selectedObject != null) _selectedObject.IsSelected = false;
-                    _selectedObject = hitObject;
-                    if (_selectedObject != null) _selectedObject.IsSelected = true;
-                    
-                    vm.SelectedObject = _selectedObject; // ViewModel と同期
-                    SkiaElement.InvalidateVisual();
+                    if (isShiftHeld)
+                    {
+                        // Shift+クリック: トグル選択
+                        vm.ToggleSelectObject(hitObject);
+                        _selectedObject = vm.SelectedObject;
+                    }
+                    else
+                    {
+                        // 通常クリック: 単一選択
+                        vm.SelectObject(hitObject);
+                        _selectedObject = hitObject;
+                    }
                 }
+                else
+                {
+                    if (!isShiftHeld)
+                    {
+                        // 何もない場所をクリック: 全選択解除し、範囲選択を開始
+                        vm.ClearSelection();
+                        _selectedObject = null;
+                        _isRangeSelecting = true;
+                        _selectionRect = new SKRect(_startPoint.X, _startPoint.Y, _startPoint.X, _startPoint.Y);
+                        SkiaElement.CaptureMouse();
+                    }
+                }
+
+                SkiaElement.InvalidateVisual();
                 
-                if (_selectedObject != null)
+                if (_selectedObject != null && !isShiftHeld)
                 {
                     _isDragging = true;
                     SkiaElement.CaptureMouse();
@@ -123,11 +169,8 @@ namespace FigCrafterApp.Views
                 };
                 
                 vm.GraphicObjects.Add(textObj);
-                
-                if (_selectedObject != null) _selectedObject.IsSelected = false;
+                vm.SelectObject(textObj);
                 _selectedObject = textObj;
-                _selectedObject.IsSelected = true;
-                vm.SelectedObject = _selectedObject; // ViewModel と同期
                 
                 vm.CurrentTool = DrawingTool.Select;
                 SkiaElement.InvalidateVisual();
@@ -215,6 +258,19 @@ namespace FigCrafterApp.Views
                 return;
             }
 
+            // 範囲選択中
+            if (_isRangeSelecting)
+            {
+                _selectionRect = new SKRect(
+                    Math.Min(_startPoint.X, currentPoint.X),
+                    Math.Min(_startPoint.Y, currentPoint.Y),
+                    Math.Max(_startPoint.X, currentPoint.X),
+                    Math.Max(_startPoint.Y, currentPoint.Y)
+                );
+                SkiaElement.InvalidateVisual();
+                return;
+            }
+
             // 新規図形の描画中
             if (_tempObject == null) return;
 
@@ -250,6 +306,36 @@ namespace FigCrafterApp.Views
             {
                 _isDragging = false;
                 SkiaElement.ReleaseMouseCapture();
+                return;
+            }
+
+            // 範囲選択の確定
+            if (_isRangeSelecting)
+            {
+                _isRangeSelecting = false;
+                SkiaElement.ReleaseMouseCapture();
+
+                if (DataContext is CanvasViewModel vmSelect)
+                {
+                    vmSelect.ClearSelection();
+                    // 範囲に完全に含まれるオブジェクトを選択
+                    foreach (var obj in vmSelect.GraphicObjects)
+                    {
+                        if (IsObjectFullyContained(obj, _selectionRect))
+                        {
+                            obj.IsSelected = true;
+                            vmSelect.SelectedObjects.Add(obj);
+                        }
+                    }
+                    // SelectedObject を最後の選択オブジェクトに設定
+                    if (vmSelect.SelectedObjects.Count > 0)
+                    {
+                        vmSelect.SelectedObject = vmSelect.SelectedObjects[^1];
+                        _selectedObject = vmSelect.SelectedObject;
+                    }
+                }
+
+                SkiaElement.InvalidateVisual();
                 return;
             }
 
@@ -308,6 +394,15 @@ namespace FigCrafterApp.Views
 
         private SKRect GetBoundingRect(GraphicObject obj)
         {
+            if (obj is LineObject lineObj)
+            {
+                return new SKRect(
+                    Math.Min(lineObj.X, lineObj.EndX),
+                    Math.Min(lineObj.Y, lineObj.EndY),
+                    Math.Max(lineObj.X, lineObj.EndX),
+                    Math.Max(lineObj.Y, lineObj.EndY)
+                );
+            }
             if (obj is TextObject textObj)
             {
                 using var paint = new SKPaint
@@ -320,6 +415,47 @@ namespace FigCrafterApp.Views
                 return new SKRect(obj.X, obj.Y, obj.X + bounds.Width, obj.Y + bounds.Height);
             }
             return new SKRect(obj.X, obj.Y, obj.X + obj.Width, obj.Y + obj.Height);
+        }
+
+        /// <summary>
+        /// オブジェクトが選択矩形に完全に含まれるか判定
+        /// </summary>
+        private bool IsObjectFullyContained(GraphicObject obj, SKRect selectionRect)
+        {
+            var objRect = GetBoundingRect(obj);
+            return selectionRect.Contains(objRect);
+        }
+
+        private void CanvasView_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (DataContext is not CanvasViewModel vm) return;
+
+            if (e.Key == Key.Delete)
+            {
+                if (vm.DeleteSelectedCommand.CanExecute(null))
+                {
+                    vm.DeleteSelectedCommand.Execute(null);
+                    // CanvasView側の選択状態もクリア
+                    _selectedObject = null;
+                }
+                e.Handled = true;
+            }
+            else if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                if (vm.CopyCommand.CanExecute(null))
+                    vm.CopyCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                if (vm.PasteCommand.CanExecute(null))
+                {
+                    vm.PasteCommand.Execute(null);
+                    // ペースト後の選択状態をCanvasView側にも反映
+                    _selectedObject = vm.SelectedObject;
+                }
+                e.Handled = true;
+            }
         }
     }
 }
