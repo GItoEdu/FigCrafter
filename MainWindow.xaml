@@ -168,6 +168,8 @@
                                  IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Line}}"/>
                     <RadioButton Content="テキスト" Style="{StaticResource ToolButtonStyle}" 
                                  IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Text}}"/>
+                    <RadioButton Content="消しゴム" Style="{StaticResource ToolButtonStyle}" 
+                                 IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Eraser}}"/>
                 </UniformGrid>
 
                 <Separator Margin="0,15" Background="#FF3E3E42"/>
@@ -404,6 +406,70 @@
                     <Button Content="🗑 選択オブジェクトを削除" Command="{Binding DataContext.ActiveDocument.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,5" Padding="5" Background="#FF6B2222" Foreground="White" BorderThickness="0"/>
                     
                 </StackPanel>
+
+                <Separator Margin="0,15" Background="#FF3E3E42"/>
+
+                <!-- レイヤーパネル -->
+                <TextBlock Text="レイヤーパネル" FontWeight="Bold" Margin="0,5,0,10" Foreground="White" FontSize="14"/>
+                <Grid Height="150" Margin="0,0,0,10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <UniformGrid Columns="3" Margin="0,0,0,5">
+                        <Button Content="➕ 追加" Command="{Binding ActiveDocument.AddLayerCommand}" Margin="2" Padding="2" Background="#FF007ACC" Foreground="White" BorderThickness="0"/>
+                        <Button Content="🗑 削除" Command="{Binding ActiveDocument.RemoveLayerCommand}" Margin="2" Padding="2" Background="#FF6B2222" Foreground="White" BorderThickness="0"/>
+                        <Button Content="↑ 上へ" Command="{Binding ActiveDocument.MoveLayerUpCommand}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="選択したレイヤーを上に移動"/>
+                    </UniformGrid>
+
+                    <ListBox Grid.Row="1" ItemsSource="{Binding ActiveDocument.Layers}" SelectedItem="{Binding ActiveDocument.ActiveLayer, Mode=TwoWay}" Background="#FF3E3E42" BorderThickness="0" Foreground="White">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <ToggleButton Grid.Column="0" IsChecked="{Binding IsVisible}" Margin="0,0,5,0" Width="20" Height="20" Background="Transparent" BorderThickness="0" VerticalAlignment="Center" ToolTip="表示/非表示の切り替え">
+                                        <ToggleButton.Style>
+                                            <Style TargetType="ToggleButton">
+                                                <Setter Property="Content" Value="👁" />
+                                                <Setter Property="Foreground" Value="White" />
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsChecked" Value="False">
+                                                        <Setter Property="Content" Value="ー" />
+                                                        <Setter Property="Foreground" Value="Gray" />
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ToggleButton.Style>
+                                    </ToggleButton>
+                                    
+                                    <ToggleButton Grid.Column="1" IsChecked="{Binding IsLocked}" Margin="0,0,5,0" Width="20" Height="20" Background="Transparent" BorderThickness="0" VerticalAlignment="Center" ToolTip="ロック/解除の切り替え">
+                                        <ToggleButton.Style>
+                                            <Style TargetType="ToggleButton">
+                                                <Setter Property="Content" Value="🔓" />
+                                                <Setter Property="Foreground" Value="White" />
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsChecked" Value="True">
+                                                        <Setter Property="Content" Value="🔒" />
+                                                        <Setter Property="Foreground" Value="Gray" />
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ToggleButton.Style>
+                                    </ToggleButton>
+                                    
+                                    <TextBox Grid.Column="2" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" Foreground="White" BorderThickness="0" VerticalAlignment="Center" Padding="2"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+
             </StackPanel>
             </ScrollViewer>
         </Grid>

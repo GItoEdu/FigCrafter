@@ -36,6 +36,10 @@ namespace FigCrafterApp.Views
         private SKPaint? _cachedCropGuidePaintNormal;
         private SKPaint? _cachedCropGuidePaintGray;
 
+        // 消しゴム用
+        private bool _isErasing = false;
+        private ImageObject? _eraserTarget = null;
+
         private SKPaint GetCachedCropGuidePaint(bool isGrayscale)
         {
             if (isGrayscale)
@@ -104,6 +108,8 @@ namespace FigCrafterApp.Views
             _isResizing = false;
             _isRangeSelecting = false;
             _isCropping = false;
+            _isErasing = false;
+            _eraserTarget = null;
             _resizeHandleIndex = -1;
             _cropHandleIndex = -1;
 
@@ -126,9 +132,13 @@ namespace FigCrafterApp.Views
 
             if (DataContext is CanvasViewModel vm)
             {
-                foreach (var obj in vm.GraphicObjects)
+                foreach (var layer in vm.Layers)
                 {
-                    obj.Draw(canvas);
+                    if (!layer.IsVisible) continue;
+                    foreach (var obj in layer.GraphicObjects)
+                    {
+                        obj.Draw(canvas);
+                    }
                 }
             }
 
@@ -208,6 +218,36 @@ namespace FigCrafterApp.Views
             _startPoint = new SKPoint((float)p.X, (float)p.Y);
             _lastMousePos = _startPoint;
 
+            if (vm.CurrentTool == DrawingTool.Eraser)
+            {
+                // 消しゴムツール: クリック位置のImageObjectを検索して消しゴム開始
+                ImageObject? targetImg = null;
+                for (int layerIndex = vm.Layers.Count - 1; layerIndex >= 0; layerIndex--)
+                {
+                    var layer = vm.Layers[layerIndex];
+                    if (!layer.IsVisible || layer.IsLocked) continue;
+                    for (int i = layer.GraphicObjects.Count - 1; i >= 0; i--)
+                    {
+                        if (layer.GraphicObjects[i] is ImageObject img && img.HitTest(_startPoint))
+                        {
+                            targetImg = img;
+                            break;
+                        }
+                    }
+                    if (targetImg != null) break;
+                }
+
+                if (targetImg != null)
+                {
+                    _isErasing = true;
+                    _eraserTarget = targetImg;
+                    ApplyEraserAtPoint(targetImg, _startPoint);
+                    SkiaElement.CaptureMouse();
+                    ThrottledInvalidateVisual();
+                }
+                return;
+            }
+
             if (vm.CurrentTool == DrawingTool.Select)
             {
                 // 既に選択されているオブジェクトがあればハンドルのヒットテストを優先
@@ -241,13 +281,21 @@ namespace FigCrafterApp.Views
 
                 // 選択ツール: 逆順（前面から背面）でHitTest
                 GraphicObject? hitObject = null;
-                for (int i = vm.GraphicObjects.Count - 1; i >= 0; i--)
+                // 上にあるレイヤーから順にヒットテストを試行
+                for (int layerIndex = vm.Layers.Count - 1; layerIndex >= 0; layerIndex--)
                 {
-                    if (vm.GraphicObjects[i].HitTest(_startPoint))
+                    var layer = vm.Layers[layerIndex];
+                    if (!layer.IsVisible || layer.IsLocked) continue;
+
+                    for (int i = layer.GraphicObjects.Count - 1; i >= 0; i--)
                     {
-                        hitObject = vm.GraphicObjects[i];
-                        break;
+                        if (layer.GraphicObjects[i].HitTest(_startPoint))
+                        {
+                            hitObject = layer.GraphicObjects[i];
+                            break;
+                        }
                     }
+                    if (hitObject != null) break;
                 }
 
                 bool isShiftHeld = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
@@ -311,7 +359,10 @@ namespace FigCrafterApp.Views
                     FillColor = SKColors.Black 
                 };
                 
-                vm.GraphicObjects.Add(textObj);
+                if (vm.ActiveLayer != null)
+                {
+                    vm.ExecuteCommand(new AddObjectCommand(vm.ActiveLayer.GraphicObjects, textObj));
+                }
                 vm.SelectObject(textObj);
                 _selectedObject = textObj;
                 
@@ -343,6 +394,14 @@ namespace FigCrafterApp.Views
             var dx = currentPoint.X - _lastMousePos.X;
             var dy = currentPoint.Y - _lastMousePos.Y;
             _lastMousePos = currentPoint;
+
+            // 消しゴムドラッグ中
+            if (_isErasing && _eraserTarget != null)
+            {
+                ApplyEraserAtPoint(_eraserTarget, currentPoint);
+                ThrottledInvalidateVisual();
+                return;
+            }
 
             // リサイズ中でなければカーソル更新
             if (!_isResizing && !_isDragging && !_isRangeSelecting && !_isCropping && _selectedObject != null)
@@ -593,6 +652,16 @@ namespace FigCrafterApp.Views
         {
             if (DataContext is not CanvasViewModel vmObj) return;
 
+            // 消しゴム操作終了
+            if (_isErasing)
+            {
+                _isErasing = false;
+                _eraserTarget = null;
+                SkiaElement.ReleaseMouseCapture();
+                SkiaElement.InvalidateVisual();
+                return;
+            }
+
             if (_isCropping)
             {
                 _isCropping = false;
@@ -664,12 +733,16 @@ namespace FigCrafterApp.Views
                 {
                     vmSelect.ClearSelection();
                     // 範囲に完全に含まれるオブジェクトを選択
-                    foreach (var obj in vmSelect.GraphicObjects)
+                    foreach (var layer in vmSelect.Layers)
                     {
-                        if (IsObjectFullyContained(obj, _selectionRect))
+                        if (!layer.IsVisible || layer.IsLocked) continue;
+                        foreach (var obj in layer.GraphicObjects)
                         {
-                            obj.IsSelected = true;
-                            vmSelect.SelectedObjects.Add(obj);
+                            if (IsObjectFullyContained(obj, _selectionRect))
+                            {
+                                obj.IsSelected = true;
+                                vmSelect.SelectedObjects.Add(obj);
+                            }
                         }
                     }
                     // SelectedObject を最後の選択オブジェクトに設定
@@ -686,14 +759,14 @@ namespace FigCrafterApp.Views
 
             if (_tempObject == null) return;
 
-            if (DataContext is CanvasViewModel vmAdd)
+            if (DataContext is CanvasViewModel vmAdd && vmAdd.ActiveLayer != null)
             {
                 // 一時オブジェクトを本番の色に変更して追加
                 if (_tempObject is RectangleObject) _tempObject.FillColor = SKColors.SkyBlue;
                 if (_tempObject is EllipseObject) _tempObject.FillColor = SKColors.Salmon;
                 if (_tempObject is LineObject) _tempObject.StrokeColor = SKColors.Black;
                 
-                vmAdd.ExecuteCommand(new AddObjectCommand(vmAdd.GraphicObjects, _tempObject));
+                vmAdd.ExecuteCommand(new AddObjectCommand(vmAdd.ActiveLayer.GraphicObjects, _tempObject));
             }
 
             _tempObject = null;
@@ -934,6 +1007,25 @@ namespace FigCrafterApp.Views
             {
                 return null;
             }
+        }
+
+        /// <summary>
+        /// 消しゴム操作：キャンバス座標を画像ピクセル座標に変換してApplyEraserを呼び出す
+        /// </summary>
+        private void ApplyEraserAtPoint(ImageObject imgObj, SKPoint canvasPoint)
+        {
+            if (imgObj.ImageData == null) return;
+
+            // キャンバス座標 -> 画像ピクセル座標に変換
+            float scaleX = imgObj.CropWidth / imgObj.Width;
+            float scaleY = imgObj.CropHeight / imgObj.Height;
+            float pixelX = imgObj.CropX + (canvasPoint.X - imgObj.X) * scaleX;
+            float pixelY = imgObj.CropY + (canvasPoint.Y - imgObj.Y) * scaleY;
+
+            // 消しゴムブラシサイズもピクセル座標系での半径に変換
+            float pixelRadius = imgObj.EraserSize * scaleX;
+
+            imgObj.ApplyEraser(pixelX, pixelY, pixelRadius);
         }
     }
 }

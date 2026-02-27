@@ -666,7 +666,56 @@ namespace FigCrafterApp.Models
     public class ImageObject : GraphicObject, IDisposable
     {
         private SKBitmap? _imageData;
+        private SKBitmap? _eraserMask; // 消しゴム用アルファマスク（白=不透明, 黒=透過）
         private bool _isGrayscale = false;
+        private float _eraserSize = 20f; // 消しゴムブラシサイズ
+
+        /// <summary>
+        /// 消しゴム用アルファマスク。nullの場合はマスクなし。
+        /// 白(255)=表示、黒(0)=透過。
+        /// </summary>
+        [JsonIgnore]
+        public SKBitmap? EraserMask
+        {
+            get => _eraserMask;
+            set => _eraserMask = value;
+        }
+
+        public float EraserSize
+        {
+            get => _eraserSize;
+            set => SetProperty(ref _eraserSize, value);
+        }
+
+        /// <summary>
+        /// 消しゴムマスクを初期化（全面白=不透明）
+        /// </summary>
+        public void EnsureEraserMask()
+        {
+            if (_eraserMask != null) return;
+            if (_imageData == null) return;
+            _eraserMask = new SKBitmap(_imageData.Width, _imageData.Height, SKColorType.Alpha8, SKAlphaType.Premul);
+            using var canvas = new SKCanvas(_eraserMask);
+            canvas.Clear(new SKColor(0, 0, 0, 255)); // Alpha8で255=完全不透明
+        }
+
+        /// <summary>
+        /// 消しゴム操作：指定ピクセル座標を中心に半径radiusの円で透過を書き込む
+        /// </summary>
+        public void ApplyEraser(float pixelX, float pixelY, float radius)
+        {
+            EnsureEraserMask();
+            if (_eraserMask == null) return;
+            using var canvas = new SKCanvas(_eraserMask);
+            using var paint = new SKPaint
+            {
+                Color = new SKColor(0, 0, 0, 0), // 透明を書き込み
+                IsAntialias = true,
+                Style = SKPaintStyle.Fill,
+                BlendMode = SKBlendMode.Src // 既存値を上書き
+            };
+            canvas.DrawCircle(pixelX, pixelY, radius, paint);
+        }
 
         public bool IsGrayscale
         {
@@ -794,7 +843,30 @@ namespace FigCrafterApp.Models
             var srcRect = new SKRect(CropX, CropY, CropX + CropWidth, CropY + CropHeight);
 
             UpdateCachedPaint();
-            canvas.DrawBitmap(_imageData, srcRect, destRect, _cachedPaint);
+
+            // 消しゴムマスクがある場合はマスク適用描画
+            if (_eraserMask != null)
+            {
+                // オフスクリーンレイヤーに画像を描画
+                canvas.SaveLayer();
+                canvas.DrawBitmap(_imageData, srcRect, destRect, _cachedPaint);
+
+                // マスクをDstIn合成モードで適用（マスクの透明部分が画像を透過にする）
+                using var maskPaint = new SKPaint
+                {
+                    BlendMode = SKBlendMode.DstIn, // dst のアルファをマスクで制限
+                    IsAntialias = true
+                };
+                // マスクのソース矩形（クロップ対応）
+                var maskSrcRect = new SKRect(CropX, CropY, CropX + CropWidth, CropY + CropHeight);
+                canvas.DrawBitmap(_eraserMask, maskSrcRect, destRect, maskPaint);
+
+                canvas.Restore(); // SaveLayerの復元
+            }
+            else
+            {
+                canvas.DrawBitmap(_imageData, srcRect, destRect, _cachedPaint);
+            }
 
             if (IsSelected)
             {
@@ -847,9 +919,14 @@ namespace FigCrafterApp.Models
             clone.CropY = CropY;
             clone.CropWidth = CropWidth;
             clone.CropHeight = CropHeight;
+            clone.EraserSize = EraserSize;
             if (_imageData != null)
             {
                 clone._imageData = _imageData.Copy();
+            }
+            if (_eraserMask != null)
+            {
+                clone._eraserMask = _eraserMask.Copy();
             }
             return clone;
         }
@@ -858,6 +935,8 @@ namespace FigCrafterApp.Models
         {
             _imageData?.Dispose();
             _imageData = null;
+            _eraserMask?.Dispose();
+            _eraserMask = null;
         }
     }
 }

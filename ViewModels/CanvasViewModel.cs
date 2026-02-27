@@ -13,7 +13,8 @@ namespace FigCrafterApp.ViewModels
         Rectangle,
         Ellipse,
         Line,
-        Text
+        Text,
+        Eraser
     }
 
     public class CanvasViewModel : ViewModelBase
@@ -25,7 +26,8 @@ namespace FigCrafterApp.ViewModels
         private double _widthMm = 210; // A4幅
         private double _heightMm = 297; // A4高さ
         private DrawingTool _currentTool = DrawingTool.Select;
-        private ObservableCollection<GraphicObject> _graphicObjects = new();
+        private ObservableCollection<Layer> _layers = new();
+        private Layer? _activeLayer;
         private GraphicObject? _selectedObject;
         private ObservableCollection<GraphicObject> _selectedObjects = new(); // 複数選択
         private GraphicObject? _clipboard; // コピー用クリップボード
@@ -161,10 +163,37 @@ namespace FigCrafterApp.ViewModels
             }
         }
 
-        public ObservableCollection<GraphicObject> GraphicObjects
+        public ObservableCollection<Layer> Layers
         {
-            get => _graphicObjects;
-            set => SetProperty(ref _graphicObjects, value);
+            get => _layers;
+            set
+            {
+                if (SetProperty(ref _layers, value))
+                {
+                    if (_layers.Count > 0)
+                        ActiveLayer = _layers[0];
+                    else
+                        ActiveLayer = null;
+                }
+            }
+        }
+
+        public Layer? ActiveLayer
+        {
+            get => _activeLayer;
+            set
+            {
+                if (SetProperty(ref _activeLayer, value))
+                {
+                    Invalidate(); 
+                    UpdateLayerCommands();
+                }
+            }
+        }
+
+        public Layer? FindLayer(GraphicObject obj)
+        {
+            return Layers.FirstOrDefault(l => l.GraphicObjects.Contains(obj));
         }
 
         /// <summary>
@@ -351,8 +380,18 @@ namespace FigCrafterApp.ViewModels
         public double WidthPx => WidthMm * Dpi / MmPerInch;
         public double HeightPx => HeightMm * Dpi / MmPerInch;
 
+        // レイヤー用コマンド
+        public ICommand AddLayerCommand { get; }
+        public ICommand RemoveLayerCommand { get; }
+        public ICommand MoveLayerUpCommand { get; }
+        public ICommand MoveLayerDownCommand { get; }
+
         public CanvasViewModel()
         {
+            var defaultLayer = new Layer { Name = "レイヤー 1" };
+            Layers.Add(defaultLayer);
+            ActiveLayer = defaultLayer;
+
             BringToFrontCommand = new RelayCommand(_ => BringToFront());
             SendToBackCommand = new RelayCommand(_ => SendToBack());
             BringForwardCommand = new RelayCommand(_ => BringForward());
@@ -371,6 +410,11 @@ namespace FigCrafterApp.ViewModels
             UndoCommand = new RelayCommand(_ => Undo(), _ => _undoStack.Count > 0);
             RedoCommand = new RelayCommand(_ => Redo(), _ => _redoStack.Count > 0);
             ToggleCropModeCommand = new RelayCommand(_ => { IsCropMode = !IsCropMode; }, p => _selectedObject is ImageObject);
+
+            AddLayerCommand = new RelayCommand(_ => AddLayer());
+            RemoveLayerCommand = new RelayCommand(_ => RemoveLayer(), _ => Layers.Count > 1 && ActiveLayer != null);
+            MoveLayerUpCommand = new RelayCommand(_ => MoveLayerUp(), _ => ActiveLayer != null && Layers.IndexOf(ActiveLayer) > 0);
+            MoveLayerDownCommand = new RelayCommand(_ => MoveLayerDown(), _ => ActiveLayer != null && Layers.IndexOf(ActiveLayer) < Layers.Count - 1);
         }
 
         public CanvasViewModel(string title) : this()
@@ -378,43 +422,113 @@ namespace FigCrafterApp.ViewModels
             Title = title;
         }
 
+        // --- レイヤー操作 ---
+        private void AddLayer()
+        {
+            var newLayer = new Layer { Name = $"レイヤー {Layers.Count + 1}" };
+            Layers.Insert(0, newLayer); // リストの上に追加
+            ActiveLayer = newLayer;
+            UpdateLayerCommands();
+        }
+
+        private void RemoveLayer()
+        {
+            if (ActiveLayer != null && Layers.Count > 1)
+            {
+                int index = Layers.IndexOf(ActiveLayer);
+                Layers.Remove(ActiveLayer);
+                ActiveLayer = index < Layers.Count ? Layers[index] : Layers[Layers.Count - 1];
+                UpdateLayerCommands();
+            }
+        }
+
+        private void MoveLayerUp()
+        {
+            if (ActiveLayer != null)
+            {
+                int index = Layers.IndexOf(ActiveLayer);
+                if (index > 0)
+                {
+                    Layers.Move(index, index - 1);
+                    UpdateLayerCommands();
+                }
+            }
+        }
+
+        private void MoveLayerDown()
+        {
+            if (ActiveLayer != null)
+            {
+                int index = Layers.IndexOf(ActiveLayer);
+                if (index < Layers.Count - 1)
+                {
+                    Layers.Move(index, index + 1);
+                    UpdateLayerCommands();
+                }
+            }
+        }
+
+        private void UpdateLayerCommands()
+        {
+            (AddLayerCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (RemoveLayerCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (MoveLayerUpCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (MoveLayerDownCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        }
+
         private void BringToFront()
         {
             if (SelectedObject == null) return;
-            int index = GraphicObjects.IndexOf(SelectedObject);
-            if (index >= 0 && index < GraphicObjects.Count - 1)
+            var layer = FindLayer(SelectedObject);
+            if (layer == null) return;
+            var list = layer.GraphicObjects;
+            
+            int index = list.IndexOf(SelectedObject);
+            if (index >= 0 && index < list.Count - 1)
             {
-                ExecuteCommand(new ReorderObjectCommand(GraphicObjects, SelectedObject, index, GraphicObjects.Count - 1));
+                ExecuteCommand(new ReorderObjectCommand(list, SelectedObject, index, list.Count - 1));
             }
         }
 
         private void SendToBack()
         {
             if (SelectedObject == null) return;
-            int index = GraphicObjects.IndexOf(SelectedObject);
+            var layer = FindLayer(SelectedObject);
+            if (layer == null) return;
+            var list = layer.GraphicObjects;
+            
+            int index = list.IndexOf(SelectedObject);
             if (index > 0)
             {
-                ExecuteCommand(new ReorderObjectCommand(GraphicObjects, SelectedObject, index, 0));
+                ExecuteCommand(new ReorderObjectCommand(list, SelectedObject, index, 0));
             }
         }
 
         private void BringForward()
         {
             if (SelectedObject == null) return;
-            int index = GraphicObjects.IndexOf(SelectedObject);
-            if (index >= 0 && index < GraphicObjects.Count - 1)
+            var layer = FindLayer(SelectedObject);
+            if (layer == null) return;
+            var list = layer.GraphicObjects;
+            
+            int index = list.IndexOf(SelectedObject);
+            if (index >= 0 && index < list.Count - 1)
             {
-                ExecuteCommand(new ReorderObjectCommand(GraphicObjects, SelectedObject, index, index + 1));
+                ExecuteCommand(new ReorderObjectCommand(list, SelectedObject, index, index + 1));
             }
         }
 
         private void SendBackward()
         {
             if (SelectedObject == null) return;
-            int index = GraphicObjects.IndexOf(SelectedObject);
+            var layer = FindLayer(SelectedObject);
+            if (layer == null) return;
+            var list = layer.GraphicObjects;
+            
+            int index = list.IndexOf(SelectedObject);
             if (index > 0)
             {
-                ExecuteCommand(new ReorderObjectCommand(GraphicObjects, SelectedObject, index, index - 1));
+                ExecuteCommand(new ReorderObjectCommand(list, SelectedObject, index, index - 1));
             }
         }
 
@@ -423,10 +537,22 @@ namespace FigCrafterApp.ViewModels
         {
             if (_selectedObjects.Count == 0) return;
             
-            // 複数選択対応: 選択中の全オブジェクトを削除するコマンドを実行
             var toRemove = _selectedObjects.ToList();
-            var command = new RemoveObjectsCommand(GraphicObjects, toRemove);
-            ExecuteCommand(command);
+            var commands = new List<IUndoableCommand>();
+            foreach (var grouping in toRemove.GroupBy(FindLayer))
+            {
+                if (grouping.Key == null) continue;
+                commands.Add(new RemoveObjectsCommand(grouping.Key.GraphicObjects, grouping.ToList()));
+            }
+
+            if (commands.Count == 1)
+            {
+                ExecuteCommand(commands[0]);
+            }
+            else if (commands.Count > 1)
+            {
+                ExecuteCommand(new CompositeCommand(commands));
+            }
 
             // 選択状態の解除（ビューモデル側の状態）
             foreach (var obj in toRemove)
@@ -446,7 +572,7 @@ namespace FigCrafterApp.ViewModels
 
         private void Paste()
         {
-            if (_clipboard == null) return;
+            if (_clipboard == null || ActiveLayer == null) return;
             var pasted = _clipboard.Clone();
             // ペースト位置を少しずらす
             pasted.X += 10;
@@ -459,7 +585,7 @@ namespace FigCrafterApp.ViewModels
             pasted.IsSelected = false;
 
             // コマンド実行用
-            var command = new AddObjectCommand(GraphicObjects, pasted);
+            var command = new AddObjectCommand(ActiveLayer.GraphicObjects, pasted);
             ExecuteCommand(command);
 
             // ペーストしたオブジェクトを選択状態にする
@@ -665,7 +791,8 @@ namespace FigCrafterApp.ViewModels
             groupObj.Children.Add(imageObj);
             groupObj.Children.Add(borderObj);
 
-            ExecuteCommand(new AddObjectCommand(GraphicObjects, groupObj));
+            if (ActiveLayer == null) return;
+            ExecuteCommand(new AddObjectCommand(ActiveLayer.GraphicObjects, groupObj));
             SelectObject(groupObj);
         }
 
@@ -691,17 +818,24 @@ namespace FigCrafterApp.ViewModels
                 canvas.Clear(SKColors.White);
             }
 
-            // 選択ハイライトを一時的に解除して描画
             var selectedStates = new List<(GraphicObject obj, bool wasSelected)>();
-            foreach (var obj in GraphicObjects)
+            foreach (var layer in Layers)
             {
-                selectedStates.Add((obj, obj.IsSelected));
-                obj.IsSelected = false;
+                if (!layer.IsVisible) continue;
+                foreach (var obj in layer.GraphicObjects)
+                {
+                    selectedStates.Add((obj, obj.IsSelected));
+                    obj.IsSelected = false;
+                }
             }
 
-            foreach (var obj in GraphicObjects)
+            foreach (var layer in Layers)
             {
-                obj.Draw(canvas);
+                if (!layer.IsVisible) continue;
+                foreach (var obj in layer.GraphicObjects)
+                {
+                    obj.Draw(canvas);
+                }
             }
 
             // 選択状態を復元
@@ -727,17 +861,24 @@ namespace FigCrafterApp.ViewModels
             using var document = SKDocument.CreatePdf(stream);
             using var canvas = document.BeginPage(width, height);
 
-            // 選択ハイライトを一時的に解除して描画
             var selectedStates = new List<(GraphicObject obj, bool wasSelected)>();
-            foreach (var obj in GraphicObjects)
+            foreach (var layer in Layers)
             {
-                selectedStates.Add((obj, obj.IsSelected));
-                obj.IsSelected = false;
+                if (!layer.IsVisible) continue;
+                foreach (var obj in layer.GraphicObjects)
+                {
+                    selectedStates.Add((obj, obj.IsSelected));
+                    obj.IsSelected = false;
+                }
             }
 
-            foreach (var obj in GraphicObjects)
+            foreach (var layer in Layers)
             {
-                obj.Draw(canvas);
+                if (!layer.IsVisible) continue;
+                foreach (var obj in layer.GraphicObjects)
+                {
+                    obj.Draw(canvas);
+                }
             }
 
             // 選択状態を復元
@@ -761,17 +902,24 @@ namespace FigCrafterApp.ViewModels
 
             canvas.Clear(SKColors.White);
 
-            // 選択ハイライトを一時的に解除して描画
             var selectedStates = new List<(GraphicObject obj, bool wasSelected)>();
-            foreach (var obj in GraphicObjects)
+            foreach (var layer in Layers)
             {
-                selectedStates.Add((obj, obj.IsSelected));
-                obj.IsSelected = false;
+                if (!layer.IsVisible) continue;
+                foreach (var obj in layer.GraphicObjects)
+                {
+                    selectedStates.Add((obj, obj.IsSelected));
+                    obj.IsSelected = false;
+                }
             }
 
-            foreach (var obj in GraphicObjects)
+            foreach (var layer in Layers)
             {
-                obj.Draw(canvas);
+                if (!layer.IsVisible) continue;
+                foreach (var obj in layer.GraphicObjects)
+                {
+                    obj.Draw(canvas);
+                }
             }
 
             // 選択状態を復元
@@ -795,16 +943,18 @@ namespace FigCrafterApp.ViewModels
             encoder.Save(stream);
         }
 
-        // --- グループ化 ---
         private void GroupSelected()
         {
             if (_selectedObjects.Count < 2) return;
 
             var group = new GroupObject();
             var objectsToGroup = _selectedObjects.ToList();
+            var targetLayer = FindLayer(objectsToGroup.First());
+            if (targetLayer == null) return;
+            var targetList = targetLayer.GraphicObjects;
 
             // 元の重ね順で最も下にあるオブジェクトの位置を取得
-            int minIndex = objectsToGroup.Min(o => GraphicObjects.IndexOf(o));
+            int minIndex = objectsToGroup.Where(o => targetList.Contains(o)).Min(o => targetList.IndexOf(o));
 
             var commands = new List<IUndoableCommand>();
 
@@ -814,17 +964,15 @@ namespace FigCrafterApp.ViewModels
                 obj.IsSelected = false;
                 group.Children.Add(obj);
             }
-            commands.Add(new RemoveObjectsCommand(GraphicObjects, objectsToGroup));
+            // FIXME: 異なるレイヤーにまたがるグループ化は非対応とし、最初のオブジェクトのレイヤーに集約する前提とするか、または別レイヤーの削除対応が必要
+            commands.Add(new RemoveObjectsCommand(targetList, objectsToGroup.Where(o => targetList.Contains(o)).ToList()));
 
             group.RecalculateBounds();
 
             // 元の重ね順位置にグループを挿入するコマンド
-            int insertIndex = Math.Min(minIndex, GraphicObjects.Count);
-            // 本来は指定インデックスにInsertするコマンドが必要だが AddObjectCommand のみ実装されているためリスト末尾以外への追加は順番を崩す可能性がある
-            // （現状は AddObjectCommand をそのまま使うか、または単純に ExecuteCommand でグループ化操作自体をまとめるアプローチにする）
-            // 一旦、専用のコマンド群ではなく ExecuteCommand() 内でこの複合コマンドを登録する
+            int insertIndex = Math.Min(minIndex, targetList.Count);
 
-            var composite = new GroupingCommand(GraphicObjects, objectsToGroup, group, insertIndex);
+            var composite = new GroupingCommand(targetList, objectsToGroup, group, insertIndex);
             ExecuteCommand(composite);
 
             // グループを選択状態にする
@@ -840,8 +988,18 @@ namespace FigCrafterApp.ViewModels
             var groupsToUngroup = _selectedObjects.OfType<GroupObject>().ToList();
             if (groupsToUngroup.Count == 0) return;
 
-            var composite = new UngroupingCommand(GraphicObjects, groupsToUngroup);
-            ExecuteCommand(composite);
+            var compositeCommands = new List<IUndoableCommand>();
+            foreach (var group in groupsToUngroup)
+            {
+                var targetLayer = FindLayer(group);
+                if (targetLayer == null) continue;
+                compositeCommands.Add(new UngroupingCommand(targetLayer.GraphicObjects, new List<GroupObject> { group }));
+            }
+            
+            if (compositeCommands.Count > 0)
+            {
+                ExecuteCommand(new CompositeCommand(compositeCommands));
+            }
 
             ClearSelection();
             
@@ -861,12 +1019,27 @@ namespace FigCrafterApp.ViewModels
         // --- プロジェクトデータの変換 ---
         public ProjectData CreateProjectData()
         {
+            // 保存時は深いコピーを行う
+            var layersCopy = new ObservableCollection<Layer>();
+            foreach (var layer in Layers)
+            {
+                var newLayer = new Layer
+                {
+                    Name = layer.Name,
+                    IsVisible = layer.IsVisible,
+                    IsLocked = layer.IsLocked,
+                    Opacity = layer.Opacity,
+                    GraphicObjects = new ObservableCollection<GraphicObject>(layer.GraphicObjects.Select(x => x.Clone()))
+                };
+                layersCopy.Add(newLayer);
+            }
+
             return new ProjectData
             {
                 Title = Title,
                 WidthMm = WidthMm,
                 HeightMm = HeightMm,
-                GraphicObjects = new ObservableCollection<GraphicObject>(GraphicObjects.Select(x => x.Clone()))
+                Layers = layersCopy
             };
         }
 
@@ -876,11 +1049,15 @@ namespace FigCrafterApp.ViewModels
             WidthMm = data.WidthMm;
             HeightMm = data.HeightMm;
             
-            GraphicObjects.Clear();
-            foreach (var obj in data.GraphicObjects)
+            data.EnsureLayerCompatibility(); // 古いデータの互換処理
+
+            Layers.Clear();
+            foreach (var layer in data.Layers)
             {
-                GraphicObjects.Add(obj);
+                Layers.Add(layer);
             }
+
+            ActiveLayer = Layers.Count > 0 ? Layers[0] : null;
             
             // 状態リセット
             ClearSelection();

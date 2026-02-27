@@ -1,0 +1,14 @@
+﻿I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(382,25): error CS0102: The type 'CanvasViewModel' already contains a definition for 'AlignBottomCommand' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_d1vr0zpb_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(383,25): error CS0102: The type 'CanvasViewModel' already contains a definition for 'AlignCenterHCommand' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_d1vr0zpb_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(384,25): error CS0102: The type 'CanvasViewModel' already contains a definition for 'AlignCenterVCommand' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_d1vr0zpb_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(385,25): error CS0102: The type 'CanvasViewModel' already contains a definition for 'GroupCommand' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_d1vr0zpb_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(386,25): error CS0102: The type 'CanvasViewModel' already contains a definition for 'UngroupCommand' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_d1vr0zpb_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(387,25): error CS0102: The type 'CanvasViewModel' already contains a definition for 'UndoCommand' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_d1vr0zpb_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(388,25): error CS0102: The type 'CanvasViewModel' already contains a definition for 'RedoCommand' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_d1vr0zpb_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(389,25): error CS0102: The type 'CanvasViewModel' already contains a definition for 'ToggleCropModeCommand' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_d1vr0zpb_wpftmp.csproj]
+
+Build FAILED.
+    0 Warning(s)
+    8 Error(s)
+
+Time Elapsed 00:00:02.09
