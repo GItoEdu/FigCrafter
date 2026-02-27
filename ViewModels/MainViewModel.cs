@@ -3,6 +3,9 @@ using System.Windows.Input;
 using Microsoft.Win32;
 using SkiaSharp;
 using FigCrafterApp.Models;
+using FigCrafterApp.Serialization;
+using System.Text.Json;
+using System.IO;
 
 namespace FigCrafterApp.ViewModels
 {
@@ -31,6 +34,9 @@ namespace FigCrafterApp.ViewModels
         public ICommand ChangeStrokeColorCommand { get; }
         public ICommand ExportPngCommand { get; }
 
+        public ICommand OpenProjectCommand { get; }
+        public ICommand SaveProjectCommand { get; }
+
         public MainViewModel()
         {
             NewDocumentCommand = new RelayCommand(p => AddNewDocument());
@@ -40,6 +46,9 @@ namespace FigCrafterApp.ViewModels
             ChangeFillColorCommand = new RelayCommand(p => ChangeSelectedObjectColor(p?.ToString(), true));
             ChangeStrokeColorCommand = new RelayCommand(p => ChangeSelectedObjectColor(p?.ToString(), false));
             ExportPngCommand = new RelayCommand(p => ExportPng());
+
+            OpenProjectCommand = new RelayCommand(p => OpenProject());
+            SaveProjectCommand = new RelayCommand(p => SaveProject());
 
             // 初期ドキュメントを追加
             AddNewDocument();
@@ -129,6 +138,65 @@ namespace FigCrafterApp.ViewModels
                 catch (Exception ex)
                 {
                     System.Windows.MessageBox.Show($"PNGの保存に失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void OpenProject()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "FigCrafter プロジェクト (*.fcp)|*.fcp|すべてのファイル (*.*)|*.*",
+                Title = "プロジェクトを開く"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    string json = File.ReadAllText(dialog.FileName);
+                    var projectData = JsonSerializer.Deserialize<ProjectData>(json, ProjectData.GetSerializerOptions());
+                    
+                    if (projectData != null)
+                    {
+                        var newDoc = new CanvasViewModel();
+                        newDoc.LoadFromProjectData(projectData);
+                        Documents.Add(newDoc);
+                        ActiveDocument = newDoc;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"プロジェクトの読み込みに失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void SaveProject()
+        {
+            if (ActiveDocument == null) return;
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "FigCrafter プロジェクト (*.fcp)|*.fcp",
+                FileName = $"{ActiveDocument.Title}.fcp",
+                Title = "プロジェクトを保存"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var projectData = ActiveDocument.CreateProjectData();
+                    string json = JsonSerializer.Serialize(projectData, ProjectData.GetSerializerOptions());
+                    File.WriteAllText(dialog.FileName, json);
+                    
+                    // タイトルを更新
+                    ActiveDocument.Title = Path.GetFileNameWithoutExtension(dialog.FileName);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"プロジェクトの保存に失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 }
             }
         }

@@ -3,6 +3,7 @@ using System.Windows.Input;
 using SkiaSharp;
 using FigCrafterApp.Models;
 using FigCrafterApp.Commands;
+using FigCrafterApp.Serialization;
 
 namespace FigCrafterApp.ViewModels
 {
@@ -203,11 +204,13 @@ namespace FigCrafterApp.ViewModels
             {
                 nameof(GraphicObject.Rotation),
                 nameof(GraphicObject.StrokeWidth),
+                nameof(GraphicObject.Opacity),
                 nameof(TextObject.Text),
                 nameof(TextObject.FontFamily),
                 nameof(TextObject.FontSize),
                 nameof(LineObject.HasArrowStart),
-                nameof(LineObject.HasArrowEnd)
+                nameof(LineObject.HasArrowEnd),
+                nameof(ImageObject.IsGrayscale)
             };
 
             if (targetedProperties.Contains(e.PropertyName) && _propertyChangeOldValues.TryGetValue(e.PropertyName, out var oldValue))
@@ -721,6 +724,39 @@ namespace FigCrafterApp.ViewModels
             }
 
             SelectedObject = _selectedObjects.Count > 0 ? _selectedObjects[^1] : null;
+        }
+
+        // --- プロジェクトデータの変換 ---
+        public ProjectData CreateProjectData()
+        {
+            return new ProjectData
+            {
+                Title = Title,
+                WidthMm = WidthMm,
+                HeightMm = HeightMm,
+                GraphicObjects = new ObservableCollection<GraphicObject>(GraphicObjects.Select(x => x.Clone()))
+            };
+        }
+
+        public void LoadFromProjectData(ProjectData data)
+        {
+            Title = data.Title;
+            WidthMm = data.WidthMm;
+            HeightMm = data.HeightMm;
+            
+            GraphicObjects.Clear();
+            foreach (var obj in data.GraphicObjects)
+            {
+                GraphicObjects.Add(obj);
+            }
+            
+            // 状態リセット
+            ClearSelection();
+            _undoStack.Clear();
+            _redoStack.Clear();
+            (UndoCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (RedoCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            Invalidate();
         }
     }
 }

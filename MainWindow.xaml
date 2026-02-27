@@ -76,7 +76,10 @@
 
         <!-- ToolBar / Menu Placeholder -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#FF333333">
-            <Button Content="新規プロジェクト" Command="{Binding NewDocumentCommand}" Margin="10,5" Padding="10,2" Background="#FF007ACC" Foreground="White" BorderThickness="0"/>
+            <Button Content="📁 開く" Command="{Binding OpenProjectCommand}" Margin="10,5,5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="プロジェクトを開く"/>
+            <Button Content="💾 保存" Command="{Binding SaveProjectCommand}" Margin="5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="プロジェクトを保存する"/>
+            
+            <Button Content="新規プロジェクト" Command="{Binding NewDocumentCommand}" Margin="15,5,10,5" Padding="10,2" Background="#FF007ACC" Foreground="White" BorderThickness="0"/>
             <Button Content="📷 PNG書き出し" Command="{Binding ExportPngCommand}" Margin="5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
             <!-- ActiveDocument の Undo/Redo コマンドにバインド -->
             <Button Content="↩ 取り消し" Command="{Binding ActiveDocument.UndoCommand}" Margin="15,5,5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="元に戻す"/>
@@ -226,6 +229,17 @@
                         <TextBlock Text="回転:" Foreground="Gray" VerticalAlignment="Center"/>
                         <TextBox Grid.Column="1" Text="{Binding Rotation, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
                     </Grid>
+
+                    <TextBlock Text="不透明度:" Margin="0,10,0,0" Foreground="Gray"/>
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- 0.0 ~ 1.0 のOpacityをUI操作 -->
+                        <Slider Grid.Column="0" Minimum="0" Maximum="1" Value="{Binding Opacity}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Opacity, StringFormat=\{0:F2\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5" TextAlignment="Center"/>
+                    </Grid>
                     
                     <!-- 直線オブジェクト専用UI -->
                     <StackPanel>
@@ -274,6 +288,22 @@
                             <TextBlock Text="サイズ:" Foreground="Gray" VerticalAlignment="Center"/>
                             <TextBox Grid.Column="1" Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
                         </Grid>
+                    </StackPanel>
+
+                    <!-- 画像オブジェクト専用UI -->
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=ImageObject}" Value="Visible">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Text="画像モード:" Margin="0,10,0,5" Foreground="Gray"/>
+                        <CheckBox Content="グレースケール化" IsChecked="{Binding IsGrayscale, UpdateSourceTrigger=PropertyChanged}" Foreground="White" Margin="0,5"/>
                     </StackPanel>
 
                     <TextBlock Text="線の太さ:" Margin="0,10,0,5" Foreground="Gray"/>

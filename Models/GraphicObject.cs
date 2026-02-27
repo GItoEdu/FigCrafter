@@ -1,9 +1,16 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 using SkiaSharp;
 
 namespace FigCrafterApp.Models
 {
+    [JsonDerivedType(typeof(RectangleObject), typeDiscriminator: "Rectangle")]
+    [JsonDerivedType(typeof(EllipseObject), typeDiscriminator: "Ellipse")]
+    [JsonDerivedType(typeof(LineObject), typeDiscriminator: "Line")]
+    [JsonDerivedType(typeof(TextObject), typeDiscriminator: "Text")]
+    [JsonDerivedType(typeof(GroupObject), typeDiscriminator: "Group")]
+    [JsonDerivedType(typeof(ImageObject), typeDiscriminator: "Image")]
     public abstract class GraphicObject : INotifyPropertyChanged, INotifyPropertyChanging
     {
         private float _x;
@@ -14,6 +21,7 @@ namespace FigCrafterApp.Models
         private SKColor _fillColor = SKColors.Blue;
         private SKColor _strokeColor = SKColors.Black;
         private float _strokeWidth = 1;
+        private float _opacity = 1.0f; // 1.0 = 不透明, 0.0 = 透明
         private bool _isSelected = false;
 
         public float X { get => _x; set => SetProperty(ref _x, value); }
@@ -24,6 +32,7 @@ namespace FigCrafterApp.Models
         public SKColor FillColor { get => _fillColor; set => SetProperty(ref _fillColor, value); }
         public SKColor StrokeColor { get => _strokeColor; set => SetProperty(ref _strokeColor, value); }
         public float StrokeWidth { get => _strokeWidth; set => SetProperty(ref _strokeWidth, value); }
+        public float Opacity { get => _opacity; set => SetProperty(ref _opacity, value); }
         public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -65,6 +74,7 @@ namespace FigCrafterApp.Models
             target.FillColor = FillColor;
             target.StrokeColor = StrokeColor;
             target.StrokeWidth = StrokeWidth;
+            target.Opacity = Opacity;
         }
 
         /// <summary>
@@ -118,15 +128,18 @@ namespace FigCrafterApp.Models
             canvas.Save();
             TransformCanvas(canvas);
 
+            var fillWithOpacity = FillColor.WithAlpha((byte)(FillColor.Alpha * Opacity));
+            var strokeWithOpacity = StrokeColor.WithAlpha((byte)(StrokeColor.Alpha * Opacity));
+
             using var paint = new SKPaint
             {
-                Color = FillColor,
+                Color = fillWithOpacity,
                 Style = SKPaintStyle.Fill,
                 IsAntialias = true
             };
             canvas.DrawRect(X, Y, Width, Height, paint);
 
-            paint.Color = StrokeColor;
+            paint.Color = strokeWithOpacity;
             paint.Style = SKPaintStyle.Stroke;
             paint.StrokeWidth = StrokeWidth;
             canvas.DrawRect(X, Y, Width, Height, paint);
@@ -205,15 +218,18 @@ namespace FigCrafterApp.Models
             canvas.Save();
             TransformCanvas(canvas);
 
+            var fillWithOpacity = FillColor.WithAlpha((byte)(FillColor.Alpha * Opacity));
+            var strokeWithOpacity = StrokeColor.WithAlpha((byte)(StrokeColor.Alpha * Opacity));
+
             using var paint = new SKPaint
             {
-                Color = FillColor,
+                Color = fillWithOpacity,
                 Style = SKPaintStyle.Fill,
                 IsAntialias = true
             };
             canvas.DrawOval(new SKRect(X, Y, X + Width, Y + Height), paint);
 
-            paint.Color = StrokeColor;
+            paint.Color = strokeWithOpacity;
             paint.Style = SKPaintStyle.Stroke;
             paint.StrokeWidth = StrokeWidth;
             canvas.DrawOval(new SKRect(X, Y, X + Width, Y + Height), paint);
@@ -292,9 +308,11 @@ namespace FigCrafterApp.Models
             canvas.Save();
             TransformCanvas(canvas);
 
+            var strokeWithOpacity = StrokeColor.WithAlpha((byte)(StrokeColor.Alpha * Opacity));
+
             using var paint = new SKPaint
             {
-                Color = StrokeColor,
+                Color = strokeWithOpacity,
                 Style = SKPaintStyle.Stroke,
                 StrokeWidth = StrokeWidth,
                 IsAntialias = true
@@ -312,7 +330,7 @@ namespace FigCrafterApp.Models
 
                 using var arrowPaint = new SKPaint
                 {
-                    Color = StrokeColor,
+                    Color = strokeWithOpacity,
                     Style = SKPaintStyle.Fill,
                     IsAntialias = true
                 };
@@ -418,9 +436,11 @@ namespace FigCrafterApp.Models
             canvas.Save();
             TransformCanvas(canvas);
 
+            var fillWithOpacity = FillColor.WithAlpha((byte)(FillColor.Alpha * Opacity));
+
             using var paint = new SKPaint
             {
-                Color = FillColor,
+                Color = fillWithOpacity,
                 IsAntialias = true,
                 Typeface = SKTypeface.FromFamilyName(FontFamily),
                 TextSize = FontSize
@@ -481,6 +501,42 @@ namespace FigCrafterApp.Models
     public class GroupObject : GraphicObject
     {
         private List<GraphicObject> _children = new();
+        private bool _isGrayscale = false;
+
+        /// <summary>
+        /// グループ内の画像オブジェクトのグレースケール状態を一括制御するプロパティ。
+        /// 変更時に子の ImageObject すべてに伝播する。
+        /// </summary>
+        public bool IsGrayscale
+        {
+            get => _isGrayscale;
+            set
+            {
+                if (SetProperty(ref _isGrayscale, value))
+                {
+                    // 子の ImageObject に伝播
+                    PropagateGrayscale(this, value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 再帰的に子の ImageObject に IsGrayscale を伝播する
+        /// </summary>
+        private static void PropagateGrayscale(GroupObject group, bool isGrayscale)
+        {
+            foreach (var child in group.Children)
+            {
+                if (child is ImageObject img)
+                {
+                    img.IsGrayscale = isGrayscale;
+                }
+                else if (child is GroupObject nested)
+                {
+                    nested.IsGrayscale = isGrayscale;
+                }
+            }
+        }
 
         public List<GraphicObject> Children
         {
@@ -527,10 +583,24 @@ namespace FigCrafterApp.Models
             canvas.Save();
             TransformCanvas(canvas);
 
+            // グループの不透明度を canvas.SaveLayer で適用
+            // （子オブジェクトの Opacity プロパティを直接変更しないため PropertyChanged イベントが発火しない）
+            if (Opacity < 1.0f)
+            {
+                using var layerPaint = new SKPaint { Color = SKColors.White.WithAlpha((byte)(255 * Opacity)) };
+                canvas.SaveLayer(layerPaint);
+            }
+
             // 子オブジェクトを描画（絶対座標で保持）
             foreach (var child in _children)
             {
                 child.Draw(canvas);
+            }
+
+            // SaveLayer を使った場合はそのレイヤーを復元
+            if (Opacity < 1.0f)
+            {
+                canvas.Restore();
             }
 
             if (IsSelected)
@@ -596,7 +666,15 @@ namespace FigCrafterApp.Models
     public class ImageObject : GraphicObject, IDisposable
     {
         private SKBitmap? _imageData;
+        private bool _isGrayscale = false;
 
+        public bool IsGrayscale
+        {
+            get => _isGrayscale;
+            set => SetProperty(ref _isGrayscale, value);
+        }
+
+        [JsonIgnore]
         public SKBitmap? ImageData
         {
             get => _imageData;
@@ -611,6 +689,40 @@ namespace FigCrafterApp.Models
             }
         }
 
+        /// <summary>
+        /// JSONシリアライズ/デシリアライズ用。画像のBase64エンコード文字列を取得・設定します。
+        /// 設定されるとSKBitmapとしてImageDataに展開されます。
+        /// </summary>
+        public string? ImageBase64
+        {
+            get
+            {
+                if (_imageData == null) return null;
+                using var image = SKImage.FromBitmap(_imageData);
+                using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+                return Convert.ToBase64String(data.ToArray());
+            }
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    ImageData = null;
+                }
+                else
+                {
+                    try
+                    {
+                        byte[] bytes = Convert.FromBase64String(value);
+                        ImageData = SKBitmap.Decode(bytes);
+                    }
+                    catch
+                    {
+                        ImageData = null;
+                    }
+                }
+            }
+        }
+
         public override void Draw(SKCanvas canvas)
         {
             if (_imageData == null) return;
@@ -619,12 +731,35 @@ namespace FigCrafterApp.Models
             TransformCanvas(canvas);
 
             var destRect = new SKRect(X, Y, X + Width, Y + Height);
-            canvas.DrawBitmap(_imageData, destRect);
+
+            using var paint = new SKPaint();
+            
+            // グレースケール用カラーマトリクス (NTSC係数)
+            // L = 0.299*R + 0.587*G + 0.114*B
+            var matrix = new float[]
+            {
+                0.299f, 0.587f, 0.114f, 0, 0,
+                0.299f, 0.587f, 0.114f, 0, 0,
+                0.299f, 0.587f, 0.114f, 0, 0,
+                0,      0,      0,      Opacity, 0
+            };
+
+            var defaultMatrix = new float[]
+            {
+                1, 0, 0, 0,       0,
+                0, 1, 0, 0,       0,
+                0, 0, 1, 0,       0,
+                0, 0, 0, Opacity, 0
+            };
+
+            paint.ColorFilter = SKColorFilter.CreateColorMatrix(IsGrayscale ? matrix : defaultMatrix);
+
+            canvas.DrawBitmap(_imageData, destRect, paint);
 
             if (IsSelected)
             {
                 // 選択枠
-                using var paint = new SKPaint
+                using var borderPaint = new SKPaint
                 {
                     Color = SKColors.DodgerBlue,
                     Style = SKPaintStyle.Stroke,
@@ -632,7 +767,7 @@ namespace FigCrafterApp.Models
                     PathEffect = SKPathEffect.CreateDash(new float[] { 4, 4 }, 0),
                     IsAntialias = true
                 };
-                canvas.DrawRect(destRect, paint);
+                canvas.DrawRect(destRect, borderPaint);
 
                 // ハンドル
                 using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
@@ -667,6 +802,7 @@ namespace FigCrafterApp.Models
         {
             var clone = new ImageObject();
             CopyPropertiesTo(clone);
+            clone.IsGrayscale = IsGrayscale;
             if (_imageData != null)
             {
                 clone._imageData = _imageData.Copy();

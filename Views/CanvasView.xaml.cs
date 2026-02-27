@@ -42,9 +42,19 @@ namespace FigCrafterApp.Views
             {
                 oldVm.InvalidateRequested -= OnInvalidateRequested;
             }
+            
+            // 状態リセット (タブ切り替え時に前タブの操作状態を引き継がないようにする)
+            _selectedObject = null;
+            _tempObject = null;
+            _isDragging = false;
+            _isResizing = false;
+            _isRangeSelecting = false;
+            _resizeHandleIndex = -1;
+
             if (e.NewValue is CanvasViewModel newVm)
             {
                 newVm.InvalidateRequested += OnInvalidateRequested;
+                SkiaElement.InvalidateVisual(); // DataContext変更時に再描画を強制する
             }
         }
 
@@ -302,10 +312,41 @@ namespace FigCrafterApp.Views
                     }
 
                     // 幅・高さが負にならないよう調整
-                    _selectedObject.X = Math.Min(left, right);
-                    _selectedObject.Y = Math.Min(top, bottom);
-                    _selectedObject.Width = Math.Abs(right - left);
-                    _selectedObject.Height = Math.Abs(bottom - top);
+                    float newX = Math.Min(left, right);
+                    float newY = Math.Min(top, bottom);
+                    float newW = Math.Abs(right - left);
+                    float newH = Math.Abs(bottom - top);
+
+                    // GroupObject の場合は子オブジェクトも比例的にスケーリング
+                    if (_selectedObject is GroupObject groupObj && rect.Width > 0 && rect.Height > 0)
+                    {
+                        float scaleX = newW / rect.Width;
+                        float scaleY = newH / rect.Height;
+
+                        foreach (var child in groupObj.Children)
+                        {
+                            // 元のバウンディングボックスに対する相対位置を計算して再配置
+                            float relX = (child.X - rect.Left) / rect.Width;
+                            float relY = (child.Y - rect.Top) / rect.Height;
+                            child.X = newX + relX * newW;
+                            child.Y = newY + relY * newH;
+                            child.Width *= scaleX;
+                            child.Height *= scaleY;
+
+                            if (child is LineObject childLine)
+                            {
+                                float relEndX = (childLine.EndX - rect.Left) / rect.Width;
+                                float relEndY = (childLine.EndY - rect.Top) / rect.Height;
+                                childLine.EndX = newX + relEndX * newW;
+                                childLine.EndY = newY + relEndY * newH;
+                            }
+                        }
+                    }
+
+                    _selectedObject.X = newX;
+                    _selectedObject.Y = newY;
+                    _selectedObject.Width = newW;
+                    _selectedObject.Height = newH;
                 }
                 
                 SkiaElement.InvalidateVisual();
