@@ -56,6 +56,7 @@ namespace FigCrafterApp.ViewModels
         public ICommand UngroupCommand { get; }
         public ICommand UndoCommand { get; }
         public ICommand RedoCommand { get; }
+        public ICommand ToggleCropModeCommand { get; }
 
         public void Invalidate() => InvalidateRequested?.Invoke(this, EventArgs.Empty);
 
@@ -135,7 +136,29 @@ namespace FigCrafterApp.ViewModels
         public DrawingTool CurrentTool
         {
             get => _currentTool;
-            set => SetProperty(ref _currentTool, value);
+            set
+            {
+                if (SetProperty(ref _currentTool, value))
+                {
+                    if (_currentTool != DrawingTool.Select)
+                    {
+                        IsCropMode = false;
+                    }
+                }
+            }
+        }
+
+        private bool _isCropMode = false;
+        public bool IsCropMode
+        {
+            get => _isCropMode;
+            set
+            {
+                if (SetProperty(ref _isCropMode, value))
+                {
+                    Invalidate();
+                }
+            }
         }
 
         public ObservableCollection<GraphicObject> GraphicObjects
@@ -210,7 +233,11 @@ namespace FigCrafterApp.ViewModels
                 nameof(TextObject.FontSize),
                 nameof(LineObject.HasArrowStart),
                 nameof(LineObject.HasArrowEnd),
-                nameof(ImageObject.IsGrayscale)
+                nameof(ImageObject.IsGrayscale),
+                nameof(ImageObject.CropX),
+                nameof(ImageObject.CropY),
+                nameof(ImageObject.CropWidth),
+                nameof(ImageObject.CropHeight)
             };
 
             if (targetedProperties.Contains(e.PropertyName) && _propertyChangeOldValues.TryGetValue(e.PropertyName, out var oldValue))
@@ -251,6 +278,10 @@ namespace FigCrafterApp.ViewModels
             else
             {
                 SelectedObject = null;
+            }
+            if (obj is not ImageObject)
+            {
+                IsCropMode = false;
             }
             Invalidate();
         }
@@ -336,11 +367,10 @@ namespace FigCrafterApp.ViewModels
             AlignCenterHCommand = new RelayCommand(_ => AlignSelected(AlignDirection.CenterH));
             AlignCenterVCommand = new RelayCommand(_ => AlignSelected(AlignDirection.CenterV));
             GroupCommand = new RelayCommand(_ => GroupSelected());
-            UngroupCommand = new RelayCommand(_ => UngroupSelected());
-            
-            // Undo/Redoコマンド。CanExecute でスタック数をチェック
+            UngroupCommand = new RelayCommand(_ => UngroupSelected(), p => _selectedObject is GroupObject);
             UndoCommand = new RelayCommand(_ => Undo(), _ => _undoStack.Count > 0);
             RedoCommand = new RelayCommand(_ => Redo(), _ => _redoStack.Count > 0);
+            ToggleCropModeCommand = new RelayCommand(_ => { IsCropMode = !IsCropMode; }, p => _selectedObject is ImageObject);
         }
 
         public CanvasViewModel(string title) : this()
@@ -615,6 +645,30 @@ namespace FigCrafterApp.ViewModels
             }
         }
 
+        // --- 画像インポート ---
+        public void ImportImageAsGroup(SKBitmap bitmap)
+        {
+            var imageObj = new ImageObject { X = 10, Y = 10, ImageData = bitmap };
+            var borderObj = new RectangleObject
+            {
+                X = 10, Y = 10,
+                Width = imageObj.Width, Height = imageObj.Height,
+                FillColor = SKColors.Transparent,
+                StrokeColor = SKColors.Black,
+                StrokeWidth = 2
+            };
+            var groupObj = new GroupObject
+            {
+                X = 10, Y = 10,
+                Width = imageObj.Width, Height = imageObj.Height
+            };
+            groupObj.Children.Add(imageObj);
+            groupObj.Children.Add(borderObj);
+
+            ExecuteCommand(new AddObjectCommand(GraphicObjects, groupObj));
+            SelectObject(groupObj);
+        }
+
         // --- PNG書き出し ---
         /// <summary>
         /// キャンバスの内容をPNGファイルとして書き出す
@@ -661,6 +715,84 @@ namespace FigCrafterApp.ViewModels
             using var data = image.Encode(SKEncodedImageFormat.Png, 100);
             using var stream = System.IO.File.OpenWrite(filePath);
             data.SaveTo(stream);
+        }
+
+        // --- PDF書き出し ---
+        public void ExportPdf(string filePath)
+        {
+            int width = (int)Math.Ceiling(WidthPx);
+            int height = (int)Math.Ceiling(HeightPx);
+
+            using var stream = System.IO.File.OpenWrite(filePath);
+            using var document = SKDocument.CreatePdf(stream);
+            using var canvas = document.BeginPage(width, height);
+
+            // 選択ハイライトを一時的に解除して描画
+            var selectedStates = new List<(GraphicObject obj, bool wasSelected)>();
+            foreach (var obj in GraphicObjects)
+            {
+                selectedStates.Add((obj, obj.IsSelected));
+                obj.IsSelected = false;
+            }
+
+            foreach (var obj in GraphicObjects)
+            {
+                obj.Draw(canvas);
+            }
+
+            // 選択状態を復元
+            foreach (var (obj, wasSelected) in selectedStates)
+            {
+                obj.IsSelected = wasSelected;
+            }
+
+            document.EndPage();
+            document.Close();
+        }
+
+        // --- TIF書き出し ---
+        public void ExportTif(string filePath)
+        {
+            int width = (int)Math.Ceiling(WidthPx);
+            int height = (int)Math.Ceiling(HeightPx);
+
+            using var bitmap = new SKBitmap(width, height);
+            using var canvas = new SKCanvas(bitmap);
+
+            canvas.Clear(SKColors.White);
+
+            // 選択ハイライトを一時的に解除して描画
+            var selectedStates = new List<(GraphicObject obj, bool wasSelected)>();
+            foreach (var obj in GraphicObjects)
+            {
+                selectedStates.Add((obj, obj.IsSelected));
+                obj.IsSelected = false;
+            }
+
+            foreach (var obj in GraphicObjects)
+            {
+                obj.Draw(canvas);
+            }
+
+            // 選択状態を復元
+            foreach (var (obj, wasSelected) in selectedStates)
+            {
+                obj.IsSelected = wasSelected;
+            }
+
+            // TIF保存 (PNGとして一旦エンコードし、WPFのTiffBitmapEncoderで変換)
+            using var image = SKImage.FromBitmap(bitmap);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            using var ms = new System.IO.MemoryStream();
+            data.SaveTo(ms);
+            ms.Position = 0;
+            
+            var decoder = new System.Windows.Media.Imaging.PngBitmapDecoder(ms, System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat, System.Windows.Media.Imaging.BitmapCacheOption.Default);
+            var encoder = new System.Windows.Media.Imaging.TiffBitmapEncoder();
+            encoder.Frames.Add(decoder.Frames[0]);
+            
+            using var stream = System.IO.File.OpenWrite(filePath);
+            encoder.Save(stream);
         }
 
         // --- グループ化 ---

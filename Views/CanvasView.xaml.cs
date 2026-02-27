@@ -19,15 +19,69 @@ namespace FigCrafterApp.Views
         private bool _isDragging = false;
         private bool _isResizing = false;
         private bool _isRangeSelecting = false; // 範囲選択中フラグ
+        private bool _isCropping = false; // トリミング中フラグ
         private SKRect _selectionRect; // 範囲選択の矩形
         private int _resizeHandleIndex = -1;
+        private int _cropHandleIndex = -1;
         private SKPoint _lastMousePos;
         private SKRect _originalResizeRect;
+        private SKRect _originalCropRect;
         private float _originalAspectRatio;
         
         // Undo用の一時保存
         private List<(GraphicObject Obj, float OldX, float OldY)> _preDragPositions = new();
         private (float X, float Y, float EndX, float EndY) _preDragLineEnd;
+
+        // 半透明クロップガイド用のペイントキャッシュ
+        private SKPaint? _cachedCropGuidePaintNormal;
+        private SKPaint? _cachedCropGuidePaintGray;
+
+        private SKPaint GetCachedCropGuidePaint(bool isGrayscale)
+        {
+            if (isGrayscale)
+            {
+                if (_cachedCropGuidePaintGray == null)
+                {
+                    _cachedCropGuidePaintGray = new SKPaint();
+                    var matrix = new float[] {
+                        0.299f, 0.587f, 0.114f, 0, 0,
+                        0.299f, 0.587f, 0.114f, 0, 0,
+                        0.299f, 0.587f, 0.114f, 0, 0,
+                        0,      0,      0,      0.3f, 0
+                    };
+                    _cachedCropGuidePaintGray.ColorFilter = SKColorFilter.CreateColorMatrix(matrix);
+                }
+                return _cachedCropGuidePaintGray;
+            }
+            else
+            {
+                if (_cachedCropGuidePaintNormal == null)
+                {
+                    _cachedCropGuidePaintNormal = new SKPaint();
+                    var matrix = new float[] {
+                        1, 0, 0, 0,    0,
+                        0, 1, 0, 0,    0,
+                        0, 0, 1, 0,    0,
+                        0, 0, 0, 0.3f, 0
+                    };
+                    _cachedCropGuidePaintNormal.ColorFilter = SKColorFilter.CreateColorMatrix(matrix);
+                }
+                return _cachedCropGuidePaintNormal;
+            }
+        }
+
+        // 描画間引き用（約60FPS制限）
+        private DateTime _lastInvalidateTime = DateTime.MinValue;
+
+        private void ThrottledInvalidateVisual()
+        {
+            var now = DateTime.Now;
+            if ((now - _lastInvalidateTime).TotalMilliseconds > 16) // 1000ms / 60fps ≒ 16.6ms
+            {
+                SkiaElement.InvalidateVisual();
+                _lastInvalidateTime = now;
+            }
+        }
 
         public CanvasView()
         {
@@ -49,7 +103,9 @@ namespace FigCrafterApp.Views
             _isDragging = false;
             _isResizing = false;
             _isRangeSelecting = false;
+            _isCropping = false;
             _resizeHandleIndex = -1;
+            _cropHandleIndex = -1;
 
             if (e.NewValue is CanvasViewModel newVm)
             {
@@ -98,6 +154,50 @@ namespace FigCrafterApp.Views
                 canvas.DrawRect(_selectionRect, fillPaint);
                 canvas.DrawRect(_selectionRect, strokePaint);
             }
+
+            // トリミングハンドルの描画と、元画像の半透明表示
+            if (DataContext is CanvasViewModel vm2 && vm2.IsCropMode && _selectedObject is ImageObject imgObj && imgObj.ImageData != null)
+            {
+                // 現在の表示領域とクロップ領域
+                var destRect = GetBoundingRect(imgObj);
+
+                // クロップ領域と表示領域の比率から、元画像全体の表示先矩形を逆算する
+                float scaleX = destRect.Width / imgObj.CropWidth;
+                float scaleY = destRect.Height / imgObj.CropHeight;
+
+                float fullLeft = destRect.Left - (imgObj.CropX * scaleX);
+                float fullTop = destRect.Top - (imgObj.CropY * scaleY);
+                float fullWidth = imgObj.ImageData.Width * scaleX;
+                float fullHeight = imgObj.ImageData.Height * scaleY;
+
+                var fullDestRect = new SKRect(fullLeft, fullTop, fullLeft + fullWidth, fullTop + fullHeight);
+
+                // 全体画像を半透明で描画
+                var paint = GetCachedCropGuidePaint(imgObj.IsGrayscale);
+                
+                canvas.Save();
+                imgObj.TransformCanvas(canvas);
+                canvas.DrawBitmap(imgObj.ImageData, fullDestRect, paint);
+                canvas.Restore();
+
+                // トリミングハンドルの描画
+                using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
+                using var handleStrokePaint = new SKPaint { Color = SKColors.Orange, Style = SKPaintStyle.Stroke, StrokeWidth = 2, IsAntialias = true };
+                float hs = 8;
+                var points = new[]
+                {
+                    new SKPoint(destRect.Left, destRect.Top),
+                    new SKPoint(destRect.Right, destRect.Top),
+                    new SKPoint(destRect.Right, destRect.Bottom),
+                    new SKPoint(destRect.Left, destRect.Bottom)
+                };
+                foreach (var pt in points)
+                {
+                    var hr = new SKRect(pt.X - hs / 2, pt.Y - hs / 2, pt.X + hs / 2, pt.Y + hs / 2);
+                    canvas.DrawRect(hr, handlePaint);
+                    canvas.DrawRect(hr, handleStrokePaint);
+                }
+            }
         }
 
         private void SkiaElement_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -116,6 +216,16 @@ namespace FigCrafterApp.Views
                     int handleIdx = GetHandleHitIndex(_selectedObject, _startPoint);
                     if (handleIdx >= 0)
                     {
+                        if (vm.IsCropMode && _selectedObject is ImageObject imgObj)
+                        {
+                            _isCropping = true;
+                            _cropHandleIndex = handleIdx;
+                            _originalResizeRect = GetBoundingRect(imgObj);
+                            _originalCropRect = new SKRect(imgObj.CropX, imgObj.CropY, imgObj.CropX + imgObj.CropWidth, imgObj.CropY + imgObj.CropHeight);
+                            SkiaElement.CaptureMouse();
+                            return;
+                        }
+                        
                         _isResizing = true;
                         _resizeHandleIndex = handleIdx;
                         _originalResizeRect = GetBoundingRect(_selectedObject);
@@ -235,7 +345,7 @@ namespace FigCrafterApp.Views
             _lastMousePos = currentPoint;
 
             // リサイズ中でなければカーソル更新
-            if (!_isResizing && !_isDragging && !_isRangeSelecting && _selectedObject != null)
+            if (!_isResizing && !_isDragging && !_isRangeSelecting && !_isCropping && _selectedObject != null)
             {
                 int hoverHandle = GetHandleHitIndex(_selectedObject, currentPoint);
                 if (_selectedObject is LineObject)
@@ -253,6 +363,77 @@ namespace FigCrafterApp.Views
                         _ => System.Windows.Input.Cursors.Arrow
                     };
                 }
+            }
+
+            if (_isCropping && _selectedObject is ImageObject cropImgObj)
+            {
+                var rect = GetBoundingRect(cropImgObj);
+                // 元の描画範囲と元の切り抜き範囲の比率
+                float scaleX = _originalCropRect.Width > 0 ? _originalResizeRect.Width / _originalCropRect.Width : 1;
+                float scaleY = _originalCropRect.Height > 0 ? _originalResizeRect.Height / _originalCropRect.Height : 1;
+
+                // dx, dy はキャンバス上の増分移動量だが、_originalからの累積計算のために totalDx, totalDy を使用
+                float totalDx = currentPoint.X - _startPoint.X;
+                float totalDy = currentPoint.Y - _startPoint.Y;
+
+                // これを元の画像サイズ(ピクセル)上の移動量に変換
+                float cropDx = totalDx / scaleX;
+                float cropDy = totalDy / scaleY;
+
+                float newCropLeft = _originalCropRect.Left;
+                float newCropTop = _originalCropRect.Top;
+                float newCropRight = _originalCropRect.Right;
+                float newCropBottom = _originalCropRect.Bottom;
+
+                float newXLeft = _originalResizeRect.Left;
+                float newXRight = _originalResizeRect.Right;
+                float newYTop = _originalResizeRect.Top;
+                float newYBottom = _originalResizeRect.Bottom;
+
+                switch (_cropHandleIndex)
+                {
+                    case 0: // TopLeft
+                        newCropLeft += cropDx; newCropTop += cropDy;
+                        newXLeft += totalDx; newYTop += totalDy;
+                        break;
+                    case 1: // TopRight
+                        newCropRight += cropDx; newCropTop += cropDy;
+                        newXRight += totalDx; newYTop += totalDy;
+                        break;
+                    case 2: // BottomRight
+                        newCropRight += cropDx; newCropBottom += cropDy;
+                        newXRight += totalDx; newYBottom += totalDy;
+                        break;
+                    case 3: // BottomLeft
+                        newCropLeft += cropDx; newCropBottom += cropDy;
+                        newXLeft += totalDx; newYBottom += totalDy;
+                        break;
+                }
+
+                // 反転（負の幅・高さ）を防ぐ、または反転した場合は最小値最大値で整理する
+                float cX = Math.Min(newCropLeft, newCropRight);
+                float cY = Math.Min(newCropTop, newCropBottom);
+                float cW = Math.Abs(newCropRight - newCropLeft);
+                float cH = Math.Abs(newCropBottom - newCropTop);
+
+                float dX = Math.Min(newXLeft, newXRight);
+                float dY = Math.Min(newYTop, newYBottom);
+                float dW = Math.Abs(newXRight - newXLeft);
+                float dH = Math.Abs(newYBottom - newYTop);
+
+                // 画像の元のピクセル幅/高さを超えないように制限を入れることも可能だが、一旦は自由枠とする
+                cropImgObj.CropX = cX;
+                cropImgObj.CropY = cY;
+                cropImgObj.CropWidth = cW;
+                cropImgObj.CropHeight = cH;
+
+                cropImgObj.X = dX;
+                cropImgObj.Y = dY;
+                cropImgObj.Width = dW;
+                cropImgObj.Height = dH;
+
+                ThrottledInvalidateVisual();
+                return;
             }
 
             if (_isResizing && _selectedObject != null)
@@ -349,7 +530,7 @@ namespace FigCrafterApp.Views
                     _selectedObject.Height = newH;
                 }
                 
-                SkiaElement.InvalidateVisual();
+                ThrottledInvalidateVisual();
                 return;
             }
 
@@ -370,7 +551,7 @@ namespace FigCrafterApp.Views
                     MoveChildrenRecursive(groupObj, dx, dy);
                 }
 
-                SkiaElement.InvalidateVisual();
+                ThrottledInvalidateVisual();
                 return;
             }
 
@@ -405,12 +586,29 @@ namespace FigCrafterApp.Views
                 _tempObject.Height = Math.Abs(_startPoint.Y - endPoint.Y);
             }
 
-            SkiaElement.InvalidateVisual();
+            ThrottledInvalidateVisual();
         }
 
         private void SkiaElement_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             if (DataContext is not CanvasViewModel vmObj) return;
+
+            if (_isCropping)
+            {
+                _isCropping = false;
+                if (_selectedObject is ImageObject imgObj)
+                {
+                    var cmd = new CropImageCommand(imgObj,
+                        _originalResizeRect.Left, _originalResizeRect.Top, _originalResizeRect.Width, _originalResizeRect.Height,
+                        imgObj.X, imgObj.Y, imgObj.Width, imgObj.Height,
+                        _originalCropRect.Left, _originalCropRect.Top, _originalCropRect.Width, _originalCropRect.Height,
+                        imgObj.CropX, imgObj.CropY, imgObj.CropWidth, imgObj.CropHeight);
+                    vmObj.ExecuteCommand(cmd);
+                }
+                _cropHandleIndex = -1;
+                SkiaElement.ReleaseMouseCapture();
+                return;
+            }
 
             if (_isResizing)
             {
@@ -620,43 +818,7 @@ namespace FigCrafterApp.Views
                 var skBitmap = TryGetImageFromClipboard();
                 if (skBitmap != null)
                 {
-                    // 画像オブジェクト
-                    var imageObj = new ImageObject
-                    {
-                        X = 10,
-                        Y = 10,
-                        ImageData = skBitmap
-                    };
-                    
-                    // 枠線オブジェクト (透明背景、黒枠線)
-                    var borderObj = new RectangleObject
-                    {
-                        X = 10,
-                        Y = 10,
-                        Width = imageObj.Width,
-                        Height = imageObj.Height,
-                        FillColor = SKColors.Transparent,
-                        StrokeColor = SKColors.Black,
-                        StrokeWidth = 2
-                    };
-
-                    // グループオブジェクト
-                    var groupObj = new GroupObject
-                    {
-                        X = 10,
-                        Y = 10,
-                        Width = imageObj.Width,
-                        Height = imageObj.Height
-                    };
-                    
-                    // 子要素として追加
-                    groupObj.Children.Add(imageObj);
-                    groupObj.Children.Add(borderObj);
-
-                    vm.GraphicObjects.Add(groupObj);
-                    vm.SelectObject(groupObj);
-                    _selectedObject = groupObj;
-                    SkiaElement.InvalidateVisual();
+                    vm.ImportImageAsGroup(skBitmap);
                 }
                 else if (vm.PasteCommand.CanExecute(null))
                 {

@@ -33,7 +33,10 @@ namespace FigCrafterApp.ViewModels
         public ICommand ChangeFillColorCommand { get; }
         public ICommand ChangeStrokeColorCommand { get; }
         public ICommand ExportPngCommand { get; }
+        public ICommand ExportPdfCommand { get; }
+        public ICommand ExportTifCommand { get; }
 
+        public ICommand ImportFileCommand { get; }
         public ICommand OpenProjectCommand { get; }
         public ICommand SaveProjectCommand { get; }
 
@@ -46,7 +49,10 @@ namespace FigCrafterApp.ViewModels
             ChangeFillColorCommand = new RelayCommand(p => ChangeSelectedObjectColor(p?.ToString(), true));
             ChangeStrokeColorCommand = new RelayCommand(p => ChangeSelectedObjectColor(p?.ToString(), false));
             ExportPngCommand = new RelayCommand(p => ExportPng());
+            ExportPdfCommand = new RelayCommand(p => ExportPdf());
+            ExportTifCommand = new RelayCommand(p => ExportTif());
 
+            ImportFileCommand = new RelayCommand(async p => await ImportFileAsync());
             OpenProjectCommand = new RelayCommand(p => OpenProject());
             SaveProjectCommand = new RelayCommand(p => SaveProject());
 
@@ -138,6 +144,87 @@ namespace FigCrafterApp.ViewModels
                 catch (Exception ex)
                 {
                     System.Windows.MessageBox.Show($"PNGの保存に失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void ExportPdf()
+        {
+            if (ActiveDocument == null) return;
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "PDFファイル (*.pdf)|*.pdf",
+                FileName = $"{ActiveDocument.Title}.pdf",
+                Title = "PDF書き出し"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    ActiveDocument.ExportPdf(dialog.FileName);
+                    System.Windows.MessageBox.Show($"PDFを保存しました:\n{dialog.FileName}", "PDF書き出し", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"PDFの保存に失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void ExportTif()
+        {
+            if (ActiveDocument == null) return;
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "TIFFファイル (*.tif;*.tiff)|*.tif;*.tiff",
+                FileName = $"{ActiveDocument.Title}.tif",
+                Title = "TIFF書き出し"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    ActiveDocument.ExportTif(dialog.FileName);
+                    System.Windows.MessageBox.Show($"TIFFを保存しました:\n{dialog.FileName}", "TIFF書き出し", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"TIFFの保存に失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private async System.Threading.Tasks.Task ImportFileAsync()
+        {
+            if (ActiveDocument == null) return;
+
+            var dialog = new OpenFileDialog
+            {
+                Filter = "画像・AI・EMFファイル|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff;*.ai;*.pdf;*.emf;*.wmf|すべてのファイル (*.*)|*.*",
+                Title = "ファイルをインポート"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var bitmap = await FigCrafterApp.Helpers.ImportHelper.ImportFileAsync(dialog.FileName);
+                    if (bitmap != null)
+                    {
+                        ActiveDocument.ImportImageAsGroup(bitmap);
+                    }
+                    else
+                    {
+                        System.Windows.MessageBox.Show("ファイルの読み込みに失敗しました。未対応の形式かデータが破損しています。", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"インポート中にエラーが発生しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 }
             }
         }

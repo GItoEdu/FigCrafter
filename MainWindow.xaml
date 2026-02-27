@@ -79,8 +79,14 @@
             <Button Content="📁 開く" Command="{Binding OpenProjectCommand}" Margin="10,5,5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="プロジェクトを開く"/>
             <Button Content="💾 保存" Command="{Binding SaveProjectCommand}" Margin="5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="プロジェクトを保存する"/>
             
+            <Button Content="📥 インポート" Command="{Binding ImportFileCommand}" Margin="15,5,5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="画像やAI(PDF互換)/EMFファイルをキャンバスに読み込む"/>
+            
             <Button Content="新規プロジェクト" Command="{Binding NewDocumentCommand}" Margin="15,5,10,5" Padding="10,2" Background="#FF007ACC" Foreground="White" BorderThickness="0"/>
-            <Button Content="📷 PNG書き出し" Command="{Binding ExportPngCommand}" Margin="5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+            
+            <!-- 書き出しボタン群 -->
+            <Button Content="📷 PNG抽出" Command="{Binding ExportPngCommand}" Margin="5,5,0,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="PNGとして書き出し"/>
+            <Button Content="📄 PDF抽出" Command="{Binding ExportPdfCommand}" Margin="2,5,0,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="PDFとして書き出し"/>
+            <Button Content="🖼️ TIF抽出" Command="{Binding ExportTifCommand}" Margin="2,5,10,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="TIFFとして書き出し"/>
             <!-- ActiveDocument の Undo/Redo コマンドにバインド -->
             <Button Content="↩ 取り消し" Command="{Binding ActiveDocument.UndoCommand}" Margin="15,5,5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="元に戻す"/>
             <Button Content="↪ やり直し" Command="{Binding ActiveDocument.RedoCommand}" Margin="5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="やり直す"/>
@@ -304,6 +310,52 @@
                         </StackPanel.Style>
                         <TextBlock Text="画像モード:" Margin="0,10,0,5" Foreground="Gray"/>
                         <CheckBox Content="グレースケール化" IsChecked="{Binding IsGrayscale, UpdateSourceTrigger=PropertyChanged}" Foreground="White" Margin="0,5"/>
+
+                        <TextBlock Text="トリミング:" Margin="0,10,0,5" Foreground="Gray"/>
+                        <Button Content="トリミングハンドル表示" Command="{Binding DataContext.ActiveDocument.ToggleCropModeCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,5,0,10" Padding="5" Background="#FF3E3E42" Foreground="White" BorderThickness="0">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding DataContext.ActiveDocument.IsCropMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                            <Setter Property="Background" Value="#FF007ACC"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Crop X:" Foreground="Gray" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Text="{Binding CropX, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Crop Y:" Foreground="Gray" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Text="{Binding CropY, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Crop W:" Foreground="Gray" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Text="{Binding CropWidth, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Crop H:" Foreground="Gray" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Text="{Binding CropHeight, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                        </Grid>
                     </StackPanel>
 
                     <TextBlock Text="線の太さ:" Margin="0,10,0,5" Foreground="Gray"/>

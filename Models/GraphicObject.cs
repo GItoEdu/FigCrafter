@@ -81,7 +81,7 @@ namespace FigCrafterApp.Models
         /// オブジェクトの中心を原点としてキャンバスに回転を適用する
         /// 呼び出し元で必ず canvas.Save() / canvas.Restore() を行うこと
         /// </summary>
-        protected void TransformCanvas(SKCanvas canvas)
+        public void TransformCanvas(SKCanvas canvas)
         {
             if (Rotation != 0)
             {
@@ -674,6 +674,35 @@ namespace FigCrafterApp.Models
             set => SetProperty(ref _isGrayscale, value);
         }
 
+        private float _cropX = 0;
+        private float _cropY = 0;
+        private float _cropWidth = -1;
+        private float _cropHeight = -1;
+
+        public float CropX
+        {
+            get => _cropX;
+            set => SetProperty(ref _cropX, value);
+        }
+
+        public float CropY
+        {
+            get => _cropY;
+            set => SetProperty(ref _cropY, value);
+        }
+
+        public float CropWidth
+        {
+            get => _cropWidth;
+            set => SetProperty(ref _cropWidth, value);
+        }
+
+        public float CropHeight
+        {
+            get => _cropHeight;
+            set => SetProperty(ref _cropHeight, value);
+        }
+
         [JsonIgnore]
         public SKBitmap? ImageData
         {
@@ -685,6 +714,8 @@ namespace FigCrafterApp.Models
                 {
                     Width = _imageData.Width;
                     Height = _imageData.Height;
+                    if (_cropWidth < 0) CropWidth = _imageData.Width;
+                    if (_cropHeight < 0) CropHeight = _imageData.Height;
                 }
             }
         }
@@ -723,6 +754,35 @@ namespace FigCrafterApp.Models
             }
         }
 
+        private SKPaint? _cachedPaint;
+        private float _lastOpacity = -1f;
+        private bool _lastIsGrayscale = false;
+
+        private void UpdateCachedPaint()
+        {
+            if (_cachedPaint == null || _lastOpacity != Opacity || _lastIsGrayscale != IsGrayscale)
+            {
+                _cachedPaint?.Dispose();
+                _cachedPaint = new SKPaint();
+                
+                var matrix = IsGrayscale ? new float[] {
+                    0.299f, 0.587f, 0.114f, 0, 0,
+                    0.299f, 0.587f, 0.114f, 0, 0,
+                    0.299f, 0.587f, 0.114f, 0, 0,
+                    0,      0,      0,      Opacity, 0
+                } : new float[] {
+                    1, 0, 0, 0,       0,
+                    0, 1, 0, 0,       0,
+                    0, 0, 1, 0,       0,
+                    0, 0, 0, Opacity, 0
+                };
+
+                _cachedPaint.ColorFilter = SKColorFilter.CreateColorMatrix(matrix);
+                _lastOpacity = Opacity;
+                _lastIsGrayscale = IsGrayscale;
+            }
+        }
+
         public override void Draw(SKCanvas canvas)
         {
             if (_imageData == null) return;
@@ -731,30 +791,10 @@ namespace FigCrafterApp.Models
             TransformCanvas(canvas);
 
             var destRect = new SKRect(X, Y, X + Width, Y + Height);
+            var srcRect = new SKRect(CropX, CropY, CropX + CropWidth, CropY + CropHeight);
 
-            using var paint = new SKPaint();
-            
-            // グレースケール用カラーマトリクス (NTSC係数)
-            // L = 0.299*R + 0.587*G + 0.114*B
-            var matrix = new float[]
-            {
-                0.299f, 0.587f, 0.114f, 0, 0,
-                0.299f, 0.587f, 0.114f, 0, 0,
-                0.299f, 0.587f, 0.114f, 0, 0,
-                0,      0,      0,      Opacity, 0
-            };
-
-            var defaultMatrix = new float[]
-            {
-                1, 0, 0, 0,       0,
-                0, 1, 0, 0,       0,
-                0, 0, 1, 0,       0,
-                0, 0, 0, Opacity, 0
-            };
-
-            paint.ColorFilter = SKColorFilter.CreateColorMatrix(IsGrayscale ? matrix : defaultMatrix);
-
-            canvas.DrawBitmap(_imageData, destRect, paint);
+            UpdateCachedPaint();
+            canvas.DrawBitmap(_imageData, srcRect, destRect, _cachedPaint);
 
             if (IsSelected)
             {
@@ -803,6 +843,10 @@ namespace FigCrafterApp.Models
             var clone = new ImageObject();
             CopyPropertiesTo(clone);
             clone.IsGrayscale = IsGrayscale;
+            clone.CropX = CropX;
+            clone.CropY = CropY;
+            clone.CropWidth = CropWidth;
+            clone.CropHeight = CropHeight;
             if (_imageData != null)
             {
                 clone._imageData = _imageData.Copy();
