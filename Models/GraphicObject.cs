@@ -692,12 +692,19 @@ namespace FigCrafterApp.Models
         /// </summary>
         public void EnsureEraserMask()
         {
-            if (_eraserMask != null) return;
-            if (_imageData == null) return;
-            // DstIn合成で確実に適用されるよう、Bgra8888カラーフォーマットを使用する
-            _eraserMask = new SKBitmap(_imageData.Width, _imageData.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
-            using var canvas = new SKCanvas(_eraserMask);
-            canvas.Clear(SKColors.White); // 白＝アルファ255なので後々のDstInで元画像がそのまま残る
+            try
+            {
+                if (_eraserMask != null) return;
+                if (_imageData == null) return;
+                // DstIn合成で確実に適用されるよう、Bgra8888カラーフォーマットを使用する
+                _eraserMask = new SKBitmap(_imageData.Width, _imageData.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
+                using var canvas = new SKCanvas(_eraserMask);
+                canvas.Clear(SKColors.White); // 白＝アルファ255なので後々のDstInで元画像がそのまま残る
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"EnsureEraserMask Error: {ex}");
+            }
         }
 
         /// <summary>
@@ -705,17 +712,24 @@ namespace FigCrafterApp.Models
         /// </summary>
         public void ApplyEraser(float pixelX, float pixelY, float radius)
         {
-            EnsureEraserMask();
-            if (_eraserMask == null) return;
-            using var canvas = new SKCanvas(_eraserMask);
-            using var paint = new SKPaint
+            try
             {
-                Color = new SKColor(0, 0, 0, 0), // 透明を書き込み
-                IsAntialias = true,
-                Style = SKPaintStyle.Fill,
-                BlendMode = SKBlendMode.Src // 既存値を上書き
-            };
-            canvas.DrawCircle(pixelX, pixelY, radius, paint);
+                EnsureEraserMask();
+                if (_eraserMask == null) return;
+                using var canvas = new SKCanvas(_eraserMask);
+                using var paint = new SKPaint
+                {
+                    Color = new SKColor(0, 0, 0, 0), // 透明を書き込み
+                    IsAntialias = true,
+                    Style = SKPaintStyle.Fill,
+                    BlendMode = SKBlendMode.Src // 既存値を上書き
+                };
+                canvas.DrawCircle(pixelX, pixelY, radius, paint);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ApplyEraser Error: {ex}");
+            }
         }
 
         public bool IsGrayscale
@@ -848,22 +862,31 @@ namespace FigCrafterApp.Models
             // 消しゴムマスクがある場合はマスク適用描画
             if (_eraserMask != null)
             {
-                // オフスクリーンレイヤーに画像を描画（範囲を絞ってハングアップを防ぐ）
-                using var layerPaint = new SKPaint();
-                canvas.SaveLayer(destRect, layerPaint);
-                canvas.DrawBitmap(_imageData, srcRect, destRect, _cachedPaint);
-
-                // マスクをDstIn合成モードで適用（マスクの透明部分が画像を透過にする）
-                using var maskPaint = new SKPaint
+                try
                 {
-                    BlendMode = SKBlendMode.DstIn, // dst のアルファをマスクで制限
-                    IsAntialias = true
-                };
-                // マスクのソース矩形（クロップ対応）
-                var maskSrcRect = new SKRect(CropX, CropY, CropX + CropWidth, CropY + CropHeight);
-                canvas.DrawBitmap(_eraserMask, maskSrcRect, destRect, maskPaint);
+                    // オフスクリーンレイヤーに画像を描画（範囲を絞ってハングアップを防ぐ）
+                    using var layerPaint = new SKPaint();
+                    canvas.SaveLayer(destRect, layerPaint);
+                    canvas.DrawBitmap(_imageData, srcRect, destRect, _cachedPaint);
 
-                canvas.Restore(); // SaveLayerの復元
+                    // マスクをDstIn合成モードで適用（マスクの透明部分が画像を透過にする）
+                    using var maskPaint = new SKPaint
+                    {
+                        BlendMode = SKBlendMode.DstIn, // dst のアルファをマスクで制限
+                        IsAntialias = true
+                    };
+                    // マスクのソース矩形（クロップ対応）
+                    var maskSrcRect = new SKRect(CropX, CropY, CropX + CropWidth, CropY + CropHeight);
+                    canvas.DrawBitmap(_eraserMask, maskSrcRect, destRect, maskPaint);
+
+                    canvas.Restore(); // SaveLayerの復元
+                }
+                catch (Exception ex)
+                {
+                    using var errPaint = new SKPaint { Color = SKColors.Red, TextSize = 16 };
+                    canvas.DrawText("Eraser Err: " + ex.Message, X, Y - 10, errPaint);
+                    canvas.DrawBitmap(_imageData, srcRect, destRect, _cachedPaint);
+                }
             }
             else
             {
