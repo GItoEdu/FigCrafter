@@ -97,7 +97,7 @@ namespace FigCrafterApp.Models
         /// スクリーン座標系の点をオブジェクトのローカル（回転前）座標系に逆変換する
         /// HitTest 等で使用する
         /// </summary>
-        protected SKPoint UntransformPoint(SKPoint point)
+        public SKPoint UntransformPoint(SKPoint point)
         {
             if (Rotation == 0) return point;
 
@@ -694,9 +694,10 @@ namespace FigCrafterApp.Models
         {
             if (_eraserMask != null) return;
             if (_imageData == null) return;
-            _eraserMask = new SKBitmap(_imageData.Width, _imageData.Height, SKColorType.Alpha8, SKAlphaType.Premul);
+            // DstIn合成で確実に適用されるよう、Bgra8888カラーフォーマットを使用する
+            _eraserMask = new SKBitmap(_imageData.Width, _imageData.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
             using var canvas = new SKCanvas(_eraserMask);
-            canvas.Clear(new SKColor(0, 0, 0, 255)); // Alpha8で255=完全不透明
+            canvas.Clear(SKColors.White); // 白＝アルファ255なので後々のDstInで元画像がそのまま残る
         }
 
         /// <summary>
@@ -847,8 +848,9 @@ namespace FigCrafterApp.Models
             // 消しゴムマスクがある場合はマスク適用描画
             if (_eraserMask != null)
             {
-                // オフスクリーンレイヤーに画像を描画
-                canvas.SaveLayer();
+                // オフスクリーンレイヤーに画像を描画（範囲を絞ってハングアップを防ぐ）
+                using var layerPaint = new SKPaint();
+                canvas.SaveLayer(destRect, layerPaint);
                 canvas.DrawBitmap(_imageData, srcRect, destRect, _cachedPaint);
 
                 // マスクをDstIn合成モードで適用（マスクの透明部分が画像を透過にする）

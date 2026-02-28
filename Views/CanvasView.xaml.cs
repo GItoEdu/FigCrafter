@@ -132,8 +132,11 @@ namespace FigCrafterApp.Views
 
             if (DataContext is CanvasViewModel vm)
             {
-                foreach (var layer in vm.Layers)
+                // レイヤーのリストはUI（ListBox）上ではインデックス0が「一番上（手前）」に表示されるため、
+                // 描画はインデックスが後ろ（奥）のものから順に行う
+                for (int i = vm.Layers.Count - 1; i >= 0; i--)
                 {
+                    var layer = vm.Layers[i];
                     if (!layer.IsVisible) continue;
                     foreach (var obj in layer.GraphicObjects)
                     {
@@ -221,6 +224,7 @@ namespace FigCrafterApp.Views
             if (vm.CurrentTool == DrawingTool.Eraser)
             {
                 // 消しゴムツール: クリック位置のImageObjectを検索して消しゴム開始
+                // GroupObjectの子のImageObjectも対象にする
                 ImageObject? targetImg = null;
                 for (int layerIndex = vm.Layers.Count - 1; layerIndex >= 0; layerIndex--)
                 {
@@ -228,10 +232,17 @@ namespace FigCrafterApp.Views
                     if (!layer.IsVisible || layer.IsLocked) continue;
                     for (int i = layer.GraphicObjects.Count - 1; i >= 0; i--)
                     {
-                        if (layer.GraphicObjects[i] is ImageObject img && img.HitTest(_startPoint))
+                        var obj = layer.GraphicObjects[i];
+                        if (obj is ImageObject img && img.HitTest(_startPoint))
                         {
                             targetImg = img;
                             break;
+                        }
+                        // GroupObject内のImageObjectも検索
+                        if (obj is GroupObject group && obj.HitTest(_startPoint))
+                        {
+                            targetImg = FindImageInGroup(group, _startPoint);
+                            if (targetImg != null) break;
                         }
                     }
                     if (targetImg != null) break;
@@ -244,14 +255,15 @@ namespace FigCrafterApp.Views
                     ApplyEraserAtPoint(targetImg, _startPoint);
                     SkiaElement.CaptureMouse();
                     ThrottledInvalidateVisual();
+                    return;
                 }
-                return;
+                // ImageObjectが見つからなかった場合、Selectツール動作にフォールスルー
             }
 
-            if (vm.CurrentTool == DrawingTool.Select)
+            if (vm.CurrentTool == DrawingTool.Select || vm.CurrentTool == DrawingTool.Eraser)
             {
                 // 既に選択されているオブジェクトがあればハンドルのヒットテストを優先
-                if (_selectedObject != null)
+                if (_selectedObject != null && vm.CurrentTool == DrawingTool.Select)
                 {
                     int handleIdx = GetHandleHitIndex(_selectedObject, _startPoint);
                     if (handleIdx >= 0)
@@ -302,22 +314,25 @@ namespace FigCrafterApp.Views
 
                 if (hitObject != null)
                 {
-                    if (isShiftHeld)
+                    if (vm.CurrentTool == DrawingTool.Select)
                     {
-                        // Shift+クリック: トグル選択
-                        vm.ToggleSelectObject(hitObject);
-                        _selectedObject = vm.SelectedObject;
-                    }
-                    else
-                    {
-                        // 通常クリック: 単一選択
-                        vm.SelectObject(hitObject);
-                        _selectedObject = hitObject;
+                        if (isShiftHeld)
+                        {
+                            // Shift+クリック: トグル選択
+                            vm.ToggleSelectObject(hitObject);
+                            _selectedObject = vm.SelectedObject;
+                        }
+                        else
+                        {
+                            // 通常クリック: 単一選択
+                            vm.SelectObject(hitObject);
+                            _selectedObject = hitObject;
+                        }
                     }
                 }
                 else
                 {
-                    if (!isShiftHeld)
+                    if (!isShiftHeld && vm.CurrentTool == DrawingTool.Select)
                     {
                         // 何もない場所をクリック: 全選択解除し、範囲選択を開始
                         vm.ClearSelection();
@@ -330,7 +345,7 @@ namespace FigCrafterApp.Views
 
                 SkiaElement.InvalidateVisual();
                 
-                if (_selectedObject != null && !isShiftHeld)
+                if (_selectedObject != null && !isShiftHeld && vm.CurrentTool == DrawingTool.Select)
                 {
                     _isDragging = true;
                     _preDragPositions.Clear();
@@ -1016,16 +1031,38 @@ namespace FigCrafterApp.Views
         {
             if (imgObj.ImageData == null) return;
 
-            // キャンバス座標 -> 画像ピクセル座標に変換
+            // 画面座標を画像のローカル（回転前）座標系に戻す
+            var p = imgObj.UntransformPoint(canvasPoint);
+
+            // ローカル座標 -> 画像ピクセル座標に変換
             float scaleX = imgObj.CropWidth / imgObj.Width;
             float scaleY = imgObj.CropHeight / imgObj.Height;
-            float pixelX = imgObj.CropX + (canvasPoint.X - imgObj.X) * scaleX;
-            float pixelY = imgObj.CropY + (canvasPoint.Y - imgObj.Y) * scaleY;
+            float pixelX = imgObj.CropX + (p.X - imgObj.X) * scaleX;
+            float pixelY = imgObj.CropY + (p.Y - imgObj.Y) * scaleY;
 
             // 消しゴムブラシサイズもピクセル座標系での半径に変換
             float pixelRadius = imgObj.EraserSize * scaleX;
 
             imgObj.ApplyEraser(pixelX, pixelY, pixelRadius);
+        }
+
+        /// <summary>
+        /// GroupObject内のImageObjectを再帰的に検索する
+        /// </summary>
+        private ImageObject? FindImageInGroup(GroupObject group, SKPoint point)
+        {
+            for (int i = group.Children.Count - 1; i >= 0; i--)
+            {
+                var child = group.Children[i];
+                if (child is ImageObject img && img.HitTest(point))
+                    return img;
+                if (child is GroupObject nestedGroup && child.HitTest(point))
+                {
+                    var found = FindImageInGroup(nestedGroup, point);
+                    if (found != null) return found;
+                }
+            }
+            return null;
         }
     }
 }

@@ -168,6 +168,14 @@ namespace FigCrafterApp.ViewModels
             get => _layers;
             set
             {
+                // 旧コレクションのイベント解除
+                if (_layers != null)
+                {
+                    _layers.CollectionChanged -= OnLayersCollectionChanged;
+                    foreach (var layer in _layers)
+                        layer.PropertyChanged -= OnLayerPropertyChanged;
+                }
+
                 if (SetProperty(ref _layers, value))
                 {
                     if (_layers.Count > 0)
@@ -175,7 +183,38 @@ namespace FigCrafterApp.ViewModels
                     else
                         ActiveLayer = null;
                 }
+
+                // 新コレクションのイベント登録
+                if (_layers != null)
+                {
+                    _layers.CollectionChanged += OnLayersCollectionChanged;
+                    foreach (var layer in _layers)
+                        layer.PropertyChanged += OnLayerPropertyChanged;
+                }
             }
+        }
+
+        private void OnLayersCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            // 追加されたレイヤーのイベント登録
+            if (e.NewItems != null)
+            {
+                foreach (Layer layer in e.NewItems)
+                    layer.PropertyChanged += OnLayerPropertyChanged;
+            }
+            // 削除されたレイヤーのイベント解除
+            if (e.OldItems != null)
+            {
+                foreach (Layer layer in e.OldItems)
+                    layer.PropertyChanged -= OnLayerPropertyChanged;
+            }
+            Invalidate();
+        }
+
+        private void OnLayerPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            // レイヤーのIsVisible/IsLocked/Opacity等の変更時に再描画を要求
+            Invalidate();
         }
 
         public Layer? ActiveLayer
@@ -303,6 +342,13 @@ namespace FigCrafterApp.ViewModels
                 obj.IsSelected = true;
                 _selectedObjects.Add(obj);
                 SelectedObject = obj;
+
+                // 選択したオブジェクトが属するレイヤーをActiveLayerに自動で切り替える
+                var layer = FindLayer(obj);
+                if (layer != null && ActiveLayer != layer)
+                {
+                    ActiveLayer = layer;
+                }
             }
             else
             {
@@ -316,7 +362,7 @@ namespace FigCrafterApp.ViewModels
         }
 
         /// <summary>
-        /// トグル選択（Shift+クリック用：追加 or 解除）
+        /// トジー選択（Shift+クリック用：追加 or 解除）
         /// </summary>
         public void ToggleSelectObject(GraphicObject obj)
         {
@@ -334,6 +380,13 @@ namespace FigCrafterApp.ViewModels
                 obj.IsSelected = true;
                 _selectedObjects.Add(obj);
                 SelectedObject = obj;
+
+                // 追加したオブジェクトが属するレイヤーをActiveLayerにする
+                var layer = FindLayer(obj);
+                if (layer != null && ActiveLayer != layer)
+                {
+                    ActiveLayer = layer;
+                }
             }
             Invalidate();
         }
@@ -388,6 +441,9 @@ namespace FigCrafterApp.ViewModels
 
         public CanvasViewModel()
         {
+            // デフォルトコレクションのイベント登録
+            _layers.CollectionChanged += OnLayersCollectionChanged;
+
             var defaultLayer = new Layer { Name = "レイヤー 1" };
             Layers.Add(defaultLayer);
             ActiveLayer = defaultLayer;

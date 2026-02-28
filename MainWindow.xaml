@@ -417,10 +417,11 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     
-                    <UniformGrid Columns="3" Margin="0,0,0,5">
+                    <UniformGrid Columns="4" Margin="0,0,0,5">
                         <Button Content="➕ 追加" Command="{Binding ActiveDocument.AddLayerCommand}" Margin="2" Padding="2" Background="#FF007ACC" Foreground="White" BorderThickness="0"/>
                         <Button Content="🗑 削除" Command="{Binding ActiveDocument.RemoveLayerCommand}" Margin="2" Padding="2" Background="#FF6B2222" Foreground="White" BorderThickness="0"/>
                         <Button Content="↑ 上へ" Command="{Binding ActiveDocument.MoveLayerUpCommand}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="選択したレイヤーを上に移動"/>
+                        <Button Content="↓ 下へ" Command="{Binding ActiveDocument.MoveLayerDownCommand}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="選択したレイヤーを下に移動"/>
                     </UniformGrid>
 
                     <ListBox Grid.Row="1" ItemsSource="{Binding ActiveDocument.Layers}" SelectedItem="{Binding ActiveDocument.ActiveLayer, Mode=TwoWay}" Background="#FF3E3E42" BorderThickness="0" Foreground="White">
