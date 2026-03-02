@@ -1,0 +1,43 @@
+﻿  Determining projects to restore...
+  All projects are up-to-date for restore.
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(685,20): error CS0103: The name '_eraserSize' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(686,36): error CS0103: The name '_eraserSize' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(445,17): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(446,17): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(451,13): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(454,13): warning CS0618: 'SKCanvas.DrawText(string, float, float, SKPaint)' is obsolete: 'Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(480,17): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(481,17): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(484,13): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(179,37): warning CS8601: Possible null reference assignment. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(181,25): warning CS8602: Dereference of a possibly null reference. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(885,78): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(886,21): warning CS0618: 'SKCanvas.DrawText(string, float, float, SKPaint)' is obsolete: 'Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(874,21): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(875,21): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(878,17): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(65,22): warning CS0414: The field 'CanvasViewModel._isExecutingCommand' is assigned but its value is never used [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+
+Build FAILED.
+
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(445,17): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(446,17): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(451,13): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(454,13): warning CS0618: 'SKCanvas.DrawText(string, float, float, SKPaint)' is obsolete: 'Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(480,17): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(481,17): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(484,13): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(179,37): warning CS8601: Possible null reference assignment. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(181,25): warning CS8602: Dereference of a possibly null reference. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(885,78): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(886,21): warning CS0618: 'SKCanvas.DrawText(string, float, float, SKPaint)' is obsolete: 'Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(874,21): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(875,21): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(878,17): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(65,22): warning CS0414: The field 'CanvasViewModel._isExecutingCommand' is assigned but its value is never used [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(685,20): error CS0103: The name '_eraserSize' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(686,36): error CS0103: The name '_eraserSize' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_bduoqlj5_wpftmp.csproj]
+    15 Warning(s)
+    2 Error(s)
+
+Time Elapsed 00:00:02.69
