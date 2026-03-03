@@ -218,6 +218,19 @@ namespace FigCrafterApp.Models
                 canvas.DrawRect(handleRect, handlePaint);
                 canvas.DrawRect(handleRect, handleStrokePaint);
             }
+
+            // 回転ハンドルを描画 (上部中央から上に伸ばした位置)
+            float rotationHandleOffset = 20 / CurrentZoomLevel;
+            float midX = (rect.Left + rect.Right) / 2;
+            var rotationHandlePos = new SKPoint(midX, rect.Top - rotationHandleOffset);
+
+            // 繋ぐ線
+            canvas.DrawLine(midX, rect.Top, midX, rotationHandlePos.Y, handleStrokePaint);
+
+            // ハンドル本体
+            var rotateRect = new SKRect(rotationHandlePos.X - handleSize / 2, rotationHandlePos.Y - handleSize / 2, rotationHandlePos.X + handleSize / 2, rotationHandlePos.Y + handleSize / 2);
+            canvas.DrawRect(rotateRect, handlePaint);
+            canvas.DrawRect(rotateRect, handleStrokePaint);
         }
     }
 

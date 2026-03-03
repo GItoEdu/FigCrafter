@@ -133,4 +133,28 @@ namespace FigCrafterApp.Commands
             _targetObject.Height = _oldHeight;
         }
     }
+
+    public class RotateCommand : IUndoableCommand
+    {
+        private readonly GraphicObject _targetObject;
+        private readonly float _oldRotation;
+        private readonly float _newRotation;
+
+        public RotateCommand(GraphicObject targetObject, float oldRotation, float newRotation)
+        {
+            _targetObject = targetObject;
+            _oldRotation = oldRotation;
+            _newRotation = newRotation;
+        }
+
+        public void Execute()
+        {
+            _targetObject.Rotation = _newRotation;
+        }
+
+        public void Undo()
+        {
+            _targetObject.Rotation = _oldRotation;
+        }
+    }
 }

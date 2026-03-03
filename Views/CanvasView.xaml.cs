@@ -18,6 +18,7 @@ namespace FigCrafterApp.Views
         // ドラッグ・変形の状態管理用
         private bool _isDragging = false;
         private bool _isResizing = false;
+        private bool _isRotating = false; // 回転中フラグ
         private bool _isRangeSelecting = false; // 範囲選択中フラグ
         private bool _isCropping = false; // トリミング中フラグ
         private SKRect _selectionRect; // 範囲選択の矩形
@@ -27,6 +28,7 @@ namespace FigCrafterApp.Views
         private SKRect _originalResizeRect;
         private SKRect _originalCropRect;
         private float _originalAspectRatio;
+        private float _originalRotation; // 回転開始時の角度を保持
         
         // Undo用の一時保存
         private List<(GraphicObject Obj, float OldX, float OldY)> _preDragPositions = new();
@@ -334,7 +336,15 @@ namespace FigCrafterApp.Views
                             SkiaElement.CaptureMouse();
                             return;
                         }
-                        
+                        if (handleIdx == 4)
+                        {
+                            _isRotating = true;
+                            _originalRotation = _selectedObject.Rotation; // 回転開始時の角度を記録
+                            _originalResizeRect = GetBoundingRect(_selectedObject);
+                            SkiaElement.CaptureMouse();
+                            return;
+                        }
+
                         _isResizing = true;
                         _resizeHandleIndex = handleIdx;
                         _originalResizeRect = GetBoundingRect(_selectedObject);
@@ -500,9 +510,37 @@ namespace FigCrafterApp.Views
                         1 => System.Windows.Input.Cursors.SizeNESW, // TopRight
                         2 => System.Windows.Input.Cursors.SizeNWSE, // BottomRight
                         3 => System.Windows.Input.Cursors.SizeNESW, // BottomLeft
+                        4 => System.Windows.Input.Cursors.Hand,     // Rotation
                         _ => System.Windows.Input.Cursors.Arrow
                     };
                 }
+            }
+
+            if (_isRotating && _selectedObject != null)
+            {
+                var rect = GetBoundingRect(_selectedObject);
+                float centerX = rect.Left + rect.Width / 2;
+                float centerY = rect.Top + rect.Height / 2;
+
+                // 中心点から現在のマウス位置への角度を計算
+                float angleRad = (float)Math.Atan2(currentPoint.Y - centerY, currentPoint.X - centerX);
+                float angleDeg = angleRad * 180.0f / (float)Math.PI;
+
+                // SkiaSharp の描画 (上方向を 0 度とする場合) に合わせて +90 度調整
+                float rotation = angleDeg + 90.0f;
+
+                // Shiftキー押下で15度刻みスナップ
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+                {
+                    rotation = (float)Math.Round(rotation / 15.0f) * 15.0f;
+                }
+
+                // 360度の範囲に収める (オプション)
+                rotation = (rotation % 360 + 360) % 360;
+
+                _selectedObject.Rotation = rotation;
+                ThrottledInvalidateVisual();
+                return;
             }
 
             if (_isCropping && _selectedObject is ImageObject cropImgObj)
@@ -829,6 +867,17 @@ namespace FigCrafterApp.Views
                 return;
             }
 
+            if (_isRotating)
+            {
+                _isRotating = false;
+                if (_selectedObject != null && _selectedObject.Rotation != _originalRotation)
+                {
+                    vmObj.ExecuteCommand(new RotateCommand(_selectedObject, _originalRotation, _selectedObject.Rotation));
+                }
+                SkiaElement.ReleaseMouseCapture();
+                return;
+            }
+
             if (_isDragging)
             {
                 _isDragging = false;
@@ -934,6 +983,13 @@ namespace FigCrafterApp.Views
             {
                 if (HitTestHandle(points[i], hitPoint, handleRadius)) return i;
             }
+
+            // 回転ハンドル (インデックス 4) の判定
+            float rotationHandleOffset = 20.0f; // GraphicObject.DrawSelectionBox と合わせる
+            float midX = (rect.Left + rect.Right) / 2;
+            var rotationHandlePos = new SKPoint(midX, rect.Top - rotationHandleOffset);
+            if (HitTestHandle(rotationHandlePos, hitPoint, handleRadius)) return 4;
+
             return -1;
         }
 
