@@ -285,16 +285,222 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="フォント:" Foreground="Gray" VerticalAlignment="Center"/>
-                            <TextBox Grid.Column="1" Text="{Binding FontFamily, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                            <ComboBox Grid.Column="1" IsEditable="True"
+                                      ItemsSource="{Binding Source={x:Static Fonts.SystemFontFamilies}}"
+                                      Text="{Binding FontFamily, UpdateSourceTrigger=PropertyChanged}"
+                                      Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Source}" FontFamily="{Binding}" Foreground="Black" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                         </Grid>
                         <Grid Margin="0,5">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="60"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="サイズ:" Foreground="Gray" VerticalAlignment="Center"/>
-                            <TextBox Grid.Column="1" Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                            <TextBox Grid.Column="1" Text="{Binding FontSize, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                            <StackPanel Grid.Column="2" Orientation="Vertical" Margin="2,0,0,0">
+                                <RepeatButton Content="▲" Command="{Binding DataContext.ActiveDocument.IncreaseFontSizeCommand, RelativeSource={RelativeSource AncestorType=Window}}" Padding="2,0" FontSize="8" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                                <RepeatButton Content="▼" Command="{Binding DataContext.ActiveDocument.DecreaseFontSizeCommand, RelativeSource={RelativeSource AncestorType=Window}}" Padding="2,0" FontSize="8" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Margin="0,1,0,0"/>
+                            </StackPanel>
                         </Grid>
+
+                        <TextBlock Text="スタイル:" Margin="0,10,0,5" Foreground="Gray"/>
+                        <UniformGrid Columns="2" Margin="0,0,0,5">
+                            <ToggleButton Content="B" IsChecked="{Binding IsBold, UpdateSourceTrigger=PropertyChanged}" FontWeight="Bold" Margin="0,0,2,0" Background="#FF3E3E42" Foreground="White" BorderThickness="0">
+                                <ToggleButton.Style>
+                                    <Style TargetType="ToggleButton">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter Property="Background" Value="#FF007ACC"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ToggleButton.Style>
+                            </ToggleButton>
+                            <ToggleButton Content="I" IsChecked="{Binding IsItalic, UpdateSourceTrigger=PropertyChanged}" FontStyle="Italic" Margin="2,0,0,0" Background="#FF3E3E42" Foreground="White" BorderThickness="0">
+                                <ToggleButton.Style>
+                                    <Style TargetType="ToggleButton">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter Property="Background" Value="#FF007ACC"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ToggleButton.Style>
+                            </ToggleButton>
+                        </UniformGrid>
+
+                        <TextBlock Text="特殊文字:" Margin="0,10,0,5" Foreground="Gray"/>
+                        <ToggleButton x:Name="SpecialCharToggleButton" Content="Ω パレットを開く" Margin="0,0,0,5" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton">
+                                    <Style.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter Property="Background" Value="#FF007ACC"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ToggleButton.Style>
+                        </ToggleButton>
+                        <Popup IsOpen="{Binding IsChecked, ElementName=SpecialCharToggleButton}" StaysOpen="False" PlacementTarget="{Binding ElementName=SpecialCharToggleButton}" Placement="Bottom" MaxWidth="350">
+                            <Border Background="#FF2D2D30" BorderBrush="#FF3E3E42" BorderThickness="1" Padding="5">
+                                <ScrollViewer MaxHeight="400" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel>
+                                        <TextBlock Text="ギリシャ文字" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
+                                        <UniformGrid Columns="8">
+                                            <UniformGrid.Resources>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Padding" Value="4"/>
+                                                    <Setter Property="Margin" Value="1"/>
+                                                    <Setter Property="FontSize" Value="14"/>
+                                                    <Setter Property="Command" Value="{Binding DataContext.ActiveDocument.InsertSpecialCharCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                </Style>
+                                            </UniformGrid.Resources>
+                                            <Button Content="α" CommandParameter="α"/>
+                                            <Button Content="β" CommandParameter="β"/>
+                                            <Button Content="γ" CommandParameter="γ"/>
+                                            <Button Content="δ" CommandParameter="δ"/>
+                                            <Button Content="ε" CommandParameter="ε"/>
+                                            <Button Content="ζ" CommandParameter="ζ"/>
+                                            <Button Content="η" CommandParameter="η"/>
+                                            <Button Content="θ" CommandParameter="θ"/>
+                                            <Button Content="ι" CommandParameter="ι"/>
+                                            <Button Content="κ" CommandParameter="κ"/>
+                                            <Button Content="λ" CommandParameter="λ"/>
+                                            <Button Content="μ" CommandParameter="μ"/>
+                                            <Button Content="ν" CommandParameter="ν"/>
+                                            <Button Content="ξ" CommandParameter="ξ"/>
+                                            <Button Content="ο" CommandParameter="ο"/>
+                                            <Button Content="π" CommandParameter="π"/>
+                                            <Button Content="ρ" CommandParameter="ρ"/>
+                                            <Button Content="σ" CommandParameter="σ"/>
+                                            <Button Content="τ" CommandParameter="τ"/>
+                                            <Button Content="υ" CommandParameter="υ"/>
+                                            <Button Content="φ" CommandParameter="φ"/>
+                                            <Button Content="χ" CommandParameter="χ"/>
+                                            <Button Content="ψ" CommandParameter="ψ"/>
+                                            <Button Content="ω" CommandParameter="ω"/>
+                                            <Button Content="Γ" CommandParameter="Γ"/>
+                                            <Button Content="Δ" CommandParameter="Δ"/>
+                                            <Button Content="Θ" CommandParameter="Θ"/>
+                                            <Button Content="Λ" CommandParameter="Λ"/>
+                                            <Button Content="Ξ" CommandParameter="Ξ"/>
+                                            <Button Content="Π" CommandParameter="Π"/>
+                                            <Button Content="Σ" CommandParameter="Σ"/>
+                                            <Button Content="Φ" CommandParameter="Φ"/>
+                                            <Button Content="Ψ" CommandParameter="Ψ"/>
+                                            <Button Content="Ω" CommandParameter="Ω"/>
+                                        </UniformGrid>
+
+                                        <TextBlock Text="数学記号" Foreground="Gray" Margin="0,8,0,3" FontSize="11"/>
+                                        <UniformGrid Columns="8">
+                                            <UniformGrid.Resources>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Padding" Value="4"/>
+                                                    <Setter Property="Margin" Value="1"/>
+                                                    <Setter Property="FontSize" Value="14"/>
+                                                    <Setter Property="Command" Value="{Binding DataContext.ActiveDocument.InsertSpecialCharCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                </Style>
+                                            </UniformGrid.Resources>
+                                            <Button Content="±" CommandParameter="±"/>
+                                            <Button Content="×" CommandParameter="×"/>
+                                            <Button Content="÷" CommandParameter="÷"/>
+                                            <Button Content="≠" CommandParameter="≠"/>
+                                            <Button Content="≤" CommandParameter="≤"/>
+                                            <Button Content="≥" CommandParameter="≥"/>
+                                            <Button Content="≈" CommandParameter="≈"/>
+                                            <Button Content="∞" CommandParameter="∞"/>
+                                            <Button Content="√" CommandParameter="√"/>
+                                            <Button Content="∑" CommandParameter="∑"/>
+                                            <Button Content="∏" CommandParameter="∏"/>
+                                            <Button Content="∫" CommandParameter="∫"/>
+                                            <Button Content="∂" CommandParameter="∂"/>
+                                            <Button Content="∇" CommandParameter="∇"/>
+                                            <Button Content="∅" CommandParameter="∅"/>
+                                            <Button Content="∈" CommandParameter="∈"/>
+                                            <Button Content="∉" CommandParameter="∉"/>
+                                            <Button Content="∩" CommandParameter="∩"/>
+                                            <Button Content="∪" CommandParameter="∪"/>
+                                            <Button Content="⊂" CommandParameter="⊂"/>
+                                            <Button Content="⊆" CommandParameter="⊆"/>
+                                            <Button Content="∃" CommandParameter="∃"/>
+                                            <Button Content="∀" CommandParameter="∀"/>
+                                            <Button Content="¬" CommandParameter="¬"/>
+                                        </UniformGrid>
+
+                                        <TextBlock Text="上付き・下付き・単位" Foreground="Gray" Margin="0,8,0,3" FontSize="11"/>
+                                        <UniformGrid Columns="8">
+                                            <UniformGrid.Resources>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Padding" Value="4"/>
+                                                    <Setter Property="Margin" Value="1"/>
+                                                    <Setter Property="FontSize" Value="14"/>
+                                                    <Setter Property="Command" Value="{Binding DataContext.ActiveDocument.InsertSpecialCharCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                </Style>
+                                            </UniformGrid.Resources>
+                                            <Button Content="°" CommandParameter="°"/>
+                                            <Button Content="²" CommandParameter="²"/>
+                                            <Button Content="³" CommandParameter="³"/>
+                                            <Button Content="⁰" CommandParameter="⁰"/>
+                                            <Button Content="¹" CommandParameter="¹"/>
+                                            <Button Content="⁴" CommandParameter="⁴"/>
+                                            <Button Content="₁" CommandParameter="₁"/>
+                                            <Button Content="₂" CommandParameter="₂"/>
+                                            <Button Content="µ" CommandParameter="µ"/>
+                                            <Button Content="Å" CommandParameter="Å"/>
+                                            <Button Content="℃" CommandParameter="℃"/>
+                                            <Button Content="℉" CommandParameter="℉"/>
+                                        </UniformGrid>
+
+                                        <TextBlock Text="矢印・その他" Foreground="Gray" Margin="0,8,0,3" FontSize="11"/>
+                                        <UniformGrid Columns="8">
+                                            <UniformGrid.Resources>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Padding" Value="4"/>
+                                                    <Setter Property="Margin" Value="1"/>
+                                                    <Setter Property="FontSize" Value="14"/>
+                                                    <Setter Property="Command" Value="{Binding DataContext.ActiveDocument.InsertSpecialCharCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                </Style>
+                                            </UniformGrid.Resources>
+                                            <Button Content="←" CommandParameter="←"/>
+                                            <Button Content="↑" CommandParameter="↑"/>
+                                            <Button Content="→" CommandParameter="→"/>
+                                            <Button Content="↓" CommandParameter="↓"/>
+                                            <Button Content="↔" CommandParameter="↔"/>
+                                            <Button Content="⇒" CommandParameter="⇒"/>
+                                            <Button Content="⇔" CommandParameter="⇔"/>
+                                            <Button Content="©" CommandParameter="©"/>
+                                            <Button Content="®" CommandParameter="®"/>
+                                            <Button Content="™" CommandParameter="™"/>
+                                            <Button Content="†" CommandParameter="†"/>
+                                            <Button Content="‡" CommandParameter="‡"/>
+                                            <Button Content="§" CommandParameter="§"/>
+                                            <Button Content="¶" CommandParameter="¶"/>
+                                            <Button Content="…" CommandParameter="…"/>
+                                            <Button Content="★" CommandParameter="★"/>
+                                        </UniformGrid>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
                     </StackPanel>
 
                     <!-- 画像オブジェクト専用UI -->

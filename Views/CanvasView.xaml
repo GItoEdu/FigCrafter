@@ -22,6 +22,31 @@
                                 MouseMove="SkiaElement_MouseMove"
                                 MouseLeftButtonUp="SkiaElement_MouseLeftButtonUp"
                                 DataContextChanged="SkiaElement_DataContextChanged"/>
+
+                <TextBox x:Name="InlineEditingTextBox" 
+                         Visibility="Hidden" 
+                         Background="Transparent" 
+                         BorderThickness="1" 
+                         BorderBrush="#FF007ACC"
+                         Foreground="Black"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         HorizontalAlignment="Left"
+                         VerticalAlignment="Top"
+                         LostFocus="InlineEditingTextBox_LostFocus"
+                         PreviewKeyDown="InlineEditingTextBox_PreviewKeyDown"
+                         Padding="-1,-1,0,0"
+                         VerticalContentAlignment="Top">
+                    <TextBox.Template>
+                        <ControlTemplate TargetType="TextBox">
+                            <Border BorderBrush="{TemplateBinding BorderBrush}" 
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Background="{TemplateBinding Background}">
+                                <ScrollViewer x:Name="PART_ContentHost" Margin="0" Padding="0"/>
+                            </Border>
+                        </ControlTemplate>
+                    </TextBox.Template>
+                </TextBox>
             </Grid>
         </ScrollViewer>
     </Grid>

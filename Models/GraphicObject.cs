@@ -436,10 +436,14 @@ namespace FigCrafterApp.Models
         private string _text = "Text";
         private string _fontFamily = "Arial";
         private float _fontSize = 24;
+        private bool _isBold = false;
+        private bool _isItalic = false;
 
         public string Text { get => _text; set => SetProperty(ref _text, value); }
         public string FontFamily { get => _fontFamily; set => SetProperty(ref _fontFamily, value); }
         public float FontSize { get => _fontSize; set => SetProperty(ref _fontSize, value); }
+        public bool IsBold { get => _isBold; set => SetProperty(ref _isBold, value); }
+        public bool IsItalic { get => _isItalic; set => SetProperty(ref _isItalic, value); }
 
         public override void Draw(SKCanvas canvas)
         {
@@ -452,7 +456,10 @@ namespace FigCrafterApp.Models
             {
                 Color = fillWithOpacity,
                 IsAntialias = true,
-                Typeface = SKTypeface.FromFamilyName(FontFamily),
+                Typeface = SKTypeface.FromFamilyName(FontFamily, 
+                    IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal, 
+                    SKFontStyleWidth.Normal, 
+                    IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright),
                 TextSize = FontSize
             };
 
@@ -487,7 +494,10 @@ namespace FigCrafterApp.Models
 
             using var paint = new SKPaint
             {
-                Typeface = SKTypeface.FromFamilyName(FontFamily),
+                Typeface = SKTypeface.FromFamilyName(FontFamily, 
+                    IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal, 
+                    SKFontStyleWidth.Normal, 
+                    IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright),
                 TextSize = FontSize
             };
             var bounds = new SKRect();
@@ -504,6 +514,8 @@ namespace FigCrafterApp.Models
             clone.Text = Text;
             clone.FontFamily = FontFamily;
             clone.FontSize = FontSize;
+            clone.IsBold = IsBold;
+            clone.IsItalic = IsItalic;
             return clone;
         }
     }

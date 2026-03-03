@@ -61,6 +61,10 @@ namespace FigCrafterApp.ViewModels
         public ICommand RedoCommand { get; }
         public ICommand ToggleCropModeCommand { get; }
 
+        public ICommand IncreaseFontSizeCommand { get; }
+        public ICommand DecreaseFontSizeCommand { get; }
+        public ICommand InsertSpecialCharCommand { get; }
+
         public ICommand ZoomInCommand { get; }
         public ICommand ZoomOutCommand { get; }
         public ICommand ResetZoomCommand { get; }
@@ -510,6 +514,10 @@ namespace FigCrafterApp.ViewModels
             UndoCommand = new RelayCommand(_ => Undo(), _ => _undoStack.Count > 0);
             RedoCommand = new RelayCommand(_ => Redo(), _ => _redoStack.Count > 0);
             ToggleCropModeCommand = new RelayCommand(_ => { IsCropMode = !IsCropMode; }, p => _selectedObject is ImageObject);
+
+            IncreaseFontSizeCommand = new RelayCommand(_ => { if (SelectedObject is TextObject text) text.FontSize += 1; });
+            DecreaseFontSizeCommand = new RelayCommand(_ => { if (SelectedObject is TextObject text && text.FontSize > 1) text.FontSize -= 1; });
+            InsertSpecialCharCommand = new RelayCommand(p => { if (SelectedObject is TextObject text && p is string charStr) text.Text += charStr; });
 
             ZoomInCommand = new RelayCommand(p => ZoomLevel += 0.1);
             ZoomOutCommand = new RelayCommand(p => ZoomLevel -= 0.1);

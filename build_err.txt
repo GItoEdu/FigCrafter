@@ -1,11 +1,43 @@
-﻿I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(464,23): error CS0102: The type 'CanvasViewModel' already contains a definition for 'ZoomLevel' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_lttvvwrq_wpftmp.csproj]
-I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(461,23): error CS0102: The type 'CanvasViewModel' already contains a definition for 'WidthPx' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_lttvvwrq_wpftmp.csproj]
-I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(462,23): error CS0102: The type 'CanvasViewModel' already contains a definition for 'HeightPx' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_lttvvwrq_wpftmp.csproj]
-I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(480,23): error CS0102: The type 'CanvasViewModel' already contains a definition for 'ZoomedWidthPx' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_lttvvwrq_wpftmp.csproj]
-I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(481,23): error CS0102: The type 'CanvasViewModel' already contains a definition for 'ZoomedHeightPx' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_lttvvwrq_wpftmp.csproj]
+﻿  Determining projects to restore...
+  All projects are up-to-date for restore.
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\MainViewModel.cs(43,16): warning CS8618: Non-nullable property 'ImportFileCommand' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(188,37): warning CS8601: Possible null reference assignment. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(190,25): warning CS8602: Dereference of a possibly null reference. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(459,17): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(463,17): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(468,13): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(471,13): warning CS0618: 'SKCanvas.DrawText(string, float, float, SKPaint)' is obsolete: 'Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(497,17): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(501,17): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(504,13): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(916,78): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(917,21): warning CS0618: 'SKCanvas.DrawText(string, float, float, SKPaint)' is obsolete: 'Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(167,31): warning CS8629: Nullable value type may be null. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(962,21): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(963,21): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(966,17): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(1299,42): error CS0266: Cannot implicitly convert type 'double' to 'float'. An explicit conversion exists (are you missing a cast?) [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
 
 Build FAILED.
-    0 Warning(s)
-    5 Error(s)
 
-Time Elapsed 00:00:02.43
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\MainViewModel.cs(43,16): warning CS8618: Non-nullable property 'ImportFileCommand' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(188,37): warning CS8601: Possible null reference assignment. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(190,25): warning CS8602: Dereference of a possibly null reference. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(459,17): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(463,17): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(468,13): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(471,13): warning CS0618: 'SKCanvas.DrawText(string, float, float, SKPaint)' is obsolete: 'Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(497,17): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(501,17): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(504,13): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(916,78): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(917,21): warning CS0618: 'SKCanvas.DrawText(string, float, float, SKPaint)' is obsolete: 'Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(167,31): warning CS8629: Nullable value type may be null. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(962,21): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(963,21): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(966,17): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(1299,42): error CS0266: Cannot implicitly convert type 'double' to 'float'. An explicit conversion exists (are you missing a cast?) [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_4l5yg2ve_wpftmp.csproj]
+    16 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:02.13

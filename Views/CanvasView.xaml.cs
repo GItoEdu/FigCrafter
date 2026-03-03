@@ -41,6 +41,10 @@ namespace FigCrafterApp.Views
         private ImageObject? _eraserTarget = null;
         private SKRect _eraserRect; // 消しゴムをかける矩形領域
 
+        // インライン編集用
+        private TextObject? _editingTextObject;
+        private string _editingOriginalText = "";
+
         private SKPaint GetCachedCropGuidePaint(bool isGrayscale)
         {
             if (isGrayscale)
@@ -93,6 +97,10 @@ namespace FigCrafterApp.Views
             InitializeComponent();
             // マウスクリック時にキーボードフォーカスを取得
             this.MouseDown += (s, e) => Keyboard.Focus(this);
+            // SkiaElement上のダブルクリックでテキスト編集を開始
+            // SKElementはFrameworkElement派生のためMouseDoubleClickイベントがない
+            // PreviewMouseLeftButtonDownでClickCount==2を検出する
+            SkiaElement.PreviewMouseLeftButtonDown += SkiaElement_PreviewDoubleClick;
         }
 
         private void SkiaElement_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -248,6 +256,11 @@ namespace FigCrafterApp.Views
 
         private void SkiaElement_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (_editingTextObject != null)
+            {
+                EndInlineEditing();
+            }
+
             if (DataContext is not CanvasViewModel vm) return;
 
             var pRaw = e.GetPosition(SkiaElement);
@@ -427,6 +440,8 @@ namespace FigCrafterApp.Views
                 
                 vm.CurrentTool = DrawingTool.Select;
                 SkiaElement.InvalidateVisual();
+                
+                StartInlineEditing(textObj, vm);
                 return;
             }
 
@@ -1241,6 +1256,126 @@ namespace FigCrafterApp.Views
                 CanvasScrollViewer.UpdateLayout();
                 CanvasScrollViewer.ScrollToHorizontalOffset(newPosXInCanvas - mousePos.X);
                 CanvasScrollViewer.ScrollToVerticalOffset(newPosYInCanvas - mousePos.Y);
+
+                // ズーム時にインライン編集を終了させる
+                if (_editingTextObject != null) EndInlineEditing();
+            }
+        }
+
+        private void StartInlineEditing(TextObject textObj, CanvasViewModel vm)
+        {
+            _editingTextObject = textObj;
+            _editingOriginalText = textObj.Text;
+
+            // 編集中は元のテキスト描画を非表示にする（テキストを空にすることで描画されなくする）
+            textObj.Text = "";
+            vm.Invalidate();
+
+            InlineEditingTextBox.Text = _editingOriginalText;
+            InlineEditingTextBox.FontFamily = new System.Windows.Media.FontFamily(textObj.FontFamily);
+            InlineEditingTextBox.FontSize = textObj.FontSize * vm.ZoomLevel;
+            InlineEditingTextBox.FontWeight = textObj.IsBold ? FontWeights.Bold : FontWeights.Normal;
+            InlineEditingTextBox.FontStyle = textObj.IsItalic ? FontStyles.Italic : FontStyles.Normal;
+
+            // TextBoxのBorder(1px)の分を補正してずれを防ぐ
+            double offsetX = textObj.X * vm.ZoomLevel - 1;
+            double offsetY = textObj.Y * vm.ZoomLevel - 1;
+            InlineEditingTextBox.Margin = new Thickness(offsetX, offsetY, 0, 0);
+            
+            InlineEditingTextBox.MinWidth = 100;
+            InlineEditingTextBox.MinHeight = textObj.FontSize * vm.ZoomLevel + 4;
+            
+            InlineEditingTextBox.Visibility = Visibility.Visible;
+            InlineEditingTextBox.Focus();
+            InlineEditingTextBox.SelectAll();
+        }
+
+        private void EndInlineEditing()
+        {
+            if (_editingTextObject == null) return;
+            
+            // 編集結果を反映（空のままの場合は元のテキストを復元）
+            string newText = InlineEditingTextBox.Text;
+            _editingTextObject.Text = string.IsNullOrEmpty(newText) ? _editingOriginalText : newText;
+
+            (DataContext as CanvasViewModel)?.Invalidate();
+            
+            InlineEditingTextBox.Visibility = Visibility.Hidden;
+            _editingTextObject = null;
+            _editingOriginalText = "";
+        }
+
+        private void InlineEditingTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            EndInlineEditing();
+        }
+
+        private void InlineEditingTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+                {
+                    // Ctrl+Enter: 改行を挿入
+                    var tb = (System.Windows.Controls.TextBox)sender;
+                    int caretIndex = tb.CaretIndex;
+                    tb.Text = tb.Text.Insert(caretIndex, "\n");
+                    tb.CaretIndex = caretIndex + 1;
+                    e.Handled = true;
+                }
+                else
+                {
+                    // Enter: 編集確定
+                    EndInlineEditing();
+                    e.Handled = true;
+                    SkiaElement.Focus();
+                }
+            }
+            else if (e.Key == Key.Escape)
+            {
+                // キャンセル: 元のテキストを復元
+                if (_editingTextObject != null)
+                {
+                    _editingTextObject.Text = _editingOriginalText;
+                    (DataContext as CanvasViewModel)?.Invalidate();
+                }
+                InlineEditingTextBox.Visibility = Visibility.Hidden;
+                _editingTextObject = null;
+                _editingOriginalText = "";
+                SkiaElement.Focus();
+                e.Handled = true;
+            }
+        }
+
+        private void SkiaElement_PreviewDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount != 2) return; // ダブルクリックのみ処理
+            if (DataContext is not CanvasViewModel vm) return;
+            if (vm.CurrentTool != DrawingTool.Select) return;
+
+            var pRaw = e.GetPosition(SkiaElement);
+            var point = new SKPoint((float)(pRaw.X / vm.ZoomLevel), (float)(pRaw.Y / vm.ZoomLevel));
+
+            // ヒットテストでTextObjectを探す
+            for (int layerIndex = 0; layerIndex < vm.Layers.Count; layerIndex++)
+            {
+                var layer = vm.Layers[layerIndex];
+                if (!layer.IsVisible || layer.IsLocked) continue;
+
+                for (int i = layer.GraphicObjects.Count - 1; i >= 0; i--)
+                {
+                    if (layer.GraphicObjects[i] is TextObject textObj && textObj.HitTest(point))
+                    {
+                        // ドラッグ操作を即座にキャンセル
+                        _isDragging = false;
+                        if (SkiaElement.IsMouseCaptured)
+                            SkiaElement.ReleaseMouseCapture();
+
+                        StartInlineEditing(textObj, vm);
+                        e.Handled = true;
+                        return;
+                    }
+                }
             }
         }
     }
