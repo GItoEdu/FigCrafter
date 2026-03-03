@@ -960,13 +960,17 @@ namespace FigCrafterApp.Views
         private int GetHandleHitIndex(GraphicObject obj, SKPoint hitPoint)
         {
             float handleRadius = 6.0f; // Clickable area
+            
+            // 図形の回転を加味するため、マウス座標を図形のローカル座標系に逆変換する
+            var localHitPoint = obj.UntransformPoint(hitPoint);
+
             if (obj is LineObject lineObj)
             {
                 var p0 = new SKPoint(lineObj.X, lineObj.Y);
                 var p1 = new SKPoint(lineObj.EndX, lineObj.EndY);
                 
-                if (HitTestHandle(p0, hitPoint, handleRadius)) return 0;
-                if (HitTestHandle(p1, hitPoint, handleRadius)) return 1;
+                if (HitTestHandle(p0, localHitPoint, handleRadius)) return 0;
+                if (HitTestHandle(p1, localHitPoint, handleRadius)) return 1;
                 return -1;
             }
 
@@ -981,14 +985,14 @@ namespace FigCrafterApp.Views
 
             for (int i = 0; i < points.Length; i++)
             {
-                if (HitTestHandle(points[i], hitPoint, handleRadius)) return i;
+                if (HitTestHandle(points[i], localHitPoint, handleRadius)) return i;
             }
 
             // 回転ハンドル (インデックス 4) の判定
             float rotationHandleOffset = 20.0f; // GraphicObject.DrawSelectionBox と合わせる
             float midX = (rect.Left + rect.Right) / 2;
             var rotationHandlePos = new SKPoint(midX, rect.Top - rotationHandleOffset);
-            if (HitTestHandle(rotationHandlePos, hitPoint, handleRadius)) return 4;
+            if (HitTestHandle(rotationHandlePos, localHitPoint, handleRadius)) return 4;
 
             return -1;
         }
