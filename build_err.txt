@@ -1,0 +1,11 @@
+﻿I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(464,23): error CS0102: The type 'CanvasViewModel' already contains a definition for 'ZoomLevel' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_lttvvwrq_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(461,23): error CS0102: The type 'CanvasViewModel' already contains a definition for 'WidthPx' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_lttvvwrq_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(462,23): error CS0102: The type 'CanvasViewModel' already contains a definition for 'HeightPx' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_lttvvwrq_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(480,23): error CS0102: The type 'CanvasViewModel' already contains a definition for 'ZoomedWidthPx' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_lttvvwrq_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(481,23): error CS0102: The type 'CanvasViewModel' already contains a definition for 'ZoomedHeightPx' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_lttvvwrq_wpftmp.csproj]
+
+Build FAILED.
+    0 Warning(s)
+    5 Error(s)
+
+Time Elapsed 00:00:02.43

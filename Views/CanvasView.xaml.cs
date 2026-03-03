@@ -133,6 +133,9 @@ namespace FigCrafterApp.Views
 
             if (DataContext is CanvasViewModel vm)
             {
+                // UI上の表示倍率（ズーム）に合わせてスケール適用
+                canvas.Scale((float)vm.ZoomLevel);
+
                 // レイヤーのリストはUI（ListBox）上ではインデックス0が「一番上（手前）」に表示されるため、
                 // 描画はインデックスが後ろ（奥）のものから順に行う
                 for (int i = vm.Layers.Count - 1; i >= 0; i--)
@@ -141,12 +144,20 @@ namespace FigCrafterApp.Views
                     if (!layer.IsVisible) continue;
                     foreach (var obj in layer.GraphicObjects)
                     {
+                        obj.CurrentZoomLevel = (float)vm.ZoomLevel;
                         obj.Draw(canvas);
                     }
                 }
             }
 
-            _tempObject?.Draw(canvas);
+            if (_tempObject != null && DataContext is CanvasViewModel vm2)
+            {
+                _tempObject.CurrentZoomLevel = (float)vm2.ZoomLevel;
+                _tempObject.Draw(canvas);
+            }
+
+            var currentZoom = (float)(DataContext as CanvasViewModel)?.ZoomLevel;
+            if (currentZoom == 0) currentZoom = 1.0f;
 
             // 範囲選択矩形の描画
             if (_isRangeSelecting)
@@ -161,8 +172,8 @@ namespace FigCrafterApp.Views
                 {
                     Color = new SKColor(0, 122, 204, 180),
                     Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1,
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 4, 4 }, 0),
+                    StrokeWidth = 1 / currentZoom,
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 4 / currentZoom, 4 / currentZoom }, 0),
                     IsAntialias = true
                 };
                 canvas.DrawRect(_selectionRect, fillPaint);
@@ -182,8 +193,8 @@ namespace FigCrafterApp.Views
                 {
                     Color = new SKColor(255, 0, 0, 180),
                     Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1,
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 4, 4 }, 0),
+                    StrokeWidth = 1 / currentZoom,
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 4 / currentZoom, 4 / currentZoom }, 0),
                     IsAntialias = true
                 };
                 canvas.DrawRect(_eraserRect, fillPaint);
@@ -191,7 +202,7 @@ namespace FigCrafterApp.Views
             }
 
             // トリミングハンドルの描画と、元画像の半透明表示
-            if (DataContext is CanvasViewModel vm2 && vm2.IsCropMode && _selectedObject is ImageObject imgObj && imgObj.ImageData != null)
+            if (DataContext is CanvasViewModel vmCrop && vmCrop.IsCropMode && _selectedObject is ImageObject imgObj && imgObj.ImageData != null)
             {
                 // 現在の表示領域とクロップ領域
                 var destRect = GetBoundingRect(imgObj);
@@ -217,8 +228,8 @@ namespace FigCrafterApp.Views
 
                 // トリミングハンドルの描画
                 using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
-                using var handleStrokePaint = new SKPaint { Color = SKColors.Orange, Style = SKPaintStyle.Stroke, StrokeWidth = 2, IsAntialias = true };
-                float hs = 8;
+                using var handleStrokePaint = new SKPaint { Color = SKColors.Orange, Style = SKPaintStyle.Stroke, StrokeWidth = 2 / currentZoom, IsAntialias = true };
+                float hs = 8 / currentZoom;
                 var points = new[]
                 {
                     new SKPoint(destRect.Left, destRect.Top),
@@ -239,8 +250,8 @@ namespace FigCrafterApp.Views
         {
             if (DataContext is not CanvasViewModel vm) return;
 
-            var p = e.GetPosition(SkiaElement);
-            _startPoint = new SKPoint((float)p.X, (float)p.Y);
+            var pRaw = e.GetPosition(SkiaElement);
+            _startPoint = new SKPoint((float)(pRaw.X / vm.ZoomLevel), (float)(pRaw.Y / vm.ZoomLevel));
             _lastMousePos = _startPoint;
 
             if (vm.CurrentTool == DrawingTool.Eraser)
@@ -437,8 +448,10 @@ namespace FigCrafterApp.Views
 
         private void SkiaElement_MouseMove(object sender, MouseEventArgs e)
         {
-            var p = e.GetPosition(SkiaElement);
-            var currentPoint = new SKPoint((float)p.X, (float)p.Y);
+            var vm = DataContext as CanvasViewModel;
+            double zoom = vm?.ZoomLevel ?? 1.0;
+            var pRaw = e.GetPosition(SkiaElement);
+            var currentPoint = new SKPoint((float)(pRaw.X / zoom), (float)(pRaw.Y / zoom));
             var dx = currentPoint.X - _lastMousePos.X;
             var dy = currentPoint.Y - _lastMousePos.Y;
             _lastMousePos = currentPoint;
@@ -1038,6 +1051,21 @@ namespace FigCrafterApp.Views
                 }
                 e.Handled = true;
             }
+            else if ((e.Key == Key.OemPlus || e.Key == Key.Add) && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                vm.ZoomInCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if ((e.Key == Key.OemMinus || e.Key == Key.Subtract) && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                vm.ZoomOutCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.D0 && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                vm.ResetZoomCommand.Execute(null);
+                e.Handled = true;
+            }
         }
 
         /// <summary>
@@ -1184,6 +1212,36 @@ namespace FigCrafterApp.Views
                 }
             }
             return null;
+        }
+
+        private void CanvasScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (Keyboard.Modifiers == ModifierKeys.Control && DataContext is CanvasViewModel vm)
+            {
+                e.Handled = true; // デフォルトのスクロール動作を無効化
+                
+                // 現在のキャンバス左上を基準にしたマウス座標と、実際に見えている領域のマウス座標
+                Point mousePos = e.GetPosition(CanvasScrollViewer);
+                double posXInCanvas = CanvasScrollViewer.HorizontalOffset + mousePos.X;
+                double posYInCanvas = CanvasScrollViewer.VerticalOffset + mousePos.Y;
+                
+                // ズーム変更前の論理座標
+                double logX = posXInCanvas / vm.ZoomLevel;
+                double logY = posYInCanvas / vm.ZoomLevel;
+
+                // ズーム処理
+                if (e.Delta > 0) vm.ZoomInCommand.Execute(null);
+                else vm.ZoomOutCommand.Execute(null);
+
+                // ズーム変更後のピクセル座標
+                double newPosXInCanvas = logX * vm.ZoomLevel;
+                double newPosYInCanvas = logY * vm.ZoomLevel;
+
+                // スクロール位置の強制更新
+                CanvasScrollViewer.UpdateLayout();
+                CanvasScrollViewer.ScrollToHorizontalOffset(newPosXInCanvas - mousePos.X);
+                CanvasScrollViewer.ScrollToVerticalOffset(newPosYInCanvas - mousePos.Y);
+            }
         }
     }
 }

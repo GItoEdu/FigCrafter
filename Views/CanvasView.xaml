@@ -10,8 +10,8 @@
              Focusable="True"
              KeyDown="CanvasView_KeyDown">
     <Grid Background="#FF2D2D30">
-        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-            <Grid Width="{Binding WidthPx}" Height="{Binding HeightPx}" Background="White" Margin="40">
+        <ScrollViewer x:Name="CanvasScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" PreviewMouseWheel="CanvasScrollViewer_PreviewMouseWheel">
+            <Grid Width="{Binding ZoomedWidthPx}" Height="{Binding ZoomedHeightPx}" Background="White" Margin="40">
                 <Grid.Effect>
                     <DropShadowEffect BlurRadius="15" Direction="270" Opacity="0.5" ShadowDepth="5"/>
                 </Grid.Effect>

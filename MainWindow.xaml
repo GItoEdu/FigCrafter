@@ -17,6 +17,7 @@
     <Window.Resources>
         <local:EnumToBoolConverter x:Key="EnumToBoolConverter"/>
         <local:SKColorToSolidColorBrushConverter x:Key="SKColorToSolidColorBrushConverter"/>
+        <local:LogZoomConverter x:Key="LogZoomConverter"/>
         <!-- タブのスタイル定義（ダークモード用） -->
         <Style TargetType="TabItem">
             <Setter Property="Background" Value="#FF2D2D30"/>
@@ -477,15 +478,41 @@
 
         <!-- Status Bar -->
         <StatusBar Grid.Row="2" Background="#FF007ACC" Foreground="White">
-            <StatusBarItem Content="Ready"/>
-            <Separator Background="#33FFFFFF"/>
-            <StatusBarItem>
+            <StatusBar.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                    </Grid>
+                </ItemsPanelTemplate>
+            </StatusBar.ItemsPanel>
+
+            <StatusBarItem Grid.Column="0" Content="Ready"/>
+            <Separator Grid.Column="1" Background="#33FFFFFF"/>
+            <StatusBarItem Grid.Column="2">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Size: "/>
                     <TextBlock Text="{Binding ActiveDocument.WidthMm, StringFormat=\{0:F1\}}"/>
                     <TextBlock Text=" x "/>
                     <TextBlock Text="{Binding ActiveDocument.HeightMm, StringFormat=\{0:F1\}}"/>
                     <TextBlock Text=" mm"/>
+                </StackPanel>
+            </StatusBarItem>
+
+            <!-- Zoom Slider -->
+            <StatusBarItem Grid.Column="3">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+                    <TextBlock Text="Zoom:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <Slider Width="150" Minimum="-1.0" Maximum="1.0" 
+                            Value="{Binding ActiveDocument.ZoomLevel, Mode=TwoWay, Converter={StaticResource LogZoomConverter}}" 
+                            TickFrequency="0.1" IsSnapToTickEnabled="False" VerticalAlignment="Center" Margin="5,0"/>
+                    <!-- 1.0 => 100% (P0 formatter) -->
+                    <TextBlock Text="{Binding ActiveDocument.ZoomLevel, StringFormat={}{0:P0}}" 
+                               VerticalAlignment="Center" Width="45" TextAlignment="Right"/>
                 </StackPanel>
             </StatusBarItem>
         </StatusBar>

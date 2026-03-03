@@ -1,0 +1,8 @@
+﻿I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(205,48): error CS0128: A local variable or function named 'vm2' is already defined in this scope [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_oer5zl1k_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(205,55): error CS0165: Use of unassigned local variable 'vm2' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_oer5zl1k_wpftmp.csproj]
+
+Build FAILED.
+    15 Warning(s)
+    2 Error(s)
+
+Time Elapsed 00:00:03.61

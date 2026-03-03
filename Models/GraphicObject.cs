@@ -20,7 +20,7 @@ namespace FigCrafterApp.Models
         private float _rotation; // 回転角 (度)
         private SKColor _fillColor = SKColors.Blue;
         private SKColor _strokeColor = SKColors.Black;
-        private float _strokeWidth = 1;
+        private float _strokeWidth = 0.5f;
         private float _opacity = 1.0f; // 1.0 = 不透明, 0.0 = 透明
         private bool _isSelected = false;
 
@@ -34,6 +34,16 @@ namespace FigCrafterApp.Models
         public float StrokeWidth { get => _strokeWidth; set => SetProperty(ref _strokeWidth, value); }
         public float Opacity { get => _opacity; set => SetProperty(ref _opacity, value); }
         public bool IsSelected { get => _isSelected; set => SetProperty(ref _isSelected, value); }
+        
+        private float _currentZoomLevel = 1.0f;
+
+        // 描画時のスケール補正用（CanvasView.xaml.csから描画直前に渡される）
+        [JsonIgnore]
+        public virtual float CurrentZoomLevel
+        {
+            get => _currentZoomLevel;
+            set => _currentZoomLevel = value;
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
         public event PropertyChangingEventHandler? PropertyChanging;
@@ -141,7 +151,7 @@ namespace FigCrafterApp.Models
 
             paint.Color = strokeWithOpacity;
             paint.Style = SKPaintStyle.Stroke;
-            paint.StrokeWidth = StrokeWidth;
+            paint.StrokeWidth = StrokeWidth / CurrentZoomLevel; // ズーム補正
             canvas.DrawRect(X, Y, Width, Height, paint);
             
             if (IsSelected)
@@ -172,8 +182,8 @@ namespace FigCrafterApp.Models
             {
                 Color = SKColors.DeepSkyBlue,
                 Style = SKPaintStyle.Stroke,
-                StrokeWidth = 1,
-                PathEffect = SKPathEffect.CreateDash(new float[] { 5, 5 }, 0),
+                StrokeWidth = 1 / CurrentZoomLevel, // ズーム補正
+                PathEffect = SKPathEffect.CreateDash(new float[] { 5 / CurrentZoomLevel, 5 / CurrentZoomLevel }, 0), // 破線も補正
                 IsAntialias = true
             };
             canvas.DrawRect(rect, paint);
@@ -189,11 +199,11 @@ namespace FigCrafterApp.Models
             {
                 Color = SKColors.DeepSkyBlue,
                 Style = SKPaintStyle.Stroke,
-                StrokeWidth = 1,
+                StrokeWidth = 1 / CurrentZoomLevel, // ズーム補正
                 IsAntialias = true
             };
             
-            float handleSize = 6;
+            float handleSize = 6 / CurrentZoomLevel; // ズーム補正
             var points = new[]
             {
                 new SKPoint(rect.Left, rect.Top),
@@ -231,7 +241,7 @@ namespace FigCrafterApp.Models
 
             paint.Color = strokeWithOpacity;
             paint.Style = SKPaintStyle.Stroke;
-            paint.StrokeWidth = StrokeWidth;
+            paint.StrokeWidth = StrokeWidth / CurrentZoomLevel; // ズーム補正
             canvas.DrawOval(new SKRect(X, Y, X + Width, Y + Height), paint);
 
             if (IsSelected)
@@ -271,16 +281,16 @@ namespace FigCrafterApp.Models
             {
                 Color = SKColors.DeepSkyBlue,
                 Style = SKPaintStyle.Stroke,
-                StrokeWidth = 1,
-                PathEffect = SKPathEffect.CreateDash(new float[] { 5, 5 }, 0),
+                StrokeWidth = 1 / CurrentZoomLevel, // ズーム補正
+                PathEffect = SKPathEffect.CreateDash(new float[] { 5 / CurrentZoomLevel, 5 / CurrentZoomLevel }, 0),
                 IsAntialias = true
             };
             canvas.DrawRect(rect, paint);
             
             // 四隅のハンドル
             using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
-            using var handleStrokePaint = new SKPaint { Color = SKColors.DeepSkyBlue, Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = true };
-            float handleSize = 6;
+            using var handleStrokePaint = new SKPaint { Color = SKColors.DeepSkyBlue, Style = SKPaintStyle.Stroke, StrokeWidth = 1 / CurrentZoomLevel, IsAntialias = true };
+            float handleSize = 6 / CurrentZoomLevel;
             var points = new[] { new SKPoint(rect.Left, rect.Top), new SKPoint(rect.Right, rect.Top), new SKPoint(rect.Right, rect.Bottom), new SKPoint(rect.Left, rect.Bottom) };
             foreach (var pt in points)
             {
@@ -314,7 +324,7 @@ namespace FigCrafterApp.Models
             {
                 Color = strokeWithOpacity,
                 Style = SKPaintStyle.Stroke,
-                StrokeWidth = StrokeWidth,
+                StrokeWidth = StrokeWidth / CurrentZoomLevel, // ズーム補正
                 IsAntialias = true
             };
             canvas.DrawLine(X, Y, EndX, EndY, paint);
@@ -325,7 +335,7 @@ namespace FigCrafterApp.Models
                 float dx = EndX - X;
                 float dy = EndY - Y;
                 float angle = (float)Math.Atan2(dy, dx);
-                float arrowLength = 15f + StrokeWidth;
+                float arrowLength = (15f + StrokeWidth) / CurrentZoomLevel;
                 float arrowAngle = (float)(Math.PI / 6); // 30度
 
                 using var arrowPaint = new SKPaint
@@ -364,8 +374,8 @@ namespace FigCrafterApp.Models
 
                 // 両端のハンドル
                 using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
-                using var handleStrokePaint = new SKPaint { Color = SKColors.DeepSkyBlue, Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = true };
-                float handleSize = 6;
+                using var handleStrokePaint = new SKPaint { Color = SKColors.DeepSkyBlue, Style = SKPaintStyle.Stroke, StrokeWidth = 1 / CurrentZoomLevel, IsAntialias = true };
+                float handleSize = 6 / CurrentZoomLevel;
                 var points = new[] { new SKPoint(X, Y), new SKPoint(EndX, EndY) };
                 foreach (var pt in points)
                 {
@@ -459,8 +469,8 @@ namespace FigCrafterApp.Models
                 {
                     Color = SKColors.DeepSkyBlue,
                     Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1,
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 5, 5 }, 0),
+                    StrokeWidth = 1 / CurrentZoomLevel, // ズーム補正
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 5 / CurrentZoomLevel, 5 / CurrentZoomLevel }, 0),
                     IsAntialias = true
                 };
                 
@@ -502,6 +512,19 @@ namespace FigCrafterApp.Models
     {
         private List<GraphicObject> _children = new();
         private bool _isGrayscale = false;
+
+        public override float CurrentZoomLevel
+        {
+            get => base.CurrentZoomLevel;
+            set
+            {
+                base.CurrentZoomLevel = value;
+                foreach (var child in _children)
+                {
+                    child.CurrentZoomLevel = value;
+                }
+            }
+        }
 
         /// <summary>
         /// グループ内の画像オブジェクトのグレースケール状態を一括制御するプロパティ。
@@ -611,8 +634,8 @@ namespace FigCrafterApp.Models
                 {
                     Color = SKColors.LimeGreen,
                     Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1,
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 6, 3 }, 0),
+                    StrokeWidth = 1 / CurrentZoomLevel, // ズーム補正
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 6 / CurrentZoomLevel, 3 / CurrentZoomLevel }, 0),
                     IsAntialias = true
                 };
                 var rect = new SKRect(X, Y, X + Width, Y + Height);
@@ -620,8 +643,8 @@ namespace FigCrafterApp.Models
 
                 // 四隅のハンドル
                 using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
-                using var handleStrokePaint = new SKPaint { Color = SKColors.LimeGreen, Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = true };
-                float handleSize = 6;
+                using var handleStrokePaint = new SKPaint { Color = SKColors.LimeGreen, Style = SKPaintStyle.Stroke, StrokeWidth = 1 / CurrentZoomLevel, IsAntialias = true };
+                float handleSize = 6 / CurrentZoomLevel;
                 var points = new[]
                 {
                     new SKPoint(rect.Left, rect.Top),
@@ -895,16 +918,16 @@ namespace FigCrafterApp.Models
                 {
                     Color = SKColors.DodgerBlue,
                     Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1,
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 4, 4 }, 0),
+                    StrokeWidth = 1 / CurrentZoomLevel, // ズーム補正
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 4 / CurrentZoomLevel, 4 / CurrentZoomLevel }, 0),
                     IsAntialias = true
                 };
                 canvas.DrawRect(destRect, borderPaint);
 
                 // ハンドル
                 using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
-                using var handleStrokePaint = new SKPaint { Color = SKColors.DodgerBlue, Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = true };
-                float hs = 6;
+                using var handleStrokePaint = new SKPaint { Color = SKColors.DodgerBlue, Style = SKPaintStyle.Stroke, StrokeWidth = 1 / CurrentZoomLevel, IsAntialias = true };
+                float hs = 6 / CurrentZoomLevel;
                 var points = new[]
                 {
                     new SKPoint(destRect.Left, destRect.Top),

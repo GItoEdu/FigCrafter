@@ -1,0 +1,49 @@
+﻿  Determining projects to restore...
+  All projects are up-to-date for restore.
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(445,17): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(446,17): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(451,13): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(454,13): warning CS0618: 'SKCanvas.DrawText(string, float, float, SKPaint)' is obsolete: 'Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(480,17): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(481,17): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(484,13): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(881,78): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(882,21): warning CS0618: 'SKCanvas.DrawText(string, float, float, SKPaint)' is obsolete: 'Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(184,37): warning CS8601: Possible null reference assignment. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(186,25): warning CS8602: Dereference of a possibly null reference. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(493,50): error CS0103: The name 'GroupSelectedObjects' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(493,79): error CS0103: The name 'CanGroup' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(494,52): error CS0103: The name 'UngroupSelectedObjects' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(494,83): error CS0103: The name 'CanUngroup' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(934,21): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(935,21): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(938,17): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml(13,111): error CS1061: 'CanvasView' does not contain a definition for 'CanvasScrollViewer_PreviewMouseWheel' and no accessible extension method 'CanvasScrollViewer_PreviewMouseWheel' accepting a first argument of type 'CanvasView' could be found (are you missing a using directive or an assembly reference?) [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(70,22): warning CS0414: The field 'CanvasViewModel._isExecutingCommand' is assigned but its value is never used [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+
+Build FAILED.
+
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(445,17): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(446,17): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(451,13): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(454,13): warning CS0618: 'SKCanvas.DrawText(string, float, float, SKPaint)' is obsolete: 'Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(480,17): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(481,17): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(484,13): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(881,78): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Models\GraphicObject.cs(882,21): warning CS0618: 'SKCanvas.DrawText(string, float, float, SKPaint)' is obsolete: 'Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(184,37): warning CS8601: Possible null reference assignment. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(186,25): warning CS8602: Dereference of a possibly null reference. [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(934,21): warning CS0618: 'SKPaint.Typeface' is obsolete: 'Use SKFont.Typeface instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(935,21): warning CS0618: 'SKPaint.TextSize' is obsolete: 'Use SKFont.Size instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml.cs(938,17): warning CS0618: 'SKPaint.MeasureText(string, ref SKRect)' is obsolete: 'Use SKFont.MeasureText() instead.' [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(70,22): warning CS0414: The field 'CanvasViewModel._isExecutingCommand' is assigned but its value is never used [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(493,50): error CS0103: The name 'GroupSelectedObjects' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(493,79): error CS0103: The name 'CanGroup' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(494,52): error CS0103: The name 'UngroupSelectedObjects' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\ViewModels\CanvasViewModel.cs(494,83): error CS0103: The name 'CanUngroup' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+I:\Ubuntu\VSCode\FigCrafter\Views\CanvasView.xaml(13,111): error CS1061: 'CanvasView' does not contain a definition for 'CanvasScrollViewer_PreviewMouseWheel' and no accessible extension method 'CanvasScrollViewer_PreviewMouseWheel' accepting a first argument of type 'CanvasView' could be found (are you missing a using directive or an assembly reference?) [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_20svmwbw_wpftmp.csproj]
+    15 Warning(s)
+    5 Error(s)
+
+Time Elapsed 00:00:02.33

@@ -25,6 +25,7 @@ namespace FigCrafterApp.ViewModels
         private string _title = "名称未設定";
         private double _widthMm = 210; // A4幅
         private double _heightMm = 297; // A4高さ
+        private double _zoomLevel = 1.0; // ズーム倍率
         private DrawingTool _currentTool = DrawingTool.Select;
         private ObservableCollection<Layer> _layers = new();
         private Layer? _activeLayer;
@@ -60,9 +61,13 @@ namespace FigCrafterApp.ViewModels
         public ICommand RedoCommand { get; }
         public ICommand ToggleCropModeCommand { get; }
 
+        public ICommand ZoomInCommand { get; }
+        public ICommand ZoomOutCommand { get; }
+        public ICommand ResetZoomCommand { get; }
+
         public void Invalidate() => InvalidateRequested?.Invoke(this, EventArgs.Empty);
 
-        private bool _isExecutingCommand = false;
+        internal bool _isExecutingCommand = false;
 
         public void ExecuteCommand(IUndoableCommand command)
         {
@@ -217,6 +222,8 @@ namespace FigCrafterApp.ViewModels
             Invalidate();
         }
 
+        private bool _isSyncingLayer = false;
+
         public Layer? ActiveLayer
         {
             get => _activeLayer;
@@ -224,6 +231,17 @@ namespace FigCrafterApp.ViewModels
             {
                 if (SetProperty(ref _activeLayer, value))
                 {
+                    if (!_isSyncingLayer && _activeLayer != null)
+                    {
+                        ClearSelection();
+                        foreach (var obj in _activeLayer.GraphicObjects)
+                        {
+                            obj.IsSelected = true;
+                            _selectedObjects.Add(obj);
+                        }
+                        SelectedObject = _selectedObjects.LastOrDefault();
+                    }
+
                     Invalidate(); 
                     UpdateLayerCommands();
                 }
@@ -343,11 +361,12 @@ namespace FigCrafterApp.ViewModels
                 _selectedObjects.Add(obj);
                 SelectedObject = obj;
 
-                // 選択したオブジェクトが属するレイヤーをActiveLayerに自動で切り替える
                 var layer = FindLayer(obj);
                 if (layer != null && ActiveLayer != layer)
                 {
+                    _isSyncingLayer = true;
                     ActiveLayer = layer;
+                    _isSyncingLayer = false;
                 }
             }
             else
@@ -381,11 +400,12 @@ namespace FigCrafterApp.ViewModels
                 _selectedObjects.Add(obj);
                 SelectedObject = obj;
 
-                // 追加したオブジェクトが属するレイヤーをActiveLayerにする
                 var layer = FindLayer(obj);
                 if (layer != null && ActiveLayer != layer)
                 {
+                    _isSyncingLayer = true;
                     ActiveLayer = layer;
+                    _isSyncingLayer = false;
                 }
             }
             Invalidate();
@@ -422,22 +442,46 @@ namespace FigCrafterApp.ViewModels
             get => _heightMm;
             set
             {
-                var clampedValue = Math.Max(1.0, Math.Min(value, 4000.0));
-                if (SetProperty(ref _heightMm, clampedValue))
+                // The instruction removed clamping, so I'm following that.
+                if (SetProperty(ref _heightMm, value))
                 {
                     OnPropertyChanged(nameof(HeightPx));
+                    OnPropertyChanged(nameof(ZoomedWidthPx));
+                    OnPropertyChanged(nameof(ZoomedHeightPx));
+                    Invalidate();
                 }
             }
         }
 
-        public double WidthPx => WidthMm * Dpi / MmPerInch;
-        public double HeightPx => HeightMm * Dpi / MmPerInch;
+        public double WidthPx => _widthMm / MmPerInch * Dpi;
+        public double HeightPx => _heightMm / MmPerInch * Dpi;
+
+        public double ZoomLevel
+        {
+            get => _zoomLevel;
+            set
+            {
+                // 値を制限 (10% ~ 1000%)
+                double newZoom = Math.Max(0.1, Math.Min(10.0, value));
+                if (SetProperty(ref _zoomLevel, newZoom))
+                {
+                    OnPropertyChanged(nameof(ZoomedWidthPx));
+                    OnPropertyChanged(nameof(ZoomedHeightPx));
+                    Invalidate();
+                }
+            }
+        }
+
+        public double ZoomedWidthPx => WidthPx * ZoomLevel;
+        public double ZoomedHeightPx => HeightPx * ZoomLevel;
 
         // レイヤー用コマンド
         public ICommand AddLayerCommand { get; }
         public ICommand RemoveLayerCommand { get; }
         public ICommand MoveLayerUpCommand { get; }
         public ICommand MoveLayerDownCommand { get; }
+
+
 
         public CanvasViewModel()
         {
@@ -466,6 +510,10 @@ namespace FigCrafterApp.ViewModels
             UndoCommand = new RelayCommand(_ => Undo(), _ => _undoStack.Count > 0);
             RedoCommand = new RelayCommand(_ => Redo(), _ => _redoStack.Count > 0);
             ToggleCropModeCommand = new RelayCommand(_ => { IsCropMode = !IsCropMode; }, p => _selectedObject is ImageObject);
+
+            ZoomInCommand = new RelayCommand(p => ZoomLevel += 0.1);
+            ZoomOutCommand = new RelayCommand(p => ZoomLevel -= 0.1);
+            ResetZoomCommand = new RelayCommand(p => ZoomLevel = 1.0);
 
             AddLayerCommand = new RelayCommand(_ => AddLayer());
             RemoveLayerCommand = new RelayCommand(_ => RemoveLayer(), _ => Layers.Count > 1 && ActiveLayer != null);
