@@ -77,10 +77,8 @@
 
         <!-- ToolBar / Menu Placeholder -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#FF333333">
-            <Button Content="📁 開く" Command="{Binding OpenProjectCommand}" Margin="10,5,5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="プロジェクトを開く"/>
+            <Button Content="📁 開く / インポート" Command="{Binding OpenProjectCommand}" Margin="10,5,5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="プロジェクトを開く、または画像やPDF・EMFなどを取り込む"/>
             <Button Content="💾 保存" Command="{Binding SaveProjectCommand}" Margin="5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="プロジェクトを保存する"/>
-            
-            <Button Content="📥 インポート" Command="{Binding ImportFileCommand}" Margin="15,5,5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="画像やAI(PDF互換)/EMFファイルをキャンバスに読み込む"/>
             
             <Button Content="新規プロジェクト" Command="{Binding NewDocumentCommand}" Margin="15,5,10,5" Padding="10,2" Background="#FF007ACC" Foreground="White" BorderThickness="0"/>
             

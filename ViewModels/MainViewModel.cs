@@ -52,12 +52,11 @@ namespace FigCrafterApp.ViewModels
             ExportPdfCommand = new RelayCommand(p => ExportPdf());
             ExportTifCommand = new RelayCommand(p => ExportTif());
 
-            ImportFileCommand = new RelayCommand(async p => await ImportFileAsync());
-            OpenProjectCommand = new RelayCommand(p => OpenProject());
+            OpenProjectCommand = new RelayCommand(async p => await OpenFileAsync());
             SaveProjectCommand = new RelayCommand(p => SaveProject());
 
-            // 初期ドキュメントを追加
-            AddNewDocument();
+            // 起動時は何も初期化しない (空の状態から開始)
+            // AddNewDocument();
         }
 
         private void AddNewDocument()
@@ -198,63 +197,56 @@ namespace FigCrafterApp.ViewModels
             }
         }
 
-        private async System.Threading.Tasks.Task ImportFileAsync()
+        private async System.Threading.Tasks.Task OpenFileAsync()
         {
-            if (ActiveDocument == null) return;
-
             var dialog = new OpenFileDialog
             {
-                Filter = "画像・AI・EMFファイル|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff;*.ai;*.pdf;*.emf;*.wmf|すべてのファイル (*.*)|*.*",
-                Title = "ファイルをインポート"
+                Filter = "FigCrafter プロジェクト (*.fcp)|*.fcp|画像・AI・EMFファイル|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff;*.ai;*.pdf;*.emf;*.wmf|すべてのファイル (*.*)|*.*",
+                Title = "プロジェクトを開く / ファイルをインポート"
             };
 
             if (dialog.ShowDialog() == true)
             {
                 try
                 {
-                    var bitmap = await FigCrafterApp.Helpers.ImportHelper.ImportFileAsync(dialog.FileName);
-                    if (bitmap != null)
+                    string extension = Path.GetExtension(dialog.FileName).ToLowerInvariant();
+                    if (extension == ".fcp")
                     {
-                        ActiveDocument.ImportImageAsGroup(bitmap);
+                        // プロジェクトとして開く
+                        string json = File.ReadAllText(dialog.FileName);
+                        var projectData = JsonSerializer.Deserialize<ProjectData>(json, ProjectData.GetSerializerOptions());
+                        
+                        if (projectData != null)
+                        {
+                            var newDoc = new CanvasViewModel();
+                            newDoc.LoadFromProjectData(projectData);
+                            Documents.Add(newDoc);
+                            ActiveDocument = newDoc;
+                        }
                     }
                     else
                     {
-                        System.Windows.MessageBox.Show("ファイルの読み込みに失敗しました。未対応の形式かデータが破損しています。", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                        // キャンバスがなければ新規作成
+                        if (ActiveDocument == null)
+                        {
+                            AddNewDocument();
+                        }
+                        
+                        // 画像等としてインポート
+                        var bitmap = await FigCrafterApp.Helpers.ImportHelper.ImportFileAsync(dialog.FileName);
+                        if (bitmap != null)
+                        {
+                            ActiveDocument?.ImportImageAsGroup(bitmap);
+                        }
+                        else
+                        {
+                            System.Windows.MessageBox.Show("ファイルの読み込みに失敗しました。未対応の形式かデータが破損しています。", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show($"インポート中にエラーが発生しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                }
-            }
-        }
-
-        private void OpenProject()
-        {
-            var dialog = new OpenFileDialog
-            {
-                Filter = "FigCrafter プロジェクト (*.fcp)|*.fcp|すべてのファイル (*.*)|*.*",
-                Title = "プロジェクトを開く"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                try
-                {
-                    string json = File.ReadAllText(dialog.FileName);
-                    var projectData = JsonSerializer.Deserialize<ProjectData>(json, ProjectData.GetSerializerOptions());
-                    
-                    if (projectData != null)
-                    {
-                        var newDoc = new CanvasViewModel();
-                        newDoc.LoadFromProjectData(projectData);
-                        Documents.Add(newDoc);
-                        ActiveDocument = newDoc;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Windows.MessageBox.Show($"プロジェクトの読み込みに失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    System.Windows.MessageBox.Show($"ファイルの読み込みに失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 }
             }
         }
