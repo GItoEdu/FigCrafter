@@ -34,6 +34,11 @@ namespace FigCrafterApp.Views
         private List<(GraphicObject Obj, float OldX, float OldY)> _preDragPositions = new();
         private (float X, float Y, float EndX, float EndY) _preDragLineEnd;
 
+        // スナップ機能用
+        private float? _snapGuideX = null;
+        private float? _snapGuideY = null;
+        private SKRect _originalDragRect;
+
         // 半透明クロップガイド用のペイントキャッシュ
         private SKPaint? _cachedCropGuidePaintNormal;
         private SKPaint? _cachedCropGuidePaintGray;
@@ -254,6 +259,33 @@ namespace FigCrafterApp.Views
                     canvas.DrawRect(hr, handleStrokePaint);
                 }
             }
+
+            // スナップガイド線の描画
+            if (_isDragging && (_snapGuideX.HasValue || _snapGuideY.HasValue))
+            {
+                using var snapGuidePaint = new SKPaint
+                {
+                    Color = SKColors.Red,
+                    Style = SKPaintStyle.Stroke,
+                    StrokeWidth = 1 / currentZoom,
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 5 / currentZoom, 5 / currentZoom }, 0),
+                    IsAntialias = true
+                };
+
+                // X軸ガイド
+                if (_snapGuideX.HasValue)
+                {
+                    float gx = _snapGuideX.Value;
+                    canvas.DrawLine(gx, -10000, gx, 10000, snapGuidePaint);
+                }
+
+                // Y軸ガイド
+                if (_snapGuideY.HasValue)
+                {
+                    float gy = _snapGuideY.Value;
+                    canvas.DrawLine(-10000, gy, 10000, gy, snapGuidePaint);
+                }
+            }
         }
 
         private void SkiaElement_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -415,6 +447,7 @@ namespace FigCrafterApp.Views
                 if (_selectedObject != null && !isShiftHeld && vm.CurrentTool == DrawingTool.Select)
                 {
                     _isDragging = true;
+                    _originalDragRect = GetBoundingRect(_selectedObject);
                     _preDragPositions.Clear();
                     foreach (var obj in vm.SelectedObjects)
                     {
@@ -712,21 +745,108 @@ namespace FigCrafterApp.Views
                 return;
             }
 
-            if (_isDragging && _selectedObject != null)
+                if (_isDragging && _selectedObject != null)
             {
-                // 移動処理
-                _selectedObject.X += dx;
-                _selectedObject.Y += dy;
+                // ドラッグ開始時からの総移動量
+                float totalDx = currentPoint.X - _startPoint.X;
+                float totalDy = currentPoint.Y - _startPoint.Y;
 
-                if (_selectedObject is LineObject lineObj)
+                // スナップガイドの初期化
+                _snapGuideX = null;
+                _snapGuideY = null;
+
+                // 選択中オブジェクトの元の矩形と予定される矩形
+                var targetRect = _originalDragRect;
+                float expectedLeft = targetRect.Left + totalDx;
+                float expectedRight = targetRect.Right + totalDx;
+                float expectedTop = targetRect.Top + totalDy;
+                float expectedBottom = targetRect.Bottom + totalDy;
+                float expectedCenterX = targetRect.Left + targetRect.Width / 2 + totalDx;
+                float expectedCenterY = targetRect.Top + targetRect.Height / 2 + totalDy;
+
+                float snapThreshold = 10.0f / (float)vm.ZoomLevel;
+
+                float closestDistX = float.MaxValue;
+                float closestDistY = float.MaxValue;
+                float snapOffsetX = 0;
+                float snapOffsetY = 0;
+
+                // 他のオブジェクトに対するスナップ判定（Shiftキーが押されていない場合のみ有効）
+                if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && vm.ActiveLayer != null)
                 {
-                    lineObj.EndX += dx;
-                    lineObj.EndY += dy;
+                    foreach (var layer in vm.Layers)
+                    {
+                        if (!layer.IsVisible || layer.IsLocked) continue;
+
+                        foreach (var obj in layer.GraphicObjects)
+                        {
+                            if (vm.SelectedObjects.Contains(obj)) continue;
+
+                            var otherRect = GetBoundingRect(obj);
+                            float[] otherXLines = { otherRect.Left, otherRect.Right, otherRect.Left + otherRect.Width / 2 };
+                            float[] otherYLines = { otherRect.Top, otherRect.Bottom, otherRect.Top + otherRect.Height / 2 };
+                            float[] targetXLines = { expectedLeft, expectedRight, expectedCenterX };
+                            float[] targetYLines = { expectedTop, expectedBottom, expectedCenterY };
+
+                            // X軸スナップ
+                            foreach (var tx in targetXLines)
+                            {
+                                foreach (var ox in otherXLines)
+                                {
+                                    float dist = Math.Abs(tx - ox);
+                                    if (dist < snapThreshold && dist < closestDistX)
+                                    {
+                                        closestDistX = dist;
+                                        snapOffsetX = ox - tx;
+                                        _snapGuideX = ox;
+                                    }
+                                }
+                            }
+
+                            // Y軸スナップ
+                            foreach (var ty in targetYLines)
+                            {
+                                foreach (var oy in otherYLines)
+                                {
+                                    float dist = Math.Abs(ty - oy);
+                                    if (dist < snapThreshold && dist < closestDistY)
+                                    {
+                                        closestDistY = dist;
+                                        snapOffsetY = oy - ty;
+                                        _snapGuideY = oy;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-                else if (_selectedObject is GroupObject groupObj)
+
+                // スナップを適用した最終的な総移動量
+                totalDx += snapOffsetX;
+                totalDy += snapOffsetY;
+
+                // 前回フレームからの差分を計算（このフレームでの実際の移動量）
+                // _selectedObject の現在位置と、あるべき位置 (元の初期位置 + 総移動量) の差分を取る
+                // 注: _selectedObject はグループ等で構成される場合もあるため、バウンディングボックスの左上などを基準に差分計算する
+                var currentBoundingRect = GetBoundingRect(_selectedObject);
+                float actualDx = (targetRect.Left + totalDx) - currentBoundingRect.Left;
+                float actualDy = (targetRect.Top + totalDy) - currentBoundingRect.Top;
+
+                // 全選択オブジェクトに差分を適用
+                foreach (var obj in vm.SelectedObjects)
                 {
-                    // グループ内の子オブジェクトも連動して移動
-                    MoveChildrenRecursive(groupObj, dx, dy);
+                    obj.X += actualDx;
+                    obj.Y += actualDy;
+
+                    if (obj is LineObject lineObj)
+                    {
+                        lineObj.EndX += actualDx;
+                        lineObj.EndY += actualDy;
+                    }
+                    else if (obj is GroupObject groupObj)
+                    {
+                        MoveChildrenRecursive(groupObj, actualDx, actualDy);
+                    }
                 }
 
                 ThrottledInvalidateVisual();
@@ -881,6 +1001,11 @@ namespace FigCrafterApp.Views
             if (_isDragging)
             {
                 _isDragging = false;
+
+                // スナップガイドのクリア
+                _snapGuideX = null;
+                _snapGuideY = null;
+
                 if (_selectedObject != null && _preDragPositions.Count > 0)
                 {
                     // 実際に動いたか確認
@@ -896,6 +1021,7 @@ namespace FigCrafterApp.Views
                     }
                 }
                 SkiaElement.ReleaseMouseCapture();
+                SkiaElement.InvalidateVisual();
                 return;
             }
 
