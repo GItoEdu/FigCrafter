@@ -288,7 +288,7 @@
                             <ComboBox Grid.Column="1" IsEditable="True"
                                       ItemsSource="{Binding Source={x:Static Fonts.SystemFontFamilies}}"
                                       Text="{Binding FontFamily, UpdateSourceTrigger=PropertyChanged}"
-                                      Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5">
+                                      Background="White" Foreground="Black" BorderThickness="0" Padding="5">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding Source}" FontFamily="{Binding}" Foreground="Black" />
