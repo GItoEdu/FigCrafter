@@ -957,14 +957,29 @@ namespace FigCrafterApp.Views
             }
             if (obj is TextObject textObj)
             {
+                if (string.IsNullOrEmpty(textObj.Text))
+                    return new SKRect(obj.X, obj.Y, obj.X + 10, obj.Y + textObj.FontSize);
+
                 using var paint = new SKPaint
                 {
-                    Typeface = SKTypeface.FromFamilyName(textObj.FontFamily),
+                    Typeface = SKTypeface.FromFamilyName(textObj.FontFamily,
+                        textObj.IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
+                        SKFontStyleWidth.Normal,
+                        textObj.IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright),
                     TextSize = textObj.FontSize
                 };
-                var bounds = new SKRect();
-                paint.MeasureText(textObj.Text, ref bounds);
-                return new SKRect(obj.X, obj.Y, obj.X + bounds.Width, obj.Y + bounds.Height);
+
+                var lines = textObj.Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                float spacing = paint.FontSpacing;
+                float maxWidth = 0;
+
+                foreach (var line in lines)
+                {
+                    maxWidth = Math.Max(maxWidth, paint.MeasureText(line));
+                }
+
+                float totalHeight = (lines.Length - 1) * spacing + paint.TextSize;
+                return new SKRect(obj.X, obj.Y, obj.X + maxWidth, obj.Y + totalHeight);
             }
             return new SKRect(obj.X, obj.Y, obj.X + obj.Width, obj.Y + obj.Height);
         }

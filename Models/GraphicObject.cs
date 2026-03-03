@@ -447,6 +447,8 @@ namespace FigCrafterApp.Models
 
         public override void Draw(SKCanvas canvas)
         {
+            if (string.IsNullOrEmpty(Text)) return;
+
             canvas.Save();
             TransformCanvas(canvas);
 
@@ -463,12 +465,28 @@ namespace FigCrafterApp.Models
                 TextSize = FontSize
             };
 
-            // テキストのバウンディングボックス計算 (描画用)
-            var bounds = new SKRect();
-            paint.MeasureText(Text, ref bounds);
+            var lines = Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            float spacing = paint.FontSpacing;
+            float totalWidth = 0;
+            float totalHeight = 0;
 
-            // X, Y を左上の基準として描画
-            canvas.DrawText(Text, X, Y - bounds.Top, paint);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                var lineBounds = new SKRect();
+                paint.MeasureText(line, ref lineBounds);
+                
+                totalWidth = Math.Max(totalWidth, lineBounds.Width);
+                
+                // 各行を描画
+                // baseline = Y + (行指数 * 行間) - (最初の行のTop)
+                // ただし、単純に Y + i*spacing でベースラインをずらしていくのが一般的
+                // 最初の行を (X, Y) の位置（上端）に合わせるには Y - firstLineBounds.Top
+                float lineY = Y - lineBounds.Top + (i * spacing);
+                canvas.DrawText(line, X, lineY, paint);
+            }
+
+            totalHeight = (lines.Length - 1) * spacing + paint.TextSize; // 簡易的な高さ計算
 
             if (IsSelected)
             {
@@ -476,12 +494,12 @@ namespace FigCrafterApp.Models
                 {
                     Color = SKColors.DeepSkyBlue,
                     Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1 / CurrentZoomLevel, // ズーム補正
+                    StrokeWidth = 1 / CurrentZoomLevel,
                     PathEffect = SKPathEffect.CreateDash(new float[] { 5 / CurrentZoomLevel, 5 / CurrentZoomLevel }, 0),
                     IsAntialias = true
                 };
                 
-                var rect = new SKRect(X, Y, X + bounds.Width, Y + bounds.Height);
+                var rect = new SKRect(X, Y, X + totalWidth, Y + totalHeight);
                 canvas.DrawRect(rect, highlightPaint);
             }
 
@@ -490,6 +508,8 @@ namespace FigCrafterApp.Models
 
         public override bool HitTest(SKPoint point)
         {
+            if (string.IsNullOrEmpty(Text)) return false;
+
             var p = UntransformPoint(point);
 
             using var paint = new SKPaint
@@ -500,10 +520,18 @@ namespace FigCrafterApp.Models
                     IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright),
                 TextSize = FontSize
             };
-            var bounds = new SKRect();
-            paint.MeasureText(Text, ref bounds);
 
-            var rect = new SKRect(X, Y, X + bounds.Width, Y + bounds.Height);
+            var lines = Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            float spacing = paint.FontSpacing;
+            float maxWidth = 0;
+            
+            foreach (var line in lines)
+            {
+                maxWidth = Math.Max(maxWidth, paint.MeasureText(line));
+            }
+
+            float totalHeight = (lines.Length - 1) * spacing + paint.TextSize;
+            var rect = new SKRect(X, Y, X + maxWidth, Y + totalHeight);
             return rect.Contains(p.X, p.Y);
         }
 
