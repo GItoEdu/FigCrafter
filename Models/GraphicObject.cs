@@ -345,21 +345,6 @@ namespace FigCrafterApp.Models
 
             if (IsSelected)
             {
-                using var highlightPaint = new SKPaint
-                {
-                    Color = SKColors.DeepSkyBlue,
-                    Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1,
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 5, 5 }, 0),
-                    IsAntialias = true
-                };
-                // 直線全体を含むバウンディングボックス
-                var minX = Math.Min(X, EndX);
-                var minY = Math.Min(Y, EndY);
-                var maxX = Math.Max(X, EndX);
-                var maxY = Math.Max(Y, EndY);
-                canvas.DrawRect(new SKRect(minX, minY, maxX, maxY), highlightPaint);
-
                 // 両端のハンドル
                 using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
                 using var handleStrokePaint = new SKPaint { Color = SKColors.DeepSkyBlue, Style = SKPaintStyle.Stroke, StrokeWidth = 1 / CurrentZoomLevel, IsAntialias = true };
