@@ -129,52 +129,6 @@ namespace FigCrafterApp.Models
             // 元の位置に戻す
             return new SKPoint(nx + cx, ny + cy);
         }
-    }
-
-    public class RectangleObject : GraphicObject
-    {
-        public override void Draw(SKCanvas canvas)
-        {
-            canvas.Save();
-            TransformCanvas(canvas);
-
-            var fillWithOpacity = FillColor.WithAlpha((byte)(FillColor.Alpha * Opacity));
-            var strokeWithOpacity = StrokeColor.WithAlpha((byte)(StrokeColor.Alpha * Opacity));
-
-            using var paint = new SKPaint
-            {
-                Color = fillWithOpacity,
-                Style = SKPaintStyle.Fill,
-                IsAntialias = true
-            };
-            canvas.DrawRect(X, Y, Width, Height, paint);
-
-            paint.Color = strokeWithOpacity;
-            paint.Style = SKPaintStyle.Stroke;
-            paint.StrokeWidth = StrokeWidth / CurrentZoomLevel; // ズーム補正
-            canvas.DrawRect(X, Y, Width, Height, paint);
-            
-            if (IsSelected)
-            {
-                DrawSelectionBox(canvas, new SKRect(X, Y, X + Width, Y + Height));
-            }
-
-            canvas.Restore();
-        }
-
-        public override bool HitTest(SKPoint point)
-        {
-            var p = UntransformPoint(point);
-            var rect = new SKRect(X, Y, X + Width, Y + Height);
-            return rect.Contains(p.X, p.Y);
-        }
-
-        public override GraphicObject Clone()
-        {
-            var clone = new RectangleObject();
-            CopyPropertiesTo(clone);
-            return clone;
-        }
 
         protected void DrawSelectionBox(SKCanvas canvas, SKRect rect)
         {
@@ -234,6 +188,52 @@ namespace FigCrafterApp.Models
         }
     }
 
+    public class RectangleObject : GraphicObject
+    {
+        public override void Draw(SKCanvas canvas)
+        {
+            canvas.Save();
+            TransformCanvas(canvas);
+
+            var fillWithOpacity = FillColor.WithAlpha((byte)(FillColor.Alpha * Opacity));
+            var strokeWithOpacity = StrokeColor.WithAlpha((byte)(StrokeColor.Alpha * Opacity));
+
+            using var paint = new SKPaint
+            {
+                Color = fillWithOpacity,
+                Style = SKPaintStyle.Fill,
+                IsAntialias = true
+            };
+            canvas.DrawRect(X, Y, Width, Height, paint);
+
+            paint.Color = strokeWithOpacity;
+            paint.Style = SKPaintStyle.Stroke;
+            paint.StrokeWidth = StrokeWidth / CurrentZoomLevel; // ズーム補正
+            canvas.DrawRect(X, Y, Width, Height, paint);
+            
+            if (IsSelected)
+            {
+                DrawSelectionBox(canvas, new SKRect(X, Y, X + Width, Y + Height));
+            }
+
+            canvas.Restore();
+        }
+
+        public override bool HitTest(SKPoint point)
+        {
+            var p = UntransformPoint(point);
+            var rect = new SKRect(X, Y, X + Width, Y + Height);
+            return rect.Contains(p.X, p.Y);
+        }
+
+        public override GraphicObject Clone()
+        {
+            var clone = new RectangleObject();
+            CopyPropertiesTo(clone);
+            return clone;
+        }
+    }
+
     public class EllipseObject : GraphicObject
     {
         public override void Draw(SKCanvas canvas)
@@ -286,31 +286,6 @@ namespace FigCrafterApp.Models
             var clone = new EllipseObject();
             CopyPropertiesTo(clone);
             return clone;
-        }
-
-        protected void DrawSelectionBox(SKCanvas canvas, SKRect rect)
-        {
-            using var paint = new SKPaint
-            {
-                Color = SKColors.DeepSkyBlue,
-                Style = SKPaintStyle.Stroke,
-                StrokeWidth = 1 / CurrentZoomLevel, // ズーム補正
-                PathEffect = SKPathEffect.CreateDash(new float[] { 5 / CurrentZoomLevel, 5 / CurrentZoomLevel }, 0),
-                IsAntialias = true
-            };
-            canvas.DrawRect(rect, paint);
-            
-            // 四隅のハンドル
-            using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
-            using var handleStrokePaint = new SKPaint { Color = SKColors.DeepSkyBlue, Style = SKPaintStyle.Stroke, StrokeWidth = 1 / CurrentZoomLevel, IsAntialias = true };
-            float handleSize = 6 / CurrentZoomLevel;
-            var points = new[] { new SKPoint(rect.Left, rect.Top), new SKPoint(rect.Right, rect.Top), new SKPoint(rect.Right, rect.Bottom), new SKPoint(rect.Left, rect.Bottom) };
-            foreach (var pt in points)
-            {
-                var handleRect = new SKRect(pt.X - handleSize / 2, pt.Y - handleSize / 2, pt.X + handleSize / 2, pt.Y + handleSize / 2);
-                canvas.DrawRect(handleRect, handlePaint);
-                canvas.DrawRect(handleRect, handleStrokePaint);
-            }
         }
     }
 
@@ -503,17 +478,8 @@ namespace FigCrafterApp.Models
 
             if (IsSelected)
             {
-                using var highlightPaint = new SKPaint
-                {
-                    Color = SKColors.DeepSkyBlue,
-                    Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1 / CurrentZoomLevel,
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 5 / CurrentZoomLevel, 5 / CurrentZoomLevel }, 0),
-                    IsAntialias = true
-                };
-                
                 var rect = new SKRect(X, Y, X + totalWidth, Y + totalHeight);
-                canvas.DrawRect(rect, highlightPaint);
+                DrawSelectionBox(canvas, rect);
             }
 
             canvas.Restore();
@@ -682,35 +648,8 @@ namespace FigCrafterApp.Models
             if (IsSelected)
             {
                 RecalculateBounds();
-                // グループのバウンディングボックスを描画
-                using var paint = new SKPaint
-                {
-                    Color = SKColors.LimeGreen,
-                    Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1 / CurrentZoomLevel, // ズーム補正
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 6 / CurrentZoomLevel, 3 / CurrentZoomLevel }, 0),
-                    IsAntialias = true
-                };
                 var rect = new SKRect(X, Y, X + Width, Y + Height);
-                canvas.DrawRect(rect, paint);
-
-                // 四隅のハンドル
-                using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
-                using var handleStrokePaint = new SKPaint { Color = SKColors.LimeGreen, Style = SKPaintStyle.Stroke, StrokeWidth = 1 / CurrentZoomLevel, IsAntialias = true };
-                float handleSize = 6 / CurrentZoomLevel;
-                var points = new[]
-                {
-                    new SKPoint(rect.Left, rect.Top),
-                    new SKPoint(rect.Right, rect.Top),
-                    new SKPoint(rect.Right, rect.Bottom),
-                    new SKPoint(rect.Left, rect.Bottom)
-                };
-                foreach (var pt in points)
-                {
-                    var handleRect = new SKRect(pt.X - handleSize / 2, pt.Y - handleSize / 2, pt.X + handleSize / 2, pt.Y + handleSize / 2);
-                    canvas.DrawRect(handleRect, handlePaint);
-                    canvas.DrawRect(handleRect, handleStrokePaint);
-                }
+                DrawSelectionBox(canvas, rect);
             }
 
             canvas.Restore();
@@ -966,34 +905,7 @@ namespace FigCrafterApp.Models
 
             if (IsSelected)
             {
-                // 選択枠
-                using var borderPaint = new SKPaint
-                {
-                    Color = SKColors.DodgerBlue,
-                    Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1 / CurrentZoomLevel, // ズーム補正
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 4 / CurrentZoomLevel, 4 / CurrentZoomLevel }, 0),
-                    IsAntialias = true
-                };
-                canvas.DrawRect(destRect, borderPaint);
-
-                // ハンドル
-                using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
-                using var handleStrokePaint = new SKPaint { Color = SKColors.DodgerBlue, Style = SKPaintStyle.Stroke, StrokeWidth = 1 / CurrentZoomLevel, IsAntialias = true };
-                float hs = 6 / CurrentZoomLevel;
-                var points = new[]
-                {
-                    new SKPoint(destRect.Left, destRect.Top),
-                    new SKPoint(destRect.Right, destRect.Top),
-                    new SKPoint(destRect.Right, destRect.Bottom),
-                    new SKPoint(destRect.Left, destRect.Bottom)
-                };
-                foreach (var pt in points)
-                {
-                    var hr = new SKRect(pt.X - hs / 2, pt.Y - hs / 2, pt.X + hs / 2, pt.Y + hs / 2);
-                    canvas.DrawRect(hr, handlePaint);
-                    canvas.DrawRect(hr, handleStrokePaint);
-                }
+                DrawSelectionBox(canvas, destRect);
             }
 
             canvas.Restore();
