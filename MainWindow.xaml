@@ -464,7 +464,7 @@
         </Grid>
 
         <!-- Status Bar -->
-        <StatusBar Grid.Row="2" Background="#FF007ACC" Foreground="White">
+        <StatusBar Grid.Row="4" Background="#FF007ACC" Foreground="White">
             <StatusBar.ItemsPanel>
                 <ItemsPanelTemplate>
                     <Grid>
