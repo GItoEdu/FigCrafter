@@ -101,5 +101,37 @@ namespace FigCrafterApp.Helpers
             return SKBitmap.Decode(ms);
 #pragma warning restore CA1416
         }
+
+        /// <summary>
+        /// 画像ファイルから水平・垂直解像度(DPI)を取得します。取得失敗時はデフォルトで (96f, 96f) を返します。
+        /// </summary>
+        public static (float dpiX, float dpiY) GetImageDpi(string filePath)
+        {
+            try
+            {
+                string ext = Path.GetExtension(filePath).ToLowerInvariant();
+                if (ext == ".ai" || ext == ".pdf")
+                {
+                    // PDF/AIの場合はレンダリング時に拡大しているため、高解像度扱いにするか標準を返す
+                    return (96f, 96f);
+                }
+
+#pragma warning disable CA1416 // プラットフォーム互換性の検証
+                using var bmp = new System.Drawing.Bitmap(filePath);
+                float x = bmp.HorizontalResolution;
+                float y = bmp.VerticalResolution;
+                
+                // あまりに異常な値(0以下など)の場合は96にフォールバック
+                if (x <= 0) x = 96f;
+                if (y <= 0) y = 96f;
+                
+                return (x, y);
+#pragma warning restore CA1416
+            }
+            catch
+            {
+                return (96f, 96f);
+            }
+        }
     }
 }

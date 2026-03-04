@@ -304,7 +304,8 @@ namespace FigCrafterApp.ViewModels
                         var bitmap = await FigCrafterApp.Helpers.ImportHelper.ImportFileAsync(dialog.FileName);
                         if (bitmap != null)
                         {
-                            ActiveDocument?.ImportImageAsGroup(bitmap);
+                            var (dpiX, dpiY) = FigCrafterApp.Helpers.ImportHelper.GetImageDpi(dialog.FileName);
+                            ActiveDocument?.ImportImageAsGroup(bitmap, dpiX, dpiY);
                         }
                         else
                         {

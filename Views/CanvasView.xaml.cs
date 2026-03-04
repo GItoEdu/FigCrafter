@@ -1314,10 +1314,10 @@ namespace FigCrafterApp.Views
             else if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 // クリップボードから画像をペースト（複数形式に対応）
-                var skBitmap = TryGetImageFromClipboard();
+                var (skBitmap, dpiX, dpiY) = TryGetImageFromClipboard();
                 if (skBitmap != null)
                 {
-                    vm.ImportImageAsGroup(skBitmap);
+                    vm.ImportImageAsGroup(skBitmap, dpiX, dpiY);
                 }
                 else if (vm.PasteCommand.CanExecute(null))
                 {
@@ -1385,12 +1385,12 @@ namespace FigCrafterApp.Views
         /// <summary>
         /// クリップボードから画像を取得（複数形式に対応）
         /// </summary>
-        private SKBitmap? TryGetImageFromClipboard()
+        private (SKBitmap? bitmap, float dpiX, float dpiY) TryGetImageFromClipboard()
         {
             try
             {
                 var dataObject = System.Windows.Clipboard.GetDataObject();
-                if (dataObject == null) return null;
+                if (dataObject == null) return (null, 96f, 96f);
 
                 // 1) PNG ストリーム直接デコード（最も確実・ImageJ対応）
                 if (dataObject.GetDataPresent("PNG"))
@@ -1400,7 +1400,7 @@ namespace FigCrafterApp.Views
                     {
                         pngData.Position = 0;
                         var result = SKBitmap.Decode(pngData);
-                        if (result != null) return result;
+                        if (result != null) return (result, 96f, 96f);
                     }
                 }
 
@@ -1411,7 +1411,7 @@ namespace FigCrafterApp.Views
                     if (bitmapSource != null)
                     {
                         var result = ConvertBitmapSourceToSKBitmap(bitmapSource);
-                        if (result != null) return result;
+                        if (result != null) return (result, (float)bitmapSource.DpiX, (float)bitmapSource.DpiY);
                     }
                 }
 
@@ -1422,7 +1422,7 @@ namespace FigCrafterApp.Views
                     if (data is System.Windows.Media.Imaging.BitmapSource bmpSrc)
                     {
                         var result = ConvertBitmapSourceToSKBitmap(bmpSrc);
-                        if (result != null) return result;
+                        if (result != null) return (result, (float)bmpSrc.DpiX, (float)bmpSrc.DpiY);
                     }
                 }
 
@@ -1435,8 +1435,9 @@ namespace FigCrafterApp.Views
                         var ext = System.IO.Path.GetExtension(files[0]).ToLower();
                         if (ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".tif" or ".tiff")
                         {
+                            var dpi = FigCrafterApp.Helpers.ImportHelper.GetImageDpi(files[0]);
                             using var stream = System.IO.File.OpenRead(files[0]);
-                            return SKBitmap.Decode(stream);
+                            return (SKBitmap.Decode(stream), dpi.dpiX, dpi.dpiY);
                         }
                     }
                 }
@@ -1445,7 +1446,7 @@ namespace FigCrafterApp.Views
             {
                 // クリップボードアクセスに失敗した場合は null
             }
-            return null;
+            return (null, 96f, 96f);
         }
 
         /// <summary>
