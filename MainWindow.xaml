@@ -81,32 +81,124 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Menu/Toolbar -->
-            <RowDefinition Height="*"/>    <!-- Main Content -->
-            <RowDefinition Height="Auto"/> <!-- Status Bar -->
+            <RowDefinition Height="Auto"/> <!-- メニューバー -->
+            <RowDefinition Height="Auto"/> <!-- プロパティツールバー -->
+            <RowDefinition Height="Auto"/> <!-- 図形ツールバー -->
+            <RowDefinition Height="*"/>    <!-- メインコンテンツ -->
+            <RowDefinition Height="Auto"/> <!-- ステータスバー -->
         </Grid.RowDefinitions>
 
-        <!-- ToolBar / Menu Placeholder -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#FF333333">
-            <Button Content="📁 開く / インポート" Command="{Binding OpenProjectCommand}" Margin="10,5,5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="プロジェクトを開く、または画像やPDF・EMFなどを取り込む"/>
-            <Button Content="💾 保存" Command="{Binding SaveProjectCommand}" Margin="5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="プロジェクトを保存する"/>
-            
-            <Button Content="新規プロジェクト" Command="{Binding NewDocumentCommand}" Margin="15,5,10,5" Padding="10,2" Background="#FF007ACC" Foreground="White" BorderThickness="0"/>
-            
-            <!-- 書き出しボタン群 -->
-            <Button Content="📷 PNG抽出" Command="{Binding ExportPngCommand}" Margin="5,5,0,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="PNGとして書き出し"/>
-            <Button Content="📄 PDF抽出" Command="{Binding ExportPdfCommand}" Margin="2,5,0,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="PDFとして書き出し"/>
-            <Button Content="🖼️ TIF抽出" Command="{Binding ExportTifCommand}" Margin="2,5,10,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="TIFFとして書き出し"/>
-            <!-- ActiveDocument の Undo/Redo コマンドにバインド -->
-            <Button Content="↩ 取り消し" Command="{Binding ActiveDocument.UndoCommand}" Margin="15,5,5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="元に戻す"/>
-            <Button Content="↪ やり直し" Command="{Binding ActiveDocument.RedoCommand}" Margin="5,5" Padding="10,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="やり直す"/>
-        </StackPanel>
+        <!-- Row 0: メニューバー -->
+        <Menu Grid.Row="0" Background="#FF333333" Foreground="White">
+            <Menu.Resources>
+                <Style TargetType="MenuItem">
+                    <Setter Property="Foreground" Value="White"/>
+                </Style>
+            </Menu.Resources>
+            <MenuItem Header="ファイル(_F)">
+                <MenuItem Header="新規キャンバス (_N)" Command="{Binding NewDocumentCommand}" InputGestureText="Ctrl+N"/>
+                <MenuItem Header="開く / インポート (_O)" Command="{Binding OpenProjectCommand}" InputGestureText="Ctrl+O"/>
+                <Separator/>
+                <MenuItem Header="上書き保存 (_S)" Command="{Binding SaveProjectCommand}" InputGestureText="Ctrl+S"/>
+                <MenuItem Header="別名で保存..." Command="{Binding SaveAsProjectCommand}" InputGestureText="Ctrl+Shift+S"/>
+                <Separator/>
+                <MenuItem Header="PNG抽出" Command="{Binding ExportPngCommand}"/>
+                <MenuItem Header="PDF抽出" Command="{Binding ExportPdfCommand}"/>
+                <MenuItem Header="TIF抽出" Command="{Binding ExportTifCommand}"/>
+            </MenuItem>
+            <MenuItem Header="編集(_E)">
+                <MenuItem Header="元に戻す (_Z)" Command="{Binding ActiveDocument.UndoCommand}" InputGestureText="Ctrl+Z"/>
+                <MenuItem Header="やり直し (_Y)" Command="{Binding ActiveDocument.RedoCommand}" InputGestureText="Ctrl+Y"/>
+                <Separator/>
+                <MenuItem Header="切り取り (_X)" InputGestureText="Ctrl+X"/>
+                <MenuItem Header="コピー (_C)" InputGestureText="Ctrl+C"/>
+                <MenuItem Header="貼り付け (_V)" InputGestureText="Ctrl+V"/>
+                <MenuItem Header="全選択 (_A)" InputGestureText="Ctrl+A"/>
+            </MenuItem>
+            <MenuItem Header="表示(_V)">
+                <MenuItem Header="スナップ切り替え" InputGestureText="Ctrl+U"/>
+            </MenuItem>
+        </Menu>
 
-        <!-- Tabbed Interface -->
-        <Grid Grid.Row="1">
+        <!-- Row 1: プロパティツールバー（オブジェクト選択時に表示） -->
+        <Border Grid.Row="1" Background="#FF2D2D30" DataContext="{Binding ActiveDocument.SelectedObject}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel Orientation="Horizontal" Margin="5,3">
+                <!-- 座標・サイズ -->
+                <TextBlock Text="X:" Foreground="Gray" VerticalAlignment="Center" Margin="5,0,2,0"/>
+                <TextBox Text="{Binding X, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Width="55" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="3,2" VerticalAlignment="Center"/>
+                <TextBlock Text="Y:" Foreground="Gray" VerticalAlignment="Center" Margin="5,0,2,0"/>
+                <TextBox Text="{Binding Y, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Width="55" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="3,2" VerticalAlignment="Center"/>
+                <TextBlock Text="W:" Foreground="Gray" VerticalAlignment="Center" Margin="8,0,2,0"/>
+                <TextBox Text="{Binding Width, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Width="55" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="3,2" VerticalAlignment="Center"/>
+                <TextBlock Text="H:" Foreground="Gray" VerticalAlignment="Center" Margin="5,0,2,0"/>
+                <TextBox Text="{Binding Height, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Width="55" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="3,2" VerticalAlignment="Center"/>
+                <TextBlock Text="回転:" Foreground="Gray" VerticalAlignment="Center" Margin="8,0,2,0"/>
+                <TextBox Text="{Binding Rotation, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Width="45" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="3,2" VerticalAlignment="Center"/>
+                <TextBlock Text="°" Foreground="Gray" VerticalAlignment="Center" Margin="1,0,0,0"/>
+                <TextBlock Text="不透明度:" Foreground="Gray" VerticalAlignment="Center" Margin="8,0,2,0"/>
+                <TextBox Text="{Binding Opacity, StringFormat=\{0:F2\}, UpdateSourceTrigger=PropertyChanged}" Width="40" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="3,2" VerticalAlignment="Center"/>
+
+                <!-- セパレータ -->
+                <Border Width="1" Background="#FF555555" Margin="8,2"/>
+
+                <!-- 整列ボタン -->
+                <Button Content="⬅" ToolTip="左揃え" Command="{Binding DataContext.ActiveDocument.AlignLeftCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="4,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                <Button Content="↔" ToolTip="水平中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterHCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="4,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                <Button Content="➡" ToolTip="右揃え" Command="{Binding DataContext.ActiveDocument.AlignRightCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="4,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                <Button Content="⬆" ToolTip="上揃え" Command="{Binding DataContext.ActiveDocument.AlignTopCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="4,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                <Button Content="↕" ToolTip="垂直中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterVCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="4,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                <Button Content="⬇" ToolTip="下揃え" Command="{Binding DataContext.ActiveDocument.AlignBottomCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="4,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+
+                <Border Width="1" Background="#FF555555" Margin="5,2"/>
+
+                <!-- 重ね順 -->
+                <Button Content="⏫" ToolTip="最前面へ" Command="{Binding DataContext.ActiveDocument.BringToFrontCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="4,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                <Button Content="🔼" ToolTip="前面へ" Command="{Binding DataContext.ActiveDocument.BringForwardCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="4,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                <Button Content="🔽" ToolTip="背面へ" Command="{Binding DataContext.ActiveDocument.SendBackwardCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="4,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                <Button Content="⏬" ToolTip="最背面へ" Command="{Binding DataContext.ActiveDocument.SendToBackCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="4,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+
+                <Border Width="1" Background="#FF555555" Margin="5,2"/>
+
+                <!-- グループ・削除 -->
+                <Button Content="📦" ToolTip="グループ化 (Ctrl+G)" Command="{Binding DataContext.ActiveDocument.GroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="4,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                <Button Content="📤" ToolTip="グループ解除 (Ctrl+Shift+G)" Command="{Binding DataContext.ActiveDocument.UngroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="4,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                <Button Content="🗑" ToolTip="削除 (Del)" Command="{Binding DataContext.ActiveDocument.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="3,1" Padding="4,2" Background="#FF6B2222" Foreground="White" BorderThickness="0" FontSize="11"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Row 2: 図形ツールバー -->
+        <Border Grid.Row="2" Background="#FF252526" BorderBrush="#FF3E3E42" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Margin="5,2">
+                <RadioButton Content="▢ 選択" Style="{StaticResource ToolButtonStyle}" 
+                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Select}}"/>
+                <RadioButton Content="■ 四角形" Style="{StaticResource ToolButtonStyle}" 
+                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Rectangle}}"/>
+                <RadioButton Content="● 円" Style="{StaticResource ToolButtonStyle}" 
+                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Ellipse}}"/>
+                <RadioButton Content="／ 直線" Style="{StaticResource ToolButtonStyle}" 
+                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Line}}"/>
+                <RadioButton Content="T テキスト" Style="{StaticResource ToolButtonStyle}" 
+                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Text}}"/>
+                <RadioButton Content="◻ 消しゴム" Style="{StaticResource ToolButtonStyle}" 
+                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Eraser}}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Row 3: メインコンテンツ -->
+        <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="250"/> <!-- Sidebar/Properties -->
+                <ColumnDefinition Width="270"/> <!-- 右パネル -->
             </Grid.ColumnDefinitions>
 
             <TabControl Grid.Column="0" ItemsSource="{Binding Documents}" SelectedItem="{Binding ActiveDocument}" Background="#FF2D2D30" BorderThickness="0">
@@ -150,558 +242,223 @@
                 </TabControl.ContentTemplate>
             </TabControl>
 
-            <!-- Sidebar -->
+            <!-- 右パネル -->
             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Background="#FF252526">
-            <StackPanel Margin="10">
-                <TextBlock Text="アートボード設定" FontWeight="Bold" Margin="0,0,0,15" Foreground="White" FontSize="14"/>
-                
-                <TextBlock Text="キャンバス名" Margin="0,5" Foreground="Gray"/>
-                <TextBox Text="{Binding ActiveDocument.Title, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+            <StackPanel Margin="8">
 
-                <TextBlock Text="幅 (mm)" Margin="0,15,0,5" Foreground="Gray"/>
-                <TextBox Text="{Binding ActiveDocument.WidthMm, UpdateSourceTrigger=PropertyChanged, Delay=500}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
-
-                <TextBlock Text="高さ (mm)" Margin="0,15,0,5" Foreground="Gray"/>
-                <TextBox Text="{Binding ActiveDocument.HeightMm, UpdateSourceTrigger=PropertyChanged, Delay=500}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
-
-                <Separator Margin="0,20" Background="#FF3E3E42"/>
-                
-                <TextBlock Text="描画ツール" FontWeight="Bold" Margin="0,5" Foreground="White"/>
-                <UniformGrid Columns="2" Margin="0,10">
-                    <RadioButton Content="選択" Style="{StaticResource ToolButtonStyle}" 
-                                 IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Select}}"/>
-                    <RadioButton Content="四角形" Style="{StaticResource ToolButtonStyle}" 
-                                 IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Rectangle}}"/>
-                    <RadioButton Content="円" Style="{StaticResource ToolButtonStyle}" 
-                                 IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Ellipse}}"/>
-                    <RadioButton Content="直線" Style="{StaticResource ToolButtonStyle}" 
-                                 IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Line}}"/>
-                    <RadioButton Content="テキスト" Style="{StaticResource ToolButtonStyle}" 
-                                 IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Text}}"/>
-                    <RadioButton Content="消しゴム" Style="{StaticResource ToolButtonStyle}" 
-                                 IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Eraser}}"/>
-                </UniformGrid>
-
-                <Separator Margin="0,15" Background="#FF3E3E42"/>
-
-                <!-- 選択オブジェクトのプロパティパネル -->
-                <StackPanel DataContext="{Binding ActiveDocument.SelectedObject}">
-                    <StackPanel.Style>
-                        <Style TargetType="StackPanel">
-                            <Setter Property="Visibility" Value="Visible"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding}" Value="{x:Null}">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </StackPanel.Style>
-
-                    <TextBlock Text="オブジェクトプロパティ" FontWeight="Bold" Margin="0,5,0,10" Foreground="White"/>
-
-                    <TextBlock Text="重ね順:" Margin="0,0,0,5" Foreground="Gray"/>
-                    <UniformGrid Columns="2" Margin="0,0,0,10">
-                        <Button Content="最前面へ" Command="{Binding DataContext.ActiveDocument.BringToFrontCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
-                        <Button Content="前面へ" Command="{Binding DataContext.ActiveDocument.BringForwardCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
-                        <Button Content="背面へ" Command="{Binding DataContext.ActiveDocument.SendBackwardCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
-                        <Button Content="最背面へ" Command="{Binding DataContext.ActiveDocument.SendToBackCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                <!-- ===== レイヤーパネル ===== -->
+                <TextBlock Text="レイヤー" FontWeight="Bold" Margin="0,0,0,8" Foreground="White" FontSize="13"/>
+                <Grid Height="150" Margin="0,0,0,5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <UniformGrid Columns="4" Margin="0,0,0,4">
+                        <Button Content="➕" ToolTip="追加" Command="{Binding ActiveDocument.AddLayerCommand}" Margin="1" Padding="2" Background="#FF007ACC" Foreground="White" BorderThickness="0" FontSize="11"/>
+                        <Button Content="🗑" ToolTip="削除" Command="{Binding ActiveDocument.RemoveLayerCommand}" Margin="1" Padding="2" Background="#FF6B2222" Foreground="White" BorderThickness="0" FontSize="11"/>
+                        <Button Content="↑" ToolTip="上へ" Command="{Binding ActiveDocument.MoveLayerUpCommand}" Margin="1" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
+                        <Button Content="↓" ToolTip="下へ" Command="{Binding ActiveDocument.MoveLayerDownCommand}" Margin="1" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
                     </UniformGrid>
-                    
-                    <Grid Margin="0,5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="60"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="X座標:" Foreground="Gray" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Text="{Binding X, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding ActiveDocument.Layers}" SelectedItem="{Binding ActiveDocument.ActiveLayer, Mode=TwoWay}" Background="#FF3E3E42" BorderThickness="0" Foreground="White">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.ContextMenu>
+                                        <ContextMenu><MenuItem Header="選択オブジェクトをこのレイヤーに移動" Command="{Binding DataContext.ActiveDocument.MoveObjectToLayerCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/></ContextMenu>
+                                    </Grid.ContextMenu>
+                                    <ToggleButton Grid.Column="0" IsChecked="{Binding IsVisible}" Margin="0,0,3,0" Width="18" Height="18" Background="Transparent" BorderThickness="0" VerticalAlignment="Center" ToolTip="表示/非表示">
+                                        <ToggleButton.Style><Style TargetType="ToggleButton"><Setter Property="Content" Value="👁"/><Setter Property="Foreground" Value="White"/><Style.Triggers><Trigger Property="IsChecked" Value="False"><Setter Property="Content" Value="ー"/><Setter Property="Foreground" Value="Gray"/></Trigger></Style.Triggers></Style></ToggleButton.Style>
+                                    </ToggleButton>
+                                    <ToggleButton Grid.Column="1" IsChecked="{Binding IsLocked}" Margin="0,0,3,0" Width="18" Height="18" Background="Transparent" BorderThickness="0" VerticalAlignment="Center" ToolTip="ロック">
+                                        <ToggleButton.Style><Style TargetType="ToggleButton"><Setter Property="Content" Value="🔓"/><Setter Property="Foreground" Value="White"/><Style.Triggers><Trigger Property="IsChecked" Value="True"><Setter Property="Content" Value="🔒"/><Setter Property="Foreground" Value="Gray"/></Trigger></Style.Triggers></Style></ToggleButton.Style>
+                                    </ToggleButton>
+                                    <TextBox Grid.Column="2" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" Foreground="White" BorderThickness="0" VerticalAlignment="Center" Padding="2" FontSize="11"/>
+                                    <Button Grid.Column="3" Content="📥" FontSize="9" Width="20" Height="20" Background="Transparent" Foreground="White" BorderThickness="0" ToolTip="移動" Command="{Binding DataContext.ActiveDocument.MoveObjectToLayerCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+                <Separator Margin="0,8" Background="#FF3E3E42"/>
+                <TextBlock Text="アートボード" FontWeight="Bold" Margin="0,0,0,6" Foreground="White" FontSize="13"/>
+                <Grid Margin="0,2"><Grid.ColumnDefinitions><ColumnDefinition Width="50"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="名前:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>
+                    <TextBox Grid.Column="1" Text="{Binding ActiveDocument.Title, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11"/>
+                </Grid>
+                <Grid Margin="0,3"><Grid.ColumnDefinitions><ColumnDefinition Width="50"/><ColumnDefinition Width="*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="サイズ:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>
+                    <TextBox Grid.Column="1" Text="{Binding ActiveDocument.WidthMm, UpdateSourceTrigger=PropertyChanged, Delay=500}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11" ToolTip="幅 (mm)"/>
+                    <TextBlock Grid.Column="2" Text="×" Foreground="Gray" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="11"/>
+                    <TextBox Grid.Column="3" Text="{Binding ActiveDocument.HeightMm, UpdateSourceTrigger=PropertyChanged, Delay=500}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11" ToolTip="高さ (mm)"/>
+                </Grid>
+                <Separator Margin="0,8" Background="#FF3E3E42"/>
+                <StackPanel DataContext="{Binding ActiveDocument.SelectedObject}">
+                    <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Visible"/><Style.Triggers><DataTrigger Binding="{Binding}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                    <TextBlock Text="線" FontWeight="Bold" Margin="0,0,0,6" Foreground="White" FontSize="13"/>
+                    <Grid Margin="0,2"><Grid.ColumnDefinitions><ColumnDefinition Width="50"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="太さ:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>
+                        <TextBox Grid.Column="1" Text="{Binding StrokeWidth, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11"/>
                     </Grid>
-                    <Grid Margin="0,5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="60"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Y座標:" Foreground="Gray" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Text="{Binding Y, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                    <TextBlock Text="枠線色:" Margin="0,6,0,4" Foreground="Gray" FontSize="11"/>
+                    <UniformGrid Columns="7" Margin="0,0,0,1">
+                        <Button Background="Black" Height="18" Margin="1" BorderThickness="1" BorderBrush="#FF555555" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Black"/>
+                        <Button Background="White" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="White"/>
+                        <Button Background="#FFFF0000" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Red"/>
+                        <Button Background="#FFFFA500" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Orange"/>
+                        <Button Background="#FFFFFF00" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Yellow"/>
+                        <Button Background="#FF008000" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Green"/>
+                        <Button Background="#FF00FFFF" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Cyan"/>
+                    </UniformGrid>
+                    <UniformGrid Columns="7" Margin="0,0,0,1">
+                        <Button Background="#FF0000FF" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Blue"/>
+                        <Button Background="#FF800080" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Purple"/>
+                        <Button Background="#FFFF69B4" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Pink"/>
+                        <Button Background="#FF8B4513" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Brown"/>
+                        <Button Background="Gray" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Gray"/>
+                        <Button Background="LightGray" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightGray"/>
+                        <Button Background="Transparent" Height="18" Margin="1" BorderThickness="1" BorderBrush="Gray" Content="✕" Foreground="White" FontSize="8" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Transparent"/>
+                    </UniformGrid>
+                    <UniformGrid Columns="7" Margin="0,0,0,1">
+                        <Button Background="#FFFF6666" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightRed"/>
+                        <Button Background="#FFFFC864" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightOrange"/>
+                        <Button Background="#FFFFFF99" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightYellow"/>
+                        <Button Background="LightGreen" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightGreen"/>
+                        <Button Background="#FF99FFFF" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightCyan"/>
+                        <Button Background="LightBlue" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightBlue"/>
+                        <Button Background="#FFC899FF" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightPurple"/>
+                    </UniformGrid>
+                    <UniformGrid Columns="7" Margin="0,0,0,1">
+                        <Button Background="DarkRed" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="DarkRed"/>
+                        <Button Background="#FFC87800" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="DarkOrange"/>
+                        <Button Background="#FFC8C800" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="DarkYellow"/>
+                        <Button Background="DarkGreen" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="DarkGreen"/>
+                        <Button Background="DarkCyan" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="DarkCyan"/>
+                        <Button Background="DarkBlue" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="DarkBlue"/>
+                        <Button Background="Navy" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Navy"/>
+                    </UniformGrid>
+                    <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="#" Foreground="Gray" VerticalAlignment="Center" Margin="0,0,2,0" FontSize="11"/>
+                        <TextBox x:Name="StrokeHexInput" Grid.Column="1" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11" MaxLength="6" ToolTip="HEX (例: FF0000)"/>
+                        <Button Grid.Column="2" Content="適用" Margin="4,0,0,0" Padding="6,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="10" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Text, ElementName=StrokeHexInput, StringFormat=#{0}}"/>
                     </Grid>
-                    <Grid Margin="0,5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="60"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="幅:" Foreground="Gray" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Text="{Binding Width, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                    <Separator Margin="0,8" Background="#FF3E3E42"/>
+                    <TextBlock Text="塗り" FontWeight="Bold" Margin="0,0,0,6" Foreground="White" FontSize="13"/>
+                    <UniformGrid Columns="7" Margin="0,0,0,1">
+                        <Button Background="Black" Height="18" Margin="1" BorderThickness="1" BorderBrush="#FF555555" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Black"/>
+                        <Button Background="White" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="White"/>
+                        <Button Background="#FFFF0000" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Red"/>
+                        <Button Background="#FFFFA500" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Orange"/>
+                        <Button Background="#FFFFFF00" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Yellow"/>
+                        <Button Background="#FF008000" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Green"/>
+                        <Button Background="#FF00FFFF" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Cyan"/>
+                    </UniformGrid>
+                    <UniformGrid Columns="7" Margin="0,0,0,1">
+                        <Button Background="#FF0000FF" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Blue"/>
+                        <Button Background="#FF800080" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Purple"/>
+                        <Button Background="#FFFF69B4" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Pink"/>
+                        <Button Background="#FF8B4513" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Brown"/>
+                        <Button Background="Gray" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Gray"/>
+                        <Button Background="LightGray" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightGray"/>
+                        <Button Background="Transparent" Height="18" Margin="1" BorderThickness="1" BorderBrush="Gray" Content="✕" Foreground="White" FontSize="8" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Transparent"/>
+                    </UniformGrid>
+                    <UniformGrid Columns="7" Margin="0,0,0,1">
+                        <Button Background="#FFFF6666" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightRed"/>
+                        <Button Background="#FFFFC864" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightOrange"/>
+                        <Button Background="#FFFFFF99" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightYellow"/>
+                        <Button Background="LightGreen" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightGreen"/>
+                        <Button Background="#FF99FFFF" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightCyan"/>
+                        <Button Background="LightBlue" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightBlue"/>
+                        <Button Background="#FFC899FF" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightPurple"/>
+                    </UniformGrid>
+                    <UniformGrid Columns="7" Margin="0,0,0,1">
+                        <Button Background="DarkRed" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="DarkRed"/>
+                        <Button Background="#FFC87800" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="DarkOrange"/>
+                        <Button Background="#FFC8C800" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="DarkYellow"/>
+                        <Button Background="DarkGreen" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="DarkGreen"/>
+                        <Button Background="DarkCyan" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="DarkCyan"/>
+                        <Button Background="DarkBlue" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="DarkBlue"/>
+                        <Button Background="Navy" Height="18" Margin="1" BorderThickness="0" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Navy"/>
+                    </UniformGrid>
+                    <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="#" Foreground="Gray" VerticalAlignment="Center" Margin="0,0,2,0" FontSize="11"/>
+                        <TextBox x:Name="FillHexInput" Grid.Column="1" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11" MaxLength="6" ToolTip="HEX (例: 00FF00)"/>
+                        <Button Grid.Column="2" Content="適用" Margin="4,0,0,0" Padding="6,2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="10" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Text, ElementName=FillHexInput, StringFormat=#{0}}"/>
                     </Grid>
-                    <Grid Margin="0,5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="60"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="高さ:" Foreground="Gray" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Text="{Binding Height, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
-                    </Grid>
-                    <Grid Margin="0,5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="60"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="回転:" Foreground="Gray" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Text="{Binding Rotation, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
-                    </Grid>
-
-                    <TextBlock Text="不透明度:" Margin="0,10,0,0" Foreground="Gray"/>
-                    <Grid Margin="0,5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="40"/>
-                        </Grid.ColumnDefinitions>
-                        <!-- 0.0 ~ 1.0 のOpacityをUI操作 -->
-                        <Slider Grid.Column="0" Minimum="0" Maximum="1" Value="{Binding Opacity}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Text="{Binding Opacity, StringFormat=\{0:F2\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5" TextAlignment="Center"/>
-                    </Grid>
-                    
-                    <!-- 直線オブジェクト専用UI -->
+                    <Separator Margin="0,8" Background="#FF3E3E42"/>
                     <StackPanel>
-                        <StackPanel.Style>
-                            <Style TargetType="StackPanel">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=LineObject}" Value="Visible">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </StackPanel.Style>
-                        <TextBlock Text="矢印設定:" Margin="0,10,0,5" Foreground="Gray"/>
-                        <CheckBox Content="始点に矢印を表示" IsChecked="{Binding HasArrowStart, UpdateSourceTrigger=PropertyChanged}" Foreground="White" Margin="0,5"/>
-                        <CheckBox Content="終点に矢印を表示" IsChecked="{Binding HasArrowEnd, UpdateSourceTrigger=PropertyChanged}" Foreground="White" Margin="0,5"/>
+                        <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=LineObject}" Value="Visible"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                        <CheckBox Content="始点に矢印" IsChecked="{Binding HasArrowStart, UpdateSourceTrigger=PropertyChanged}" Foreground="White" Margin="0,2" FontSize="11"/>
+                        <CheckBox Content="終点に矢印" IsChecked="{Binding HasArrowEnd, UpdateSourceTrigger=PropertyChanged}" Foreground="White" Margin="0,2" FontSize="11"/>
                     </StackPanel>
-
-                    <!-- テキストオブジェクト専用UI -->
                     <StackPanel>
-                        <StackPanel.Style>
-                            <Style TargetType="StackPanel">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=TextObject}" Value="Visible">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </StackPanel.Style>
-                        <TextBlock Text="テキスト内容:" Margin="0,10,0,5" Foreground="Gray"/>
-                        <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5" TextWrapping="Wrap" AcceptsReturn="True" Height="60"/>
-                        <Grid Margin="0,10,0,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="フォント:" Foreground="Gray" VerticalAlignment="Center"/>
-                            <ComboBox Grid.Column="1" IsEditable="True"
-                                      ItemsSource="{Binding Source={x:Static Fonts.SystemFontFamilies}}"
-                                      Text="{Binding FontFamily, UpdateSourceTrigger=PropertyChanged}"
-                                      Background="White" Foreground="Black" BorderThickness="0" Padding="5">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Source}" FontFamily="{Binding}" Foreground="Black" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
+                        <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=TextObject}" Value="Visible"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                        <TextBlock Text="テキスト:" Margin="0,0,0,4" Foreground="Gray" FontSize="11"/>
+                        <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4" TextWrapping="Wrap" AcceptsReturn="True" Height="50" FontSize="11"/>
+                        <Grid Margin="0,6,0,3"><Grid.ColumnDefinitions><ColumnDefinition Width="50"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="フォント:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>
+                            <ComboBox Grid.Column="1" IsEditable="True" ItemsSource="{Binding Source={x:Static Fonts.SystemFontFamilies}}" Text="{Binding FontFamily, UpdateSourceTrigger=PropertyChanged}" Background="White" Foreground="Black" BorderThickness="0" Padding="4" FontSize="11">
+                                <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Source}" FontFamily="{Binding}" Foreground="Black"/></DataTemplate></ComboBox.ItemTemplate>
                             </ComboBox>
                         </Grid>
-                        <Grid Margin="0,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="サイズ:" Foreground="Gray" VerticalAlignment="Center"/>
-                            <TextBox Grid.Column="1" Text="{Binding FontSize, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
+                        <Grid Margin="0,3"><Grid.ColumnDefinitions><ColumnDefinition Width="50"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="サイズ:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>
+                            <TextBox Grid.Column="1" Text="{Binding FontSize, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11"/>
                             <StackPanel Grid.Column="2" Orientation="Vertical" Margin="2,0,0,0">
-                                <RepeatButton Content="▲" Command="{Binding DataContext.ActiveDocument.IncreaseFontSizeCommand, RelativeSource={RelativeSource AncestorType=Window}}" Padding="2,0" FontSize="8" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
-                                <RepeatButton Content="▼" Command="{Binding DataContext.ActiveDocument.DecreaseFontSizeCommand, RelativeSource={RelativeSource AncestorType=Window}}" Padding="2,0" FontSize="8" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Margin="0,1,0,0"/>
+                                <RepeatButton Content="▲" Command="{Binding DataContext.ActiveDocument.IncreaseFontSizeCommand, RelativeSource={RelativeSource AncestorType=Window}}" Padding="2,0" FontSize="7" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
+                                <RepeatButton Content="▼" Command="{Binding DataContext.ActiveDocument.DecreaseFontSizeCommand, RelativeSource={RelativeSource AncestorType=Window}}" Padding="2,0" FontSize="7" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Margin="0,1,0,0"/>
                             </StackPanel>
                         </Grid>
-
-                        <TextBlock Text="スタイル:" Margin="0,10,0,5" Foreground="Gray"/>
-                        <UniformGrid Columns="2" Margin="0,0,0,5">
+                        <UniformGrid Columns="2" Margin="0,2,0,4">
                             <ToggleButton Content="B" IsChecked="{Binding IsBold, UpdateSourceTrigger=PropertyChanged}" FontWeight="Bold" Margin="0,0,2,0" Background="#FF3E3E42" Foreground="White" BorderThickness="0">
-                                <ToggleButton.Style>
-                                    <Style TargetType="ToggleButton">
-                                        <Style.Triggers>
-                                            <Trigger Property="IsChecked" Value="True">
-                                                <Setter Property="Background" Value="#FF007ACC"/>
-                                            </Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ToggleButton.Style>
+                                <ToggleButton.Style><Style TargetType="ToggleButton"><Style.Triggers><Trigger Property="IsChecked" Value="True"><Setter Property="Background" Value="#FF007ACC"/></Trigger></Style.Triggers></Style></ToggleButton.Style>
                             </ToggleButton>
                             <ToggleButton Content="I" IsChecked="{Binding IsItalic, UpdateSourceTrigger=PropertyChanged}" FontStyle="Italic" Margin="2,0,0,0" Background="#FF3E3E42" Foreground="White" BorderThickness="0">
-                                <ToggleButton.Style>
-                                    <Style TargetType="ToggleButton">
-                                        <Style.Triggers>
-                                            <Trigger Property="IsChecked" Value="True">
-                                                <Setter Property="Background" Value="#FF007ACC"/>
-                                            </Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ToggleButton.Style>
+                                <ToggleButton.Style><Style TargetType="ToggleButton"><Style.Triggers><Trigger Property="IsChecked" Value="True"><Setter Property="Background" Value="#FF007ACC"/></Trigger></Style.Triggers></Style></ToggleButton.Style>
                             </ToggleButton>
                         </UniformGrid>
-
-                        <TextBlock Text="特殊文字:" Margin="0,10,0,5" Foreground="Gray"/>
-                        <ToggleButton x:Name="SpecialCharToggleButton" Content="Ω パレットを開く" Margin="0,0,0,5" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5">
-                            <ToggleButton.Style>
-                                <Style TargetType="ToggleButton">
-                                    <Style.Triggers>
-                                        <Trigger Property="IsChecked" Value="True">
-                                            <Setter Property="Background" Value="#FF007ACC"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ToggleButton.Style>
+                        <ToggleButton x:Name="SpecialCharToggleButton" Content="Ω 特殊文字" Margin="0,2,0,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4" FontSize="11">
+                            <ToggleButton.Style><Style TargetType="ToggleButton"><Style.Triggers><Trigger Property="IsChecked" Value="True"><Setter Property="Background" Value="#FF007ACC"/></Trigger></Style.Triggers></Style></ToggleButton.Style>
                         </ToggleButton>
                         <Popup IsOpen="{Binding IsChecked, ElementName=SpecialCharToggleButton}" StaysOpen="False" PlacementTarget="{Binding ElementName=SpecialCharToggleButton}" Placement="Bottom" MaxWidth="350">
                             <Border Background="#FF2D2D30" BorderBrush="#FF3E3E42" BorderThickness="1" Padding="5">
                                 <ScrollViewer MaxHeight="400" VerticalScrollBarVisibility="Auto">
                                     <StackPanel>
                                         <TextBlock Text="ギリシャ文字" Foreground="Gray" Margin="0,0,0,3" FontSize="11"/>
-                                        <UniformGrid Columns="8">
-                                            <UniformGrid.Resources>
-                                                <Style TargetType="Button">
-                                                    <Setter Property="Background" Value="Transparent"/>
-                                                    <Setter Property="Foreground" Value="White"/>
-                                                    <Setter Property="BorderThickness" Value="0"/>
-                                                    <Setter Property="Padding" Value="4"/>
-                                                    <Setter Property="Margin" Value="1"/>
-                                                    <Setter Property="FontSize" Value="14"/>
-                                                    <Setter Property="Command" Value="{Binding DataContext.ActiveDocument.InsertSpecialCharCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                                                </Style>
-                                            </UniformGrid.Resources>
-                                            <Button Content="α" CommandParameter="α"/>
-                                            <Button Content="β" CommandParameter="β"/>
-                                            <Button Content="γ" CommandParameter="γ"/>
-                                            <Button Content="δ" CommandParameter="δ"/>
-                                            <Button Content="ε" CommandParameter="ε"/>
-                                            <Button Content="ζ" CommandParameter="ζ"/>
-                                            <Button Content="η" CommandParameter="η"/>
-                                            <Button Content="θ" CommandParameter="θ"/>
-                                            <Button Content="ι" CommandParameter="ι"/>
-                                            <Button Content="κ" CommandParameter="κ"/>
-                                            <Button Content="λ" CommandParameter="λ"/>
-                                            <Button Content="μ" CommandParameter="μ"/>
-                                            <Button Content="ν" CommandParameter="ν"/>
-                                            <Button Content="ξ" CommandParameter="ξ"/>
-                                            <Button Content="ο" CommandParameter="ο"/>
-                                            <Button Content="π" CommandParameter="π"/>
-                                            <Button Content="ρ" CommandParameter="ρ"/>
-                                            <Button Content="σ" CommandParameter="σ"/>
-                                            <Button Content="τ" CommandParameter="τ"/>
-                                            <Button Content="υ" CommandParameter="υ"/>
-                                            <Button Content="φ" CommandParameter="φ"/>
-                                            <Button Content="χ" CommandParameter="χ"/>
-                                            <Button Content="ψ" CommandParameter="ψ"/>
-                                            <Button Content="ω" CommandParameter="ω"/>
-                                            <Button Content="Γ" CommandParameter="Γ"/>
-                                            <Button Content="Δ" CommandParameter="Δ"/>
-                                            <Button Content="Θ" CommandParameter="Θ"/>
-                                            <Button Content="Λ" CommandParameter="Λ"/>
-                                            <Button Content="Ξ" CommandParameter="Ξ"/>
-                                            <Button Content="Π" CommandParameter="Π"/>
-                                            <Button Content="Σ" CommandParameter="Σ"/>
-                                            <Button Content="Φ" CommandParameter="Φ"/>
-                                            <Button Content="Ψ" CommandParameter="Ψ"/>
-                                            <Button Content="Ω" CommandParameter="Ω"/>
+                                        <UniformGrid Columns="8"><UniformGrid.Resources><Style TargetType="Button"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="4"/><Setter Property="Margin" Value="1"/><Setter Property="FontSize" Value="14"/><Setter Property="Command" Value="{Binding DataContext.ActiveDocument.InsertSpecialCharCommand, RelativeSource={RelativeSource AncestorType=Window}}"/></Style></UniformGrid.Resources>
+                                            <Button Content="α" CommandParameter="α"/><Button Content="β" CommandParameter="β"/><Button Content="γ" CommandParameter="γ"/><Button Content="δ" CommandParameter="δ"/><Button Content="ε" CommandParameter="ε"/><Button Content="ζ" CommandParameter="ζ"/><Button Content="η" CommandParameter="η"/><Button Content="θ" CommandParameter="θ"/><Button Content="ι" CommandParameter="ι"/><Button Content="κ" CommandParameter="κ"/><Button Content="λ" CommandParameter="λ"/><Button Content="μ" CommandParameter="μ"/><Button Content="ν" CommandParameter="ν"/><Button Content="ξ" CommandParameter="ξ"/><Button Content="ο" CommandParameter="ο"/><Button Content="π" CommandParameter="π"/><Button Content="ρ" CommandParameter="ρ"/><Button Content="σ" CommandParameter="σ"/><Button Content="τ" CommandParameter="τ"/><Button Content="υ" CommandParameter="υ"/><Button Content="φ" CommandParameter="φ"/><Button Content="χ" CommandParameter="χ"/><Button Content="ψ" CommandParameter="ψ"/><Button Content="ω" CommandParameter="ω"/><Button Content="Γ" CommandParameter="Γ"/><Button Content="Δ" CommandParameter="Δ"/><Button Content="Θ" CommandParameter="Θ"/><Button Content="Λ" CommandParameter="Λ"/><Button Content="Ξ" CommandParameter="Ξ"/><Button Content="Π" CommandParameter="Π"/><Button Content="Σ" CommandParameter="Σ"/><Button Content="Φ" CommandParameter="Φ"/><Button Content="Ψ" CommandParameter="Ψ"/><Button Content="Ω" CommandParameter="Ω"/>
                                         </UniformGrid>
-
                                         <TextBlock Text="数学記号" Foreground="Gray" Margin="0,8,0,3" FontSize="11"/>
-                                        <UniformGrid Columns="8">
-                                            <UniformGrid.Resources>
-                                                <Style TargetType="Button">
-                                                    <Setter Property="Background" Value="Transparent"/>
-                                                    <Setter Property="Foreground" Value="White"/>
-                                                    <Setter Property="BorderThickness" Value="0"/>
-                                                    <Setter Property="Padding" Value="4"/>
-                                                    <Setter Property="Margin" Value="1"/>
-                                                    <Setter Property="FontSize" Value="14"/>
-                                                    <Setter Property="Command" Value="{Binding DataContext.ActiveDocument.InsertSpecialCharCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                                                </Style>
-                                            </UniformGrid.Resources>
-                                            <Button Content="±" CommandParameter="±"/>
-                                            <Button Content="×" CommandParameter="×"/>
-                                            <Button Content="÷" CommandParameter="÷"/>
-                                            <Button Content="≠" CommandParameter="≠"/>
-                                            <Button Content="≤" CommandParameter="≤"/>
-                                            <Button Content="≥" CommandParameter="≥"/>
-                                            <Button Content="≈" CommandParameter="≈"/>
-                                            <Button Content="∞" CommandParameter="∞"/>
-                                            <Button Content="√" CommandParameter="√"/>
-                                            <Button Content="∑" CommandParameter="∑"/>
-                                            <Button Content="∏" CommandParameter="∏"/>
-                                            <Button Content="∫" CommandParameter="∫"/>
-                                            <Button Content="∂" CommandParameter="∂"/>
-                                            <Button Content="∇" CommandParameter="∇"/>
-                                            <Button Content="∅" CommandParameter="∅"/>
-                                            <Button Content="∈" CommandParameter="∈"/>
-                                            <Button Content="∉" CommandParameter="∉"/>
-                                            <Button Content="∩" CommandParameter="∩"/>
-                                            <Button Content="∪" CommandParameter="∪"/>
-                                            <Button Content="⊂" CommandParameter="⊂"/>
-                                            <Button Content="⊆" CommandParameter="⊆"/>
-                                            <Button Content="∃" CommandParameter="∃"/>
-                                            <Button Content="∀" CommandParameter="∀"/>
-                                            <Button Content="¬" CommandParameter="¬"/>
+                                        <UniformGrid Columns="8"><UniformGrid.Resources><Style TargetType="Button"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="4"/><Setter Property="Margin" Value="1"/><Setter Property="FontSize" Value="14"/><Setter Property="Command" Value="{Binding DataContext.ActiveDocument.InsertSpecialCharCommand, RelativeSource={RelativeSource AncestorType=Window}}"/></Style></UniformGrid.Resources>
+                                            <Button Content="±" CommandParameter="±"/><Button Content="×" CommandParameter="×"/><Button Content="÷" CommandParameter="÷"/><Button Content="≠" CommandParameter="≠"/><Button Content="≤" CommandParameter="≤"/><Button Content="≥" CommandParameter="≥"/><Button Content="≈" CommandParameter="≈"/><Button Content="∞" CommandParameter="∞"/><Button Content="√" CommandParameter="√"/><Button Content="∑" CommandParameter="∑"/><Button Content="∏" CommandParameter="∏"/><Button Content="∫" CommandParameter="∫"/><Button Content="∂" CommandParameter="∂"/><Button Content="∇" CommandParameter="∇"/><Button Content="∅" CommandParameter="∅"/><Button Content="∈" CommandParameter="∈"/><Button Content="∉" CommandParameter="∉"/><Button Content="∩" CommandParameter="∩"/><Button Content="∪" CommandParameter="∪"/><Button Content="⊂" CommandParameter="⊂"/><Button Content="⊆" CommandParameter="⊆"/><Button Content="∃" CommandParameter="∃"/><Button Content="∀" CommandParameter="∀"/><Button Content="¬" CommandParameter="¬"/>
                                         </UniformGrid>
-
                                         <TextBlock Text="上付き・下付き・単位" Foreground="Gray" Margin="0,8,0,3" FontSize="11"/>
-                                        <UniformGrid Columns="8">
-                                            <UniformGrid.Resources>
-                                                <Style TargetType="Button">
-                                                    <Setter Property="Background" Value="Transparent"/>
-                                                    <Setter Property="Foreground" Value="White"/>
-                                                    <Setter Property="BorderThickness" Value="0"/>
-                                                    <Setter Property="Padding" Value="4"/>
-                                                    <Setter Property="Margin" Value="1"/>
-                                                    <Setter Property="FontSize" Value="14"/>
-                                                    <Setter Property="Command" Value="{Binding DataContext.ActiveDocument.InsertSpecialCharCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                                                </Style>
-                                            </UniformGrid.Resources>
-                                            <Button Content="°" CommandParameter="°"/>
-                                            <Button Content="²" CommandParameter="²"/>
-                                            <Button Content="³" CommandParameter="³"/>
-                                            <Button Content="⁰" CommandParameter="⁰"/>
-                                            <Button Content="¹" CommandParameter="¹"/>
-                                            <Button Content="⁴" CommandParameter="⁴"/>
-                                            <Button Content="₁" CommandParameter="₁"/>
-                                            <Button Content="₂" CommandParameter="₂"/>
-                                            <Button Content="µ" CommandParameter="µ"/>
-                                            <Button Content="Å" CommandParameter="Å"/>
-                                            <Button Content="℃" CommandParameter="℃"/>
-                                            <Button Content="℉" CommandParameter="℉"/>
+                                        <UniformGrid Columns="8"><UniformGrid.Resources><Style TargetType="Button"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="4"/><Setter Property="Margin" Value="1"/><Setter Property="FontSize" Value="14"/><Setter Property="Command" Value="{Binding DataContext.ActiveDocument.InsertSpecialCharCommand, RelativeSource={RelativeSource AncestorType=Window}}"/></Style></UniformGrid.Resources>
+                                            <Button Content="°" CommandParameter="°"/><Button Content="²" CommandParameter="²"/><Button Content="³" CommandParameter="³"/><Button Content="⁰" CommandParameter="⁰"/><Button Content="¹" CommandParameter="¹"/><Button Content="⁴" CommandParameter="⁴"/><Button Content="₁" CommandParameter="₁"/><Button Content="₂" CommandParameter="₂"/><Button Content="µ" CommandParameter="µ"/><Button Content="Å" CommandParameter="Å"/><Button Content="℃" CommandParameter="℃"/><Button Content="℉" CommandParameter="℉"/>
                                         </UniformGrid>
-
                                         <TextBlock Text="矢印・その他" Foreground="Gray" Margin="0,8,0,3" FontSize="11"/>
-                                        <UniformGrid Columns="8">
-                                            <UniformGrid.Resources>
-                                                <Style TargetType="Button">
-                                                    <Setter Property="Background" Value="Transparent"/>
-                                                    <Setter Property="Foreground" Value="White"/>
-                                                    <Setter Property="BorderThickness" Value="0"/>
-                                                    <Setter Property="Padding" Value="4"/>
-                                                    <Setter Property="Margin" Value="1"/>
-                                                    <Setter Property="FontSize" Value="14"/>
-                                                    <Setter Property="Command" Value="{Binding DataContext.ActiveDocument.InsertSpecialCharCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                                                </Style>
-                                            </UniformGrid.Resources>
-                                            <Button Content="←" CommandParameter="←"/>
-                                            <Button Content="↑" CommandParameter="↑"/>
-                                            <Button Content="→" CommandParameter="→"/>
-                                            <Button Content="↓" CommandParameter="↓"/>
-                                            <Button Content="↔" CommandParameter="↔"/>
-                                            <Button Content="⇒" CommandParameter="⇒"/>
-                                            <Button Content="⇔" CommandParameter="⇔"/>
-                                            <Button Content="©" CommandParameter="©"/>
-                                            <Button Content="®" CommandParameter="®"/>
-                                            <Button Content="™" CommandParameter="™"/>
-                                            <Button Content="†" CommandParameter="†"/>
-                                            <Button Content="‡" CommandParameter="‡"/>
-                                            <Button Content="§" CommandParameter="§"/>
-                                            <Button Content="¶" CommandParameter="¶"/>
-                                            <Button Content="…" CommandParameter="…"/>
-                                            <Button Content="★" CommandParameter="★"/>
+                                        <UniformGrid Columns="8"><UniformGrid.Resources><Style TargetType="Button"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="4"/><Setter Property="Margin" Value="1"/><Setter Property="FontSize" Value="14"/><Setter Property="Command" Value="{Binding DataContext.ActiveDocument.InsertSpecialCharCommand, RelativeSource={RelativeSource AncestorType=Window}}"/></Style></UniformGrid.Resources>
+                                            <Button Content="←" CommandParameter="←"/><Button Content="↑" CommandParameter="↑"/><Button Content="→" CommandParameter="→"/><Button Content="↓" CommandParameter="↓"/><Button Content="↔" CommandParameter="↔"/><Button Content="⇒" CommandParameter="⇒"/><Button Content="⇔" CommandParameter="⇔"/><Button Content="©" CommandParameter="©"/><Button Content="®" CommandParameter="®"/><Button Content="™" CommandParameter="™"/><Button Content="†" CommandParameter="†"/><Button Content="‡" CommandParameter="‡"/><Button Content="§" CommandParameter="§"/><Button Content="¶" CommandParameter="¶"/><Button Content="…" CommandParameter="…"/><Button Content="★" CommandParameter="★"/>
                                         </UniformGrid>
                                     </StackPanel>
                                 </ScrollViewer>
                             </Border>
                         </Popup>
                     </StackPanel>
-
-                    <!-- 画像オブジェクト専用UI -->
                     <StackPanel>
-                        <StackPanel.Style>
-                            <Style TargetType="StackPanel">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=ImageObject}" Value="Visible">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </StackPanel.Style>
-                        <TextBlock Text="画像モード:" Margin="0,10,0,5" Foreground="Gray"/>
-                        <CheckBox Content="グレースケール化" IsChecked="{Binding IsGrayscale, UpdateSourceTrigger=PropertyChanged}" Foreground="White" Margin="0,5"/>
-
-                        <TextBlock Text="トリミング:" Margin="0,10,0,5" Foreground="Gray"/>
-                        <Button Content="トリミングハンドル表示" Command="{Binding DataContext.ActiveDocument.ToggleCropModeCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,5,0,10" Padding="5" Background="#FF3E3E42" Foreground="White" BorderThickness="0">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding DataContext.ActiveDocument.IsCropMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                            <Setter Property="Background" Value="#FF007ACC"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
+                        <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=ImageObject}" Value="Visible"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                        <CheckBox Content="グレースケール" IsChecked="{Binding IsGrayscale, UpdateSourceTrigger=PropertyChanged}" Foreground="White" Margin="0,3" FontSize="11"/>
+                        <Button Content="トリミング" Command="{Binding DataContext.ActiveDocument.ToggleCropModeCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,2,0,4" Padding="4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11">
+                            <Button.Style><Style TargetType="Button"><Style.Triggers><DataTrigger Binding="{Binding DataContext.ActiveDocument.IsCropMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"><Setter Property="Background" Value="#FF007ACC"/></DataTrigger></Style.Triggers></Style></Button.Style>
                         </Button>
-
-                        <Grid Margin="0,2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Crop X:" Foreground="Gray" VerticalAlignment="Center"/>
-                            <TextBox Grid.Column="1" Text="{Binding CropX, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
-                        </Grid>
-                        <Grid Margin="0,2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Crop Y:" Foreground="Gray" VerticalAlignment="Center"/>
-                            <TextBox Grid.Column="1" Text="{Binding CropY, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
-                        </Grid>
-                        <Grid Margin="0,2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Crop W:" Foreground="Gray" VerticalAlignment="Center"/>
-                            <TextBox Grid.Column="1" Text="{Binding CropWidth, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
-                        </Grid>
-                        <Grid Margin="0,2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Crop H:" Foreground="Gray" VerticalAlignment="Center"/>
-                            <TextBox Grid.Column="1" Text="{Binding CropHeight, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
-                        </Grid>
+                        <Grid Margin="0,2"><Grid.ColumnDefinitions><ColumnDefinition Width="50"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="Crop X:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/><TextBox Grid.Column="1" Text="{Binding CropX, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11"/></Grid>
+                        <Grid Margin="0,2"><Grid.ColumnDefinitions><ColumnDefinition Width="50"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="Crop Y:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/><TextBox Grid.Column="1" Text="{Binding CropY, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11"/></Grid>
+                        <Grid Margin="0,2"><Grid.ColumnDefinitions><ColumnDefinition Width="50"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="Crop W:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/><TextBox Grid.Column="1" Text="{Binding CropWidth, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11"/></Grid>
+                        <Grid Margin="0,2"><Grid.ColumnDefinitions><ColumnDefinition Width="50"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="Crop H:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/><TextBox Grid.Column="1" Text="{Binding CropHeight, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11"/></Grid>
                     </StackPanel>
-
-                    <TextBlock Text="線の太さ:" Margin="0,10,0,5" Foreground="Gray"/>
-                    <TextBox Text="{Binding StrokeWidth, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="5"/>
-                    
-                    <TextBlock Text="塗り色 (ARGB):" Margin="0,10,0,5" Foreground="Gray"/>
-                    <!-- 簡易実装として文字列入力で妥協せずコンバータを通じた直接入力は難しいため、将来的にカラーピッカーにする前提で一旦RGB文字列等の実装をするか、ここでは簡略化して TextBox で扱う事は難しいので、とりあえず後回しにし、表示のみまたは固定ボタン等にするか... -->
-                    <!-- TODO: 実際に色を変更するための簡易UI -->
-                    <UniformGrid Columns="4" Margin="0,5">
-                        <Button Background="SkyBlue" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="SkyBlue" Height="20" Margin="2" BorderThickness="0"/>
-                        <Button Background="Salmon" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Salmon" Height="20" Margin="2" BorderThickness="0"/>
-                        <Button Background="LightGreen" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="LightGreen" Height="20" Margin="2" BorderThickness="0"/>
-                        <Button Background="Transparent" Command="{Binding DataContext.ChangeFillColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Transparent" Height="20" Margin="2" BorderThickness="1" BorderBrush="Gray" Content="✕" Foreground="White"/>
-                    </UniformGrid>
-
-                    <TextBlock Text="枠線色:" Margin="0,10,0,5" Foreground="Gray"/>
-                    <UniformGrid Columns="4" Margin="0,5">
-                        <Button Background="Black" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Black" Height="20" Margin="2" BorderThickness="0"/>
-                        <Button Background="Red" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Red" Height="20" Margin="2" BorderThickness="0"/>
-                        <Button Background="Blue" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Blue" Height="20" Margin="2" BorderThickness="0"/>
-                        <Button Background="Transparent" Command="{Binding DataContext.ChangeStrokeColorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Transparent" Height="20" Margin="2" BorderThickness="1" BorderBrush="Gray" Content="✕" Foreground="White"/>
-                    </UniformGrid>
-
-                    <Separator Margin="0,15" Background="#FF3E3E42"/>
-
-                    <TextBlock Text="整列:" Margin="0,0,0,5" Foreground="Gray"/>
-                    <UniformGrid Columns="3" Margin="0,0,0,5">
-                        <Button Content="⬅ 左" Command="{Binding DataContext.ActiveDocument.AlignLeftCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
-                        <Button Content="↔ 中央" Command="{Binding DataContext.ActiveDocument.AlignCenterHCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
-                        <Button Content="➡ 右" Command="{Binding DataContext.ActiveDocument.AlignRightCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
-                        <Button Content="⬆ 上" Command="{Binding DataContext.ActiveDocument.AlignTopCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
-                        <Button Content="↕ 中央" Command="{Binding DataContext.ActiveDocument.AlignCenterVCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
-                        <Button Content="⬇ 下" Command="{Binding DataContext.ActiveDocument.AlignBottomCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
-                    </UniformGrid>
-
-                    <Separator Margin="0,15" Background="#FF3E3E42"/>
-
-                    <TextBlock Text="グループ:" Margin="0,0,0,5" Foreground="Gray"/>
-                    <UniformGrid Columns="2" Margin="0,0,0,5">
-                        <Button Content="📦 グループ化" Command="{Binding DataContext.ActiveDocument.GroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
-                        <Button Content="📤 解除" Command="{Binding DataContext.ActiveDocument.UngroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
-                    </UniformGrid>
-
-                    <Separator Margin="0,15" Background="#FF3E3E42"/>
-
-                    <Button Content="🗑 選択オブジェクトを削除" Command="{Binding DataContext.ActiveDocument.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,5" Padding="5" Background="#FF6B2222" Foreground="White" BorderThickness="0"/>
-                    
                 </StackPanel>
-
-                <Separator Margin="0,15" Background="#FF3E3E42"/>
-
-                <!-- レイヤーパネル -->
-                <TextBlock Text="レイヤーパネル" FontWeight="Bold" Margin="0,5,0,10" Foreground="White" FontSize="14"/>
-                <Grid Height="150" Margin="0,0,0,10">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    
-                    <UniformGrid Columns="4" Margin="0,0,0,5">
-                        <Button Content="➕ 追加" Command="{Binding ActiveDocument.AddLayerCommand}" Margin="2" Padding="2" Background="#FF007ACC" Foreground="White" BorderThickness="0"/>
-                        <Button Content="🗑 削除" Command="{Binding ActiveDocument.RemoveLayerCommand}" Margin="2" Padding="2" Background="#FF6B2222" Foreground="White" BorderThickness="0"/>
-                        <Button Content="↑ 上へ" Command="{Binding ActiveDocument.MoveLayerUpCommand}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="選択したレイヤーを上に移動"/>
-                        <Button Content="↓ 下へ" Command="{Binding ActiveDocument.MoveLayerDownCommand}" Margin="2" Padding="2" Background="#FF3E3E42" Foreground="White" BorderThickness="0" ToolTip="選択したレイヤーを下に移動"/>
-                    </UniformGrid>
-
-                    <ListBox Grid.Row="1" ItemsSource="{Binding ActiveDocument.Layers}" SelectedItem="{Binding ActiveDocument.ActiveLayer, Mode=TwoWay}" Background="#FF3E3E42" BorderThickness="0" Foreground="White">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <Grid.ContextMenu>
-                                        <ContextMenu>
-                                            <MenuItem Header="選択オブジェクトをこのレイヤーに移動" 
-                                                      Command="{Binding DataContext.ActiveDocument.MoveObjectToLayerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                      CommandParameter="{Binding}"/>
-                                        </ContextMenu>
-                                    </Grid.ContextMenu>
-                                    
-                                    <ToggleButton Grid.Column="0" IsChecked="{Binding IsVisible}" Margin="0,0,5,0" Width="20" Height="20" Background="Transparent" BorderThickness="0" VerticalAlignment="Center" ToolTip="表示/非表示の切り替え">
-                                        <ToggleButton.Style>
-                                            <Style TargetType="ToggleButton">
-                                                <Setter Property="Content" Value="👁" />
-                                                <Setter Property="Foreground" Value="White" />
-                                                <Style.Triggers>
-                                                    <Trigger Property="IsChecked" Value="False">
-                                                        <Setter Property="Content" Value="ー" />
-                                                        <Setter Property="Foreground" Value="Gray" />
-                                                    </Trigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </ToggleButton.Style>
-                                    </ToggleButton>
-                                    
-                                    <ToggleButton Grid.Column="1" IsChecked="{Binding IsLocked}" Margin="0,0,5,0" Width="20" Height="20" Background="Transparent" BorderThickness="0" VerticalAlignment="Center" ToolTip="ロック/解除の切り替え">
-                                        <ToggleButton.Style>
-                                            <Style TargetType="ToggleButton">
-                                                <Setter Property="Content" Value="🔓" />
-                                                <Setter Property="Foreground" Value="White" />
-                                                <Style.Triggers>
-                                                    <Trigger Property="IsChecked" Value="True">
-                                                        <Setter Property="Content" Value="🔒" />
-                                                        <Setter Property="Foreground" Value="Gray" />
-                                                    </Trigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </ToggleButton.Style>
-                                    </ToggleButton>
-                                    
-                                    <TextBox Grid.Column="2" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" Foreground="White" BorderThickness="0" VerticalAlignment="Center" Padding="2"/>
-
-                                    <Button Grid.Column="3" Content="📥" FontSize="10" Width="22" Height="22"
-                                            Background="Transparent" Foreground="White" BorderThickness="0"
-                                            ToolTip="選択オブジェクトをこのレイヤーに移動"
-                                            Command="{Binding DataContext.ActiveDocument.MoveObjectToLayerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </Grid>
-
             </StackPanel>
             </ScrollViewer>
         </Grid>

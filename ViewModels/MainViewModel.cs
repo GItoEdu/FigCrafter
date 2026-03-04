@@ -100,15 +100,80 @@ namespace FigCrafterApp.ViewModels
             if (string.IsNullOrEmpty(colorName) || ActiveDocument?.SelectedObject == null) return;
 
             SKColor color = SKColors.Transparent;
-            switch (colorName.ToLower())
+
+            // HEX入力 (#RRGGBB または #AARRGGBB) の処理
+            if (colorName.StartsWith("#"))
             {
-                case "skyblue": color = SKColors.SkyBlue; break;
-                case "salmon": color = SKColors.Salmon; break;
-                case "lightgreen": color = SKColors.LightGreen; break;
-                case "black": color = SKColors.Black; break;
-                case "red": color = SKColors.Red; break;
-                case "blue": color = SKColors.Blue; break;
-                case "transparent": color = SKColors.Transparent; break;
+                string hex = colorName.TrimStart('#');
+                if (hex.Length == 6)
+                {
+                    // #RRGGBB → 不透明色
+                    if (byte.TryParse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber, null, out byte r) &&
+                        byte.TryParse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber, null, out byte g) &&
+                        byte.TryParse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber, null, out byte b))
+                    {
+                        color = new SKColor(r, g, b);
+                    }
+                }
+                else if (hex.Length == 8)
+                {
+                    // #AARRGGBB
+                    if (byte.TryParse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber, null, out byte a) &&
+                        byte.TryParse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber, null, out byte r) &&
+                        byte.TryParse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber, null, out byte g) &&
+                        byte.TryParse(hex.Substring(6, 2), System.Globalization.NumberStyles.HexNumber, null, out byte b))
+                    {
+                        color = new SKColor(r, g, b, a);
+                    }
+                }
+            }
+            else
+            {
+                // 色名による指定
+                switch (colorName.ToLower())
+                {
+                    // 基本12色
+                    case "black": color = SKColors.Black; break;
+                    case "white": color = SKColors.White; break;
+                    case "red": color = SKColors.Red; break;
+                    case "orange": color = new SKColor(255, 165, 0); break;
+                    case "yellow": color = SKColors.Yellow; break;
+                    case "green": color = new SKColor(0, 128, 0); break;
+                    case "cyan": color = SKColors.Cyan; break;
+                    case "blue": color = SKColors.Blue; break;
+                    case "purple": color = new SKColor(128, 0, 128); break;
+                    case "pink": color = new SKColor(255, 105, 180); break;
+                    case "brown": color = new SKColor(139, 69, 19); break;
+                    case "gray": color = SKColors.Gray; break;
+                    // 明るいバリエーション
+                    case "lightgray": color = SKColors.LightGray; break;
+                    case "lightred": color = new SKColor(255, 102, 102); break;
+                    case "lightorange": color = new SKColor(255, 200, 100); break;
+                    case "lightyellow": color = new SKColor(255, 255, 153); break;
+                    case "lightgreen": color = SKColors.LightGreen; break;
+                    case "lightcyan": color = new SKColor(153, 255, 255); break;
+                    case "lightblue": color = SKColors.LightBlue; break;
+                    case "lightpurple": color = new SKColor(200, 153, 255); break;
+                    case "lightpink": color = new SKColor(255, 182, 193); break;
+                    case "lightbrown": color = new SKColor(210, 180, 140); break;
+                    case "skyblue": color = SKColors.SkyBlue; break;
+                    case "salmon": color = SKColors.Salmon; break;
+                    // 暗いバリエーション
+                    case "darkgray": color = SKColors.DarkGray; break;
+                    case "darkred": color = SKColors.DarkRed; break;
+                    case "darkorange": color = new SKColor(200, 120, 0); break;
+                    case "darkyellow": color = new SKColor(200, 200, 0); break;
+                    case "darkgreen": color = SKColors.DarkGreen; break;
+                    case "darkcyan": color = SKColors.DarkCyan; break;
+                    case "darkblue": color = SKColors.DarkBlue; break;
+                    case "darkpurple": color = new SKColor(80, 0, 80); break;
+                    case "darkpink": color = new SKColor(200, 50, 100); break;
+                    case "darkbrown": color = new SKColor(101, 50, 10); break;
+                    case "navy": color = SKColors.Navy; break;
+                    case "maroon": color = SKColors.Maroon; break;
+                    // 特殊
+                    case "transparent": color = SKColors.Transparent; break;
+                }
             }
 
             if (isFill)
