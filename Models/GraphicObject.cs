@@ -130,6 +130,51 @@ namespace FigCrafterApp.Models
             return new SKPoint(nx + cx, ny + cy);
         }
 
+        /// <summary>
+        /// オブジェクトのローカル座標系の点をスクリーン座標（回転後）に変換する
+        /// </summary>
+        public SKPoint TransformPoint(SKPoint point)
+        {
+            if (Rotation == 0) return point;
+
+            float cx = X + Width / 2;
+            float cy = Y + Height / 2;
+
+            float dx = point.X - cx;
+            float dy = point.Y - cy;
+
+            float rad = Rotation * (float)Math.PI / 180.0f;
+            float cos = (float)Math.Cos(rad);
+            float sin = (float)Math.Sin(rad);
+
+            float nx = dx * cos - dy * sin;
+            float ny = dx * sin + dy * cos;
+
+            return new SKPoint(nx + cx, ny + cy);
+        }
+
+        /// <summary>
+        /// 回転を適用した後のオブジェクトの4つの角座標を返す
+        /// </summary>
+        public virtual SKPoint[] GetTransformedCorners()
+        {
+            var corners = new[]
+            {
+                new SKPoint(X, Y),
+                new SKPoint(X + Width, Y),
+                new SKPoint(X + Width, Y + Height),
+                new SKPoint(X, Y + Height)
+            };
+
+            if (Rotation == 0) return corners;
+
+            for (int i = 0; i < corners.Length; i++)
+            {
+                corners[i] = TransformPoint(corners[i]);
+            }
+            return corners;
+        }
+
         protected void DrawSelectionBox(SKCanvas canvas, SKRect rect)
         {
             using var paint = new SKPaint

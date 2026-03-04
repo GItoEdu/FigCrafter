@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Controls;
@@ -38,6 +39,8 @@ namespace FigCrafterApp.Views
         private float? _snapGuideX = null;
         private float? _snapGuideY = null;
         private SKRect _originalDragRect;
+        private GraphicObject? _snapXTarget = null; // X軸スナップ先のオブジェクト
+        private GraphicObject? _snapYTarget = null; // Y軸スナップ先のオブジェクト
 
         // 半透明クロップガイド用のペイントキャッシュ
         private SKPaint? _cachedCropGuidePaintNormal;
@@ -265,10 +268,10 @@ namespace FigCrafterApp.Views
             {
                 using var snapGuidePaint = new SKPaint
                 {
-                    Color = SKColors.Red,
+                    Color = new SKColor(255, 50, 50, 200),
                     Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1 / currentZoom,
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 5 / currentZoom, 5 / currentZoom }, 0),
+                    StrokeWidth = 0.5f / currentZoom,
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 4 / currentZoom, 4 / currentZoom }, 0),
                     IsAntialias = true
                 };
 
@@ -284,6 +287,27 @@ namespace FigCrafterApp.Views
                 {
                     float gy = _snapGuideY.Value;
                     canvas.DrawLine(-10000, gy, 10000, gy, snapGuidePaint);
+                }
+
+                // スナップ先オブジェクトの強調表示
+                using var highlightPaint = new SKPaint
+                {
+                    Color = new SKColor(255, 140, 0, 150), // 半透明オレンジ
+                    Style = SKPaintStyle.Stroke,
+                    StrokeWidth = 1.5f / currentZoom,
+                    IsAntialias = true
+                };
+
+                // X軸スナップ先の強調
+                if (_snapXTarget != null)
+                {
+                    DrawSnapTargetHighlight(canvas, _snapXTarget, highlightPaint);
+                }
+
+                // Y軸スナップ先の強調（X軸と同じオブジェクトの場合は二重描画を避ける）
+                if (_snapYTarget != null && _snapYTarget != _snapXTarget)
+                {
+                    DrawSnapTargetHighlight(canvas, _snapYTarget, highlightPaint);
                 }
             }
         }
@@ -754,6 +778,8 @@ namespace FigCrafterApp.Views
                 // スナップガイドの初期化
                 _snapGuideX = null;
                 _snapGuideY = null;
+                _snapXTarget = null;
+                _snapYTarget = null;
 
                 // 選択中オブジェクトの元の矩形と予定される矩形
                 var targetRect = _originalDragRect;
@@ -774,6 +800,9 @@ namespace FigCrafterApp.Views
                 // 他のオブジェクトに対するスナップ判定（Shiftキーが押されていない場合のみ有効）
                 if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && vm.ActiveLayer != null)
                 {
+                    float[] targetXLines = { expectedLeft, expectedRight, expectedCenterX };
+                    float[] targetYLines = { expectedTop, expectedBottom, expectedCenterY };
+
                     foreach (var layer in vm.Layers)
                     {
                         if (!layer.IsVisible || layer.IsLocked) continue;
@@ -782,16 +811,28 @@ namespace FigCrafterApp.Views
                         {
                             if (vm.SelectedObjects.Contains(obj)) continue;
 
-                            var otherRect = GetBoundingRect(obj);
-                            float[] otherXLines = { otherRect.Left, otherRect.Right, otherRect.Left + otherRect.Width / 2 };
-                            float[] otherYLines = { otherRect.Top, otherRect.Bottom, otherRect.Top + otherRect.Height / 2 };
-                            float[] targetXLines = { expectedLeft, expectedRight, expectedCenterX };
-                            float[] targetYLines = { expectedTop, expectedBottom, expectedCenterY };
+                            // 回転後の頂点座標を取得
+                            var corners = obj.GetTransformedCorners();
+
+                            // 頂点から各軸座標を収集（重複を避けるためHashSetを使用）
+                            var otherXSet = new HashSet<float>();
+                            var otherYSet = new HashSet<float>();
+                            foreach (var c in corners)
+                            {
+                                otherXSet.Add((float)Math.Round(c.X, 1));
+                                otherYSet.Add((float)Math.Round(c.Y, 1));
+                            }
+
+                            // 中心座標も追加
+                            float centerX = corners.Average(c => c.X);
+                            float centerY = corners.Average(c => c.Y);
+                            otherXSet.Add((float)Math.Round(centerX, 1));
+                            otherYSet.Add((float)Math.Round(centerY, 1));
 
                             // X軸スナップ
                             foreach (var tx in targetXLines)
                             {
-                                foreach (var ox in otherXLines)
+                                foreach (var ox in otherXSet)
                                 {
                                     float dist = Math.Abs(tx - ox);
                                     if (dist < snapThreshold && dist < closestDistX)
@@ -799,6 +840,7 @@ namespace FigCrafterApp.Views
                                         closestDistX = dist;
                                         snapOffsetX = ox - tx;
                                         _snapGuideX = ox;
+                                        _snapXTarget = obj;
                                     }
                                 }
                             }
@@ -806,7 +848,7 @@ namespace FigCrafterApp.Views
                             // Y軸スナップ
                             foreach (var ty in targetYLines)
                             {
-                                foreach (var oy in otherYLines)
+                                foreach (var oy in otherYSet)
                                 {
                                     float dist = Math.Abs(ty - oy);
                                     if (dist < snapThreshold && dist < closestDistY)
@@ -814,6 +856,7 @@ namespace FigCrafterApp.Views
                                         closestDistY = dist;
                                         snapOffsetY = oy - ty;
                                         _snapGuideY = oy;
+                                        _snapYTarget = obj;
                                     }
                                 }
                             }
@@ -1005,6 +1048,8 @@ namespace FigCrafterApp.Views
                 // スナップガイドのクリア
                 _snapGuideX = null;
                 _snapGuideY = null;
+                _snapXTarget = null;
+                _snapYTarget = null;
 
                 if (_selectedObject != null && _preDragPositions.Count > 0)
                 {
@@ -1081,6 +1126,24 @@ namespace FigCrafterApp.Views
             _tempObject = null;
             SkiaElement.ReleaseMouseCapture();
             SkiaElement.InvalidateVisual();
+        }
+
+        /// <summary>
+        /// スナップ先オブジェクトの外枠を強調描画するヘルパー
+        /// </summary>
+        private void DrawSnapTargetHighlight(SKCanvas canvas, GraphicObject target, SKPaint paint)
+        {
+            var corners = target.GetTransformedCorners();
+            if (corners.Length < 2) return;
+
+            using var path = new SKPath();
+            path.MoveTo(corners[0]);
+            for (int i = 1; i < corners.Length; i++)
+            {
+                path.LineTo(corners[i]);
+            }
+            path.Close();
+            canvas.DrawPath(path, paint);
         }
 
         private int GetHandleHitIndex(GraphicObject obj, SKPoint hitPoint)
