@@ -797,8 +797,8 @@ namespace FigCrafterApp.Views
                 float snapOffsetX = 0;
                 float snapOffsetY = 0;
 
-                // 他のオブジェクトに対するスナップ判定（Shiftキーが押されていない場合のみ有効）
-                if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && vm.ActiveLayer != null)
+                // 他のオブジェクトに対するスナップ判定（スナップ有効かつShiftキーが押されていない場合のみ）
+                if (vm.IsSnapEnabled && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && vm.ActiveLayer != null)
                 {
                     float[] targetXLines = { expectedLeft, expectedRight, expectedCenterX };
                     float[] targetYLines = { expectedTop, expectedBottom, expectedCenterY };
@@ -1343,6 +1343,13 @@ namespace FigCrafterApp.Views
             else if (e.Key == Key.D0 && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
             {
                 vm.ResetZoomCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.U && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                // Ctrl+U: スナップON/OFF切替
+                vm.IsSnapEnabled = !vm.IsSnapEnabled;
+                SkiaElement.InvalidateVisual();
                 e.Handled = true;
             }
         }

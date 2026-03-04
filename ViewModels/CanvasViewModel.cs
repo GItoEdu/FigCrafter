@@ -32,6 +32,7 @@ namespace FigCrafterApp.ViewModels
         private GraphicObject? _selectedObject;
         private ObservableCollection<GraphicObject> _selectedObjects = new(); // 複数選択
         private GraphicObject? _clipboard; // コピー用クリップボード
+        private bool _isSnapEnabled = true; // スナップ機能のON/OFF
 
         // Undo / Redo 用の履歴スタック
         private readonly Stack<IUndoableCommand> _undoStack = new();
@@ -170,6 +171,12 @@ namespace FigCrafterApp.ViewModels
                     Invalidate();
                 }
             }
+        }
+
+        public bool IsSnapEnabled
+        {
+            get => _isSnapEnabled;
+            set => SetProperty(ref _isSnapEnabled, value);
         }
 
         public ObservableCollection<Layer> Layers
@@ -717,43 +724,39 @@ namespace FigCrafterApp.ViewModels
         private enum AlignDirection { Left, Right, Top, Bottom, CenterH, CenterV }
 
         /// <summary>
-        /// オブジェクトの左端X座標を取得
+        /// オブジェクトの左端X座標を取得（回転後の頂点を考慮）
         /// </summary>
         private float GetLeftEdge(GraphicObject obj)
         {
-            if (obj is LineObject line) return Math.Min(line.X, line.EndX);
-            if (obj is GroupObject group) { group.RecalculateBounds(); return group.X; }
-            return obj.X;
+            var corners = obj.GetTransformedCorners();
+            return corners.Min(c => c.X);
         }
 
         /// <summary>
-        /// オブジェクトの右端X座標を取得
+        /// オブジェクトの右端X座標を取得（回転後の頂点を考慮）
         /// </summary>
         private float GetRightEdge(GraphicObject obj)
         {
-            if (obj is LineObject line) return Math.Max(line.X, line.EndX);
-            if (obj is GroupObject group) { group.RecalculateBounds(); return group.X + group.Width; }
-            return obj.X + obj.Width;
+            var corners = obj.GetTransformedCorners();
+            return corners.Max(c => c.X);
         }
 
         /// <summary>
-        /// オブジェクトの上端Y座標を取得
+        /// オブジェクトの上端Y座標を取得（回転後の頂点を考慮）
         /// </summary>
         private float GetTopEdge(GraphicObject obj)
         {
-            if (obj is LineObject line) return Math.Min(line.Y, line.EndY);
-            if (obj is GroupObject group) { group.RecalculateBounds(); return group.Y; }
-            return obj.Y;
+            var corners = obj.GetTransformedCorners();
+            return corners.Min(c => c.Y);
         }
 
         /// <summary>
-        /// オブジェクトの下端Y座標を取得
+        /// オブジェクトの下端Y座標を取得（回転後の頂点を考慮）
         /// </summary>
         private float GetBottomEdge(GraphicObject obj)
         {
-            if (obj is LineObject line) return Math.Max(line.Y, line.EndY);
-            if (obj is GroupObject group) { group.RecalculateBounds(); return group.Y + group.Height; }
-            return obj.Y + obj.Height;
+            var corners = obj.GetTransformedCorners();
+            return corners.Max(c => c.Y);
         }
 
         /// <summary>
