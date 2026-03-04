@@ -152,8 +152,10 @@ namespace FigCrafterApp.Views
 
             if (DataContext is CanvasViewModel vm)
             {
-                // UI上の表示倍率（ズーム）に合わせてスケール適用
-                canvas.Scale((float)vm.ZoomLevel);
+                // UI上の表示倍率（ズーム）に合わせてスケール適用。座標系をmmにするため、96DPI(WPF)ベースの係数を掛ける
+                float mmToPx = 96.0f / 25.4f;
+                float totalScale = (float)vm.ZoomLevel * mmToPx;
+                canvas.Scale(totalScale);
 
                 // レイヤーのリストはUI（ListBox）上ではインデックス0が「一番上（手前）」に表示されるため、
                 // 描画はインデックスが後ろ（奥）のものから順に行う
@@ -163,7 +165,7 @@ namespace FigCrafterApp.Views
                     if (!layer.IsVisible) continue;
                     foreach (var obj in layer.GraphicObjects)
                     {
-                        obj.CurrentZoomLevel = (float)vm.ZoomLevel;
+                        obj.CurrentZoomLevel = totalScale;
                         obj.Draw(canvas);
                     }
                 }
@@ -171,7 +173,9 @@ namespace FigCrafterApp.Views
 
             if (_tempObject != null && DataContext is CanvasViewModel vm2)
             {
-                _tempObject.CurrentZoomLevel = (float)vm2.ZoomLevel;
+                float mmToPx = 96.0f / 25.4f;
+                float totalScale = (float)vm2.ZoomLevel * mmToPx;
+                _tempObject.CurrentZoomLevel = totalScale;
                 _tempObject.Draw(canvas);
             }
 
@@ -323,7 +327,7 @@ namespace FigCrafterApp.Views
             if (DataContext is not CanvasViewModel vm) return;
 
             var pRaw = e.GetPosition(SkiaElement);
-            _startPoint = new SKPoint((float)(pRaw.X / vm.ZoomLevel), (float)(pRaw.Y / vm.ZoomLevel));
+            _startPoint = new SKPoint((float)(pRaw.X / vm.ZoomLevel * (25.4 / 96.0)), (float)(pRaw.Y / vm.ZoomLevel * (25.4 / 96.0)));
             _lastMousePos = _startPoint;
 
             if (vm.CurrentTool == DrawingTool.Eraser)
@@ -535,7 +539,7 @@ namespace FigCrafterApp.Views
             var vm = DataContext as CanvasViewModel;
             double zoom = vm?.ZoomLevel ?? 1.0;
             var pRaw = e.GetPosition(SkiaElement);
-            var currentPoint = new SKPoint((float)(pRaw.X / zoom), (float)(pRaw.Y / zoom));
+            var currentPoint = new SKPoint((float)(pRaw.X / zoom * (25.4 / 96.0)), (float)(pRaw.Y / zoom * (25.4 / 96.0)));
             var dx = currentPoint.X - _lastMousePos.X;
             var dy = currentPoint.Y - _lastMousePos.Y;
             _lastMousePos = currentPoint;
@@ -1654,7 +1658,7 @@ namespace FigCrafterApp.Views
             if (vm.CurrentTool != DrawingTool.Select) return;
 
             var pRaw = e.GetPosition(SkiaElement);
-            var point = new SKPoint((float)(pRaw.X / vm.ZoomLevel), (float)(pRaw.Y / vm.ZoomLevel));
+            var point = new SKPoint((float)(pRaw.X / vm.ZoomLevel * (25.4 / 96.0)), (float)(pRaw.Y / vm.ZoomLevel * (25.4 / 96.0)));
 
             // ヒットテストでTextObjectを探す
             for (int layerIndex = 0; layerIndex < vm.Layers.Count; layerIndex++)
