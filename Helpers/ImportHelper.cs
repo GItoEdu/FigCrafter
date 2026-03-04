@@ -25,6 +25,10 @@ namespace FigCrafterApp.Helpers
                 {
                     return ImportMetafile(filePath);
                 }
+                else if (ext == ".tif" || ext == ".tiff")
+                {
+                    return ImportTiffImage(filePath);
+                }
                 else
                 {
                     // 標準の画像読込
@@ -80,6 +84,17 @@ namespace FigCrafterApp.Helpers
             g.Clear(System.Drawing.Color.Transparent);
             g.DrawImage(metafile, 0, 0, width, height);
 
+            using var ms = new MemoryStream();
+            bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+            ms.Position = 0;
+            return SKBitmap.Decode(ms);
+#pragma warning restore CA1416
+        }
+
+        private static SKBitmap? ImportTiffImage(string filePath)
+        {
+#pragma warning disable CA1416 // プラットフォーム互換性の検証
+            using var bmp = new System.Drawing.Bitmap(filePath);
             using var ms = new MemoryStream();
             bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
             ms.Position = 0;
