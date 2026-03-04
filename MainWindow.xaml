@@ -89,10 +89,10 @@
         </Grid.RowDefinitions>
 
         <!-- Row 0: メニューバー -->
-        <Menu Grid.Row="0" Background="#FF333333" Foreground="White">
+        <Menu Grid.Row="0" Background="{DynamicResource {x:Static SystemColors.MenuBrushKey}}" Foreground="{DynamicResource {x:Static SystemColors.MenuTextBrushKey}}">
             <Menu.Resources>
                 <Style TargetType="MenuItem">
-                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.MenuTextBrushKey}}"/>
                 </Style>
             </Menu.Resources>
             <MenuItem Header="ファイル(_F)">
