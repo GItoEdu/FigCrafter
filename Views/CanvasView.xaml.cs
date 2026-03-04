@@ -1293,6 +1293,24 @@ namespace FigCrafterApp.Views
                     vm.CopyCommand.Execute(null);
                 e.Handled = true;
             }
+            else if (e.Key == Key.X && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                // Ctrl+X: 切り取り
+                if (vm.CutCommand.CanExecute(null))
+                {
+                    vm.CutCommand.Execute(null);
+                    _selectedObject = null;
+                }
+                e.Handled = true;
+            }
+            else if (e.Key == Key.A && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                // Ctrl+A: 全て選択
+                vm.SelectAllCommand.Execute(null);
+                _selectedObject = vm.SelectedObject;
+                SkiaElement.InvalidateVisual();
+                e.Handled = true;
+            }
             else if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 // クリップボードから画像をペースト（複数形式に対応）

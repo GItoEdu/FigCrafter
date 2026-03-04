@@ -14,6 +14,17 @@
         <vm:MainViewModel/>
     </Window.DataContext>
 
+    <Window.InputBindings>
+        <!-- Ctrl+N: 新規キャンバス -->
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewDocumentCommand}"/>
+        <!-- Ctrl+S: 上書き保存 -->
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveProjectCommand}"/>
+        <!-- Ctrl+Shift+S: 別名で保存 -->
+        <KeyBinding Key="S" Modifiers="Control+Shift" Command="{Binding SaveAsProjectCommand}"/>
+        <!-- Ctrl+O: 開く -->
+        <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenProjectCommand}"/>
+    </Window.InputBindings>
+
     <Window.Resources>
         <local:EnumToBoolConverter x:Key="EnumToBoolConverter"/>
         <local:SKColorToSolidColorBrushConverter x:Key="SKColorToSolidColorBrushConverter"/>
@@ -637,7 +648,16 @@
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
+
+                                    <Grid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="選択オブジェクトをこのレイヤーに移動" 
+                                                      Command="{Binding DataContext.ActiveDocument.MoveObjectToLayerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                      CommandParameter="{Binding}"/>
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
                                     
                                     <ToggleButton Grid.Column="0" IsChecked="{Binding IsVisible}" Margin="0,0,5,0" Width="20" Height="20" Background="Transparent" BorderThickness="0" VerticalAlignment="Center" ToolTip="表示/非表示の切り替え">
                                         <ToggleButton.Style>
@@ -670,6 +690,12 @@
                                     </ToggleButton>
                                     
                                     <TextBox Grid.Column="2" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" Foreground="White" BorderThickness="0" VerticalAlignment="Center" Padding="2"/>
+
+                                    <Button Grid.Column="3" Content="📥" FontSize="10" Width="22" Height="22"
+                                            Background="Transparent" Foreground="White" BorderThickness="0"
+                                            ToolTip="選択オブジェクトをこのレイヤーに移動"
+                                            Command="{Binding DataContext.ActiveDocument.MoveObjectToLayerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"/>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>

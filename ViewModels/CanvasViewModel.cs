@@ -33,6 +33,7 @@ namespace FigCrafterApp.ViewModels
         private ObservableCollection<GraphicObject> _selectedObjects = new(); // 複数選択
         private GraphicObject? _clipboard; // コピー用クリップボード
         private bool _isSnapEnabled = true; // スナップ機能のON/OFF
+        private string? _filePath; // 保存先ファイルパス
 
         // Undo / Redo 用の履歴スタック
         private readonly Stack<IUndoableCommand> _undoStack = new();
@@ -61,6 +62,9 @@ namespace FigCrafterApp.ViewModels
         public ICommand UndoCommand { get; }
         public ICommand RedoCommand { get; }
         public ICommand ToggleCropModeCommand { get; }
+        public ICommand CutCommand { get; }
+        public ICommand SelectAllCommand { get; }
+        public ICommand MoveObjectToLayerCommand { get; }
 
         public ICommand IncreaseFontSizeCommand { get; }
         public ICommand DecreaseFontSizeCommand { get; }
@@ -177,6 +181,12 @@ namespace FigCrafterApp.ViewModels
         {
             get => _isSnapEnabled;
             set => SetProperty(ref _isSnapEnabled, value);
+        }
+
+        public string? FilePath
+        {
+            get => _filePath;
+            set => SetProperty(ref _filePath, value);
         }
 
         public ObservableCollection<Layer> Layers
@@ -521,6 +531,9 @@ namespace FigCrafterApp.ViewModels
             UndoCommand = new RelayCommand(_ => Undo(), _ => _undoStack.Count > 0);
             RedoCommand = new RelayCommand(_ => Redo(), _ => _redoStack.Count > 0);
             ToggleCropModeCommand = new RelayCommand(_ => { IsCropMode = !IsCropMode; }, p => _selectedObject is ImageObject);
+            CutCommand = new RelayCommand(_ => CutSelected(), _ => _selectedObject != null);
+            SelectAllCommand = new RelayCommand(_ => SelectAll());
+            MoveObjectToLayerCommand = new RelayCommand(p => MoveObjectToLayer(p as Layer), p => p is Layer && _selectedObject != null);
 
             IncreaseFontSizeCommand = new RelayCommand(_ => { if (SelectedObject is TextObject text) text.FontSize += 1; });
             DecreaseFontSizeCommand = new RelayCommand(_ => { if (SelectedObject is TextObject text && text.FontSize > 1) text.FontSize -= 1; });
@@ -687,6 +700,60 @@ namespace FigCrafterApp.ViewModels
         {
             if (SelectedObject == null) return;
             _clipboard = SelectedObject.Clone();
+        }
+
+        /// <summary>
+        /// 切り取り（コピー＋削除）
+        /// </summary>
+        private void CutSelected()
+        {
+            CopySelected();
+            DeleteSelected();
+        }
+
+        /// <summary>
+        /// アクティブレイヤーの全オブジェクトを選択
+        /// </summary>
+        private void SelectAll()
+        {
+            if (ActiveLayer == null) return;
+
+            _selectedObjects.Clear();
+            foreach (var obj in ActiveLayer.GraphicObjects)
+            {
+                obj.IsSelected = true;
+                _selectedObjects.Add(obj);
+            }
+            SelectedObject = _selectedObjects.FirstOrDefault();
+            Invalidate();
+        }
+
+        /// <summary>
+        /// 選択中のオブジェクトを指定レイヤーに移動
+        /// </summary>
+        private void MoveObjectToLayer(Layer? targetLayer)
+        {
+            if (targetLayer == null || _selectedObjects.Count == 0) return;
+
+            var objectsToMove = _selectedObjects.ToList();
+            var commands = new List<IUndoableCommand>();
+
+            foreach (var obj in objectsToMove)
+            {
+                var sourceLayer = FindLayer(obj);
+                if (sourceLayer == null || sourceLayer == targetLayer) continue;
+
+                // 元レイヤーから削除して対象レイヤーに追加
+                commands.Add(new RemoveObjectsCommand(sourceLayer.GraphicObjects, new List<GraphicObject> { obj }));
+                commands.Add(new AddObjectCommand(targetLayer.GraphicObjects, obj));
+            }
+
+            if (commands.Count > 0)
+            {
+                ExecuteCommand(new CompositeCommand(commands));
+                ActiveLayer = targetLayer;
+                Invalidate();
+            }
         }
 
         private void Paste()

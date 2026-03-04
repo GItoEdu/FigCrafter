@@ -39,6 +39,7 @@ namespace FigCrafterApp.ViewModels
         public ICommand ImportFileCommand { get; }
         public ICommand OpenProjectCommand { get; }
         public ICommand SaveProjectCommand { get; }
+        public ICommand SaveAsProjectCommand { get; }
 
         public MainViewModel()
         {
@@ -54,6 +55,7 @@ namespace FigCrafterApp.ViewModels
 
             OpenProjectCommand = new RelayCommand(async p => await OpenFileAsync());
             SaveProjectCommand = new RelayCommand(p => SaveProject());
+            SaveAsProjectCommand = new RelayCommand(p => SaveProjectAs());
 
             // 起動時は何も初期化しない (空の状態から開始)
             // AddNewDocument();
@@ -220,6 +222,7 @@ namespace FigCrafterApp.ViewModels
                         {
                             var newDoc = new CanvasViewModel();
                             newDoc.LoadFromProjectData(projectData);
+                            newDoc.FilePath = dialog.FileName;
                             Documents.Add(newDoc);
                             ActiveDocument = newDoc;
                         }
@@ -255,6 +258,31 @@ namespace FigCrafterApp.ViewModels
         {
             if (ActiveDocument == null) return;
 
+            // ファイルパスが既知の場合は上書き保存
+            if (!string.IsNullOrEmpty(ActiveDocument.FilePath))
+            {
+                try
+                {
+                    var projectData = ActiveDocument.CreateProjectData();
+                    string json = JsonSerializer.Serialize(projectData, ProjectData.GetSerializerOptions());
+                    File.WriteAllText(ActiveDocument.FilePath, json);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"プロジェクトの保存に失敗しました：\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+            else
+            {
+                // ファイルパスが未設定の場合は「名前を付けて保存」にフォールバック
+                SaveProjectAs();
+            }
+        }
+
+        private void SaveProjectAs()
+        {
+            if (ActiveDocument == null) return;
+
             var dialog = new SaveFileDialog
             {
                 Filter = "FigCrafter プロジェクト (*.fcp)|*.fcp",
@@ -270,12 +298,13 @@ namespace FigCrafterApp.ViewModels
                     string json = JsonSerializer.Serialize(projectData, ProjectData.GetSerializerOptions());
                     File.WriteAllText(dialog.FileName, json);
                     
-                    // タイトルを更新
+                    // タイトルとファイルパスを更新
                     ActiveDocument.Title = Path.GetFileNameWithoutExtension(dialog.FileName);
+                    ActiveDocument.FilePath = dialog.FileName;
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show($"プロジェクトの保存に失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    System.Windows.MessageBox.Show($"プロジェクトの保存に失敗しました：\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 }
             }
         }
