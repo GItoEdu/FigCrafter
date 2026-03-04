@@ -39,6 +39,7 @@ namespace FigCrafterApp.Views
         private float? _snapGuideX = null;
         private float? _snapGuideY = null;
         private SKRect _originalDragRect;
+        private SKPoint[] _originalDragCorners = Array.Empty<SKPoint>(); // ドラッグ開始時の回転後頂点
         private GraphicObject? _snapXTarget = null; // X軸スナップ先のオブジェクト
         private GraphicObject? _snapYTarget = null; // Y軸スナップ先のオブジェクト
 
@@ -472,6 +473,7 @@ namespace FigCrafterApp.Views
                 {
                     _isDragging = true;
                     _originalDragRect = GetBoundingRect(_selectedObject);
+                    _originalDragCorners = _selectedObject.GetTransformedCorners();
                     _preDragPositions.Clear();
                     foreach (var obj in vm.SelectedObjects)
                     {
@@ -783,12 +785,20 @@ namespace FigCrafterApp.Views
 
                 // 選択中オブジェクトの元の矩形と予定される矩形
                 var targetRect = _originalDragRect;
-                float expectedLeft = targetRect.Left + totalDx;
-                float expectedRight = targetRect.Right + totalDx;
-                float expectedTop = targetRect.Top + totalDy;
-                float expectedBottom = targetRect.Bottom + totalDy;
-                float expectedCenterX = targetRect.Left + targetRect.Width / 2 + totalDx;
-                float expectedCenterY = targetRect.Top + targetRect.Height / 2 + totalDy;
+
+                // 回転後の頂点座標をtotalDx/totalDyで移動した位置を計算
+                var draggedXSet = new HashSet<float>();
+                var draggedYSet = new HashSet<float>();
+                foreach (var c in _originalDragCorners)
+                {
+                    draggedXSet.Add((float)Math.Round(c.X + totalDx, 1));
+                    draggedYSet.Add((float)Math.Round(c.Y + totalDy, 1));
+                }
+                // 中心座標も追加
+                float draggedCenterX = _originalDragCorners.Average(c => c.X) + totalDx;
+                float draggedCenterY = _originalDragCorners.Average(c => c.Y) + totalDy;
+                draggedXSet.Add((float)Math.Round(draggedCenterX, 1));
+                draggedYSet.Add((float)Math.Round(draggedCenterY, 1));
 
                 float snapThreshold = 10.0f / (float)vm.ZoomLevel;
 
@@ -800,8 +810,8 @@ namespace FigCrafterApp.Views
                 // 他のオブジェクトに対するスナップ判定（スナップ有効かつShiftキーが押されていない場合のみ）
                 if (vm.IsSnapEnabled && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && vm.ActiveLayer != null)
                 {
-                    float[] targetXLines = { expectedLeft, expectedRight, expectedCenterX };
-                    float[] targetYLines = { expectedTop, expectedBottom, expectedCenterY };
+                    float[] targetXLines = draggedXSet.ToArray();
+                    float[] targetYLines = draggedYSet.ToArray();
 
                     foreach (var layer in vm.Layers)
                     {
