@@ -956,20 +956,20 @@ namespace FigCrafterApp.ViewModels
         // --- 画像インポート ---
         public void ImportImageAsGroup(SKBitmap bitmap, float dpiX = 96f, float dpiY = 96f)
         {
-            // DPIからミリメートルサイズを計算 (1インチ = 25.4mm)
-            float widthMm = bitmap.Width * (25.4f / dpiX);
-            float heightMm = bitmap.Height * (25.4f / dpiY);
+            // DPI情報を加味して、WPFの論理ピクセル(96DPI)でのサイズを計算する
+            float widthPx = bitmap.Width * (96.0f / dpiX);
+            float heightPx = bitmap.Height * (96.0f / dpiY);
 
             var imageObj = new ImageObject 
             { 
                 X = 10, Y = 10, 
                 ImageData = bitmap,
-                Width = widthMm, Height = heightMm 
+                Width = widthPx, Height = heightPx 
             };
             var borderObj = new RectangleObject
             {
                 X = 10, Y = 10,
-                Width = widthMm, Height = heightMm,
+                Width = widthPx, Height = heightPx,
                 FillColor = SKColors.Transparent,
                 StrokeColor = SKColors.Black,
                 StrokeWidth = 2
@@ -977,7 +977,7 @@ namespace FigCrafterApp.ViewModels
             var groupObj = new GroupObject
             {
                 X = 10, Y = 10,
-                Width = widthMm, Height = heightMm
+                Width = widthPx, Height = heightPx
             };
             groupObj.Children.Add(imageObj);
             groupObj.Children.Add(borderObj);
