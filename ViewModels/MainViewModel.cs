@@ -172,13 +172,16 @@ namespace FigCrafterApp.ViewModels
                 }
             }
 
+            var obj = ActiveDocument.SelectedObject;
             if (isFill)
             {
-                ActiveDocument.SelectedObject.FillColor = color;
+                var cmd = new FigCrafterApp.Commands.PropertyChangeCommand(obj, nameof(GraphicObject.FillColor), obj.FillColor, color);
+                ActiveDocument.ExecuteCommand(cmd);
             }
             else
             {
-                ActiveDocument.SelectedObject.StrokeColor = color;
+                var cmd = new FigCrafterApp.Commands.PropertyChangeCommand(obj, nameof(GraphicObject.StrokeColor), obj.StrokeColor, color);
+                ActiveDocument.ExecuteCommand(cmd);
             }
             ActiveDocument.Invalidate();
         }
@@ -261,12 +264,15 @@ namespace FigCrafterApp.ViewModels
                             AddNewDocument();
                         }
                         
-                        // 画像等としてインポート
+                        // 画像等としてインポート。新規レイヤーを作成してそこに配置する
                         var bitmap = await FigCrafterApp.Helpers.ImportHelper.ImportFileAsync(dialog.FileName);
                         if (bitmap != null)
                         {
-                            var (dpiX, dpiY) = FigCrafterApp.Helpers.ImportHelper.GetImageDpi(dialog.FileName);
-                            ActiveDocument?.ImportImageAsGroup(bitmap, dpiX, dpiY);
+                            if (ActiveDocument != null)
+                            {
+                                var (dpiX, dpiY) = FigCrafterApp.Helpers.ImportHelper.GetImageDpi(dialog.FileName);
+                                ActiveDocument.ImportImageAsGroup(bitmap, dpiX, dpiY);
+                            }
                         }
                         else
                         {

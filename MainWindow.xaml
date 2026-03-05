@@ -23,6 +23,10 @@
         <KeyBinding Key="S" Modifiers="Control+Shift" Command="{Binding SaveAsProjectCommand}"/>
         <!-- Ctrl+O: 開く -->
         <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenProjectCommand}"/>
+        <!-- Ctrl+Z: Undo -->
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding ActiveDocument.UndoCommand}"/>
+        <!-- Ctrl+Y: Redo -->
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding ActiveDocument.RedoCommand}"/>
     </Window.InputBindings>
 
     <Window.Resources>
@@ -171,6 +175,7 @@
                 <TextBox Text="{Binding Rotation, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Width="45" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="3,2" VerticalAlignment="Center"/>
                 <TextBlock Text="°" Foreground="Gray" VerticalAlignment="Center" Margin="1,0,0,0"/>
                 <TextBlock Text="不透明度:" Foreground="Gray" VerticalAlignment="Center" Margin="8,0,2,0"/>
+                <Slider Minimum="0" Maximum="1" Value="{Binding Opacity, UpdateSourceTrigger=PropertyChanged}" Width="60" VerticalAlignment="Center" Margin="0,0,5,0" SmallChange="0.05" LargeChange="0.1"/>
                 <TextBox Text="{Binding Opacity, StringFormat=\{0:F2\}, UpdateSourceTrigger=PropertyChanged}" Width="40" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="3,2" VerticalAlignment="Center"/>
 
                 <!-- セパレータ -->

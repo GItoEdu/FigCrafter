@@ -335,6 +335,8 @@ namespace FigCrafterApp.ViewModels
                 nameof(GraphicObject.Rotation),
                 nameof(GraphicObject.StrokeWidth),
                 nameof(GraphicObject.Opacity),
+                nameof(GraphicObject.FillColor),
+                nameof(GraphicObject.StrokeColor),
                 nameof(TextObject.Text),
                 nameof(TextObject.FontFamily),
                 nameof(TextObject.FontSize),
@@ -364,6 +366,10 @@ namespace FigCrafterApp.ViewModels
                     
                     _undoStack.Push(new PropertyChangeCommand(obj, e.PropertyName, oldValue, newValue));
                     _redoStack.Clear();
+                    
+                    // コマンド状態が変わったことをUI(メニュー等)に通知
+                    (UndoCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (RedoCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -555,7 +561,7 @@ namespace FigCrafterApp.ViewModels
         }
 
         // --- レイヤー操作 ---
-        private void AddLayer()
+        public void AddLayer()
         {
             var newLayer = new Layer { Name = $"レイヤー {Layers.Count + 1}" };
             Layers.Insert(0, newLayer); // リストの上に追加
@@ -600,7 +606,7 @@ namespace FigCrafterApp.ViewModels
             }
         }
 
-        private void UpdateLayerCommands()
+        public void UpdateLayerCommands()
         {
             (AddLayerCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (RemoveLayerCommand as RelayCommand)?.RaiseCanExecuteChanged();
@@ -982,8 +988,18 @@ namespace FigCrafterApp.ViewModels
             groupObj.Children.Add(imageObj);
             groupObj.Children.Add(borderObj);
 
-            if (ActiveLayer == null) return;
-            ExecuteCommand(new AddObjectCommand(ActiveLayer.GraphicObjects, groupObj));
+            var commands = new List<IUndoableCommand>();
+
+            // 新規レイヤーを作成してアクティブにするコマンド
+            var newLayer = new Layer { Name = $"レイヤー {Layers.Count + 1}" };
+            commands.Add(new AddLayerCommand(this, newLayer));
+
+            // そのレイヤー（のアクティブ化後を想定）にオブジェクトを追加するコマンド
+            commands.Add(new AddObjectCommand(newLayer.GraphicObjects, groupObj));
+
+            // 複合コマンドとして一括で実行（登録）
+            ExecuteCommand(new CompositeCommand(commands));
+            
             SelectObject(groupObj);
         }
 

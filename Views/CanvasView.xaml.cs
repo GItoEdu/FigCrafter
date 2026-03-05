@@ -20,7 +20,7 @@ namespace FigCrafterApp.Views
         private bool _isDragging = false;
         private bool _isResizing = false;
         private bool _isRotating = false; // 回転中フラグ
-        private bool _isRangeSelecting = false; // 範囲選択中フラグ
+        // 範囲選択中フラグ
         private bool _isCropping = false; // トリミング中フラグ
         private SKRect _selectionRect; // 範囲選択の矩形
         private int _resizeHandleIndex = -1;
@@ -51,6 +51,7 @@ namespace FigCrafterApp.Views
         private bool _isErasing = false;
         private ImageObject? _eraserTarget = null;
         private SKRect _eraserRect; // 消しゴムをかける矩形領域
+        private SKBitmap? _preEraserMask = null; // Undo用：消しゴム適用前のマスク
 
         // インライン編集用
         private TextObject? _editingTextObject;
@@ -126,7 +127,6 @@ namespace FigCrafterApp.Views
             _tempObject = null;
             _isDragging = false;
             _isResizing = false;
-            _isRangeSelecting = false;
             _isCropping = false;
             _isErasing = false;
             _eraserTarget = null;
@@ -182,27 +182,6 @@ namespace FigCrafterApp.Views
             var currentZoom = (float)(DataContext as CanvasViewModel)?.ZoomLevel;
             if (currentZoom == 0) currentZoom = 1.0f;
 
-            // 範囲選択矩形の描画
-            if (_isRangeSelecting)
-            {
-                using var fillPaint = new SKPaint
-                {
-                    Color = new SKColor(0, 122, 204, 40), // 半透明の青
-                    Style = SKPaintStyle.Fill,
-                    IsAntialias = true
-                };
-                using var strokePaint = new SKPaint
-                {
-                    Color = new SKColor(0, 122, 204, 180),
-                    Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1 / currentZoom,
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 4 / currentZoom, 4 / currentZoom }, 0),
-                    IsAntialias = true
-                };
-                canvas.DrawRect(_selectionRect, fillPaint);
-                canvas.DrawRect(_selectionRect, strokePaint);
-            }
-
             // 消しゴム矩形の描画
             if (_isErasing)
             {
@@ -216,7 +195,7 @@ namespace FigCrafterApp.Views
                 {
                     Color = new SKColor(255, 0, 0, 180),
                     Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1 / currentZoom,
+                    StrokeWidth = 0.5f / currentZoom,
                     PathEffect = SKPathEffect.CreateDash(new float[] { 4 / currentZoom, 4 / currentZoom }, 0),
                     IsAntialias = true
                 };
@@ -376,6 +355,17 @@ namespace FigCrafterApp.Views
                 _isErasing = true;
                 _eraserTarget = targetImg; // ここでnullでも、MouseUp時のフォールバックに任せる
                 _eraserRect = new SKRect(_startPoint.X, _startPoint.Y, _startPoint.X, _startPoint.Y);
+                
+                if (_eraserTarget != null)
+                {
+                    _eraserTarget.EnsureEraserMask();
+                    _preEraserMask = _eraserTarget.EraserMask?.Copy();
+                }
+                else
+                {
+                    _preEraserMask = null;
+                }
+
                 SkiaElement.CaptureMouse();
                 return;
             }
@@ -462,12 +452,10 @@ namespace FigCrafterApp.Views
                 {
                     if (!isShiftHeld && vm.CurrentTool == DrawingTool.Select)
                     {
-                        // 何もない場所をクリック: 全選択解除し、範囲選択を開始
+                        // 何もない場所をクリック: 全選択解除
                         vm.ClearSelection();
                         _selectedObject = null;
-                        _isRangeSelecting = true;
-                        _selectionRect = new SKRect(_startPoint.X, _startPoint.Y, _startPoint.X, _startPoint.Y);
-                        SkiaElement.CaptureMouse();
+                        SkiaElement.InvalidateVisual();
                     }
                 }
 
@@ -558,7 +546,7 @@ namespace FigCrafterApp.Views
             }
 
             // リサイズ中でなければカーソル更新
-            if (!_isResizing && !_isDragging && !_isRangeSelecting && !_isCropping && _selectedObject != null)
+            if (!_isResizing && !_isDragging && !_isCropping && _selectedObject != null)
             {
                 int hoverHandle = GetHandleHitIndex(_selectedObject, currentPoint);
                 if (_selectedObject is LineObject)
@@ -910,19 +898,6 @@ namespace FigCrafterApp.Views
                 return;
             }
 
-            // 範囲選択中
-            if (_isRangeSelecting)
-            {
-                _selectionRect = new SKRect(
-                    Math.Min(_startPoint.X, currentPoint.X),
-                    Math.Min(_startPoint.Y, currentPoint.Y),
-                    Math.Max(_startPoint.X, currentPoint.X),
-                    Math.Max(_startPoint.Y, currentPoint.Y)
-                );
-                SkiaElement.InvalidateVisual();
-                return;
-            }
-
             // 新規図形の描画中
             if (_tempObject == null) return;
 
@@ -990,7 +965,16 @@ namespace FigCrafterApp.Views
                     if (targetImg != null)
                     {
                         System.IO.File.AppendAllText("eraser_debug.log", $"MouseUp: Applying eraser to {targetImg.GetHashCode()}, rect={GetBoundingRect(targetImg)}\n");
+                        
+                        // Maskが未作成の場合のため
+                        targetImg.EnsureEraserMask();
+                        var oldMask = _preEraserMask; 
+                        
                         ApplyEraserRectToImage(targetImg, _eraserRect);
+                        
+                        // 新しいMaskと古いMaskの差分をコマンドとして登録する
+                        var newMask = targetImg.EraserMask;
+                        vmObj.ExecuteCommand(new EraserCommand(targetImg, oldMask, newMask));
                     }
                     else
                     {
@@ -999,6 +983,7 @@ namespace FigCrafterApp.Views
                 }
                 _isErasing = false;
                 _eraserTarget = null;
+                _preEraserMask = null;
                 SkiaElement.ReleaseMouseCapture();
                 SkiaElement.InvalidateVisual();
                 return;
@@ -1080,47 +1065,6 @@ namespace FigCrafterApp.Views
                     }
                 }
                 SkiaElement.ReleaseMouseCapture();
-                SkiaElement.InvalidateVisual();
-                return;
-            }
-
-            // 範囲選択の確定
-            if (_isRangeSelecting)
-            {
-                _isRangeSelecting = false;
-                SkiaElement.ReleaseMouseCapture();
-
-                if (DataContext is CanvasViewModel vmSelect)
-                {
-                    vmSelect.ClearSelection();
-                    // 範囲に完全に含まれるオブジェクトを選択
-                    foreach (var layer in vmSelect.Layers)
-                    {
-                        if (!layer.IsVisible || layer.IsLocked) continue;
-                        foreach (var obj in layer.GraphicObjects)
-                        {
-                            if (IsObjectFullyContained(obj, _selectionRect))
-                            {
-                                obj.IsSelected = true;
-                                vmSelect.SelectedObjects.Add(obj);
-                            }
-                        }
-                    }
-                    // SelectedObject を最後の選択オブジェクトに設定し、レイヤーを同期
-                    if (vmSelect.SelectedObjects.Count > 0)
-                    {
-                        var lastObj = vmSelect.SelectedObjects[^1];
-                        vmSelect.SelectedObject = lastObj;
-                        _selectedObject = lastObj;
-
-                        var layer = vmSelect.FindLayer(lastObj);
-                        if (layer != null && vmSelect.ActiveLayer != layer)
-                        {
-                            vmSelect.ActiveLayer = layer;
-                        }
-                    }
-                }
-
                 SkiaElement.InvalidateVisual();
                 return;
             }
