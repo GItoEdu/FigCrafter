@@ -60,9 +60,9 @@
             <Setter Property="Background" Value="#FF3E3E42"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Margin" Value="2"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
@@ -74,6 +74,32 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Background" Value="#FF007ACC"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ToolActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FF3E3E42"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
                     <Setter Property="Background" Value="#FF007ACC"/>
                 </Trigger>
             </Style.Triggers>
@@ -103,9 +129,7 @@
                 <MenuItem Header="上書き保存 (_S)" Command="{Binding SaveProjectCommand}" InputGestureText="Ctrl+S"/>
                 <MenuItem Header="別名で保存..." Command="{Binding SaveAsProjectCommand}" InputGestureText="Ctrl+Shift+S"/>
                 <Separator/>
-                <MenuItem Header="PNG抽出" Command="{Binding ExportPngCommand}"/>
-                <MenuItem Header="PDF抽出" Command="{Binding ExportPdfCommand}"/>
-                <MenuItem Header="TIF抽出" Command="{Binding ExportTifCommand}"/>
+                <MenuItem Header="エクスポート..." Command="{Binding ExportMixedCommand}"/>
             </MenuItem>
             <MenuItem Header="編集(_E)">
                 <MenuItem Header="元に戻す (_Z)" Command="{Binding ActiveDocument.UndoCommand}" InputGestureText="Ctrl+Z"/>
@@ -153,33 +177,43 @@
                 <Border Width="1" Background="#FF555555" Margin="8,2"/>
 
                 <!-- 整列ボタン -->
-                <Button Content="⬅" ToolTip="左揃え" Command="{Binding DataContext.ActiveDocument.AlignLeftCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="8,4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="↔" ToolTip="水平中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterHCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="8,4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="➡" ToolTip="右揃え" Command="{Binding DataContext.ActiveDocument.AlignRightCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="8,4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="⬆" ToolTip="上揃え" Command="{Binding DataContext.ActiveDocument.AlignTopCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="8,4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="↕" ToolTip="垂直中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterVCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="8,4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="⬇" ToolTip="下揃え" Command="{Binding DataContext.ActiveDocument.AlignBottomCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="8,4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="⬅" ToolTip="左揃え" Command="{Binding DataContext.ActiveDocument.AlignLeftCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
+                <Button Content="↔" ToolTip="水平中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterHCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
+                <Button Content="➡" ToolTip="右揃え" Command="{Binding DataContext.ActiveDocument.AlignRightCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
+                <Button Content="⬆" ToolTip="上揃え" Command="{Binding DataContext.ActiveDocument.AlignTopCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
+                <Button Content="↕" ToolTip="垂直中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterVCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
+                <Button Content="⬇" ToolTip="下揃え" Command="{Binding DataContext.ActiveDocument.AlignBottomCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
 
                 <Border Width="1" Background="#FF555555" Margin="5,2"/>
 
                 <!-- 重ね順 -->
-                <Button Content="⏫" ToolTip="最前面へ" Command="{Binding DataContext.ActiveDocument.BringToFrontCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="8,4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="🔼" ToolTip="前面へ" Command="{Binding DataContext.ActiveDocument.BringForwardCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="8,4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="🔽" ToolTip="背面へ" Command="{Binding DataContext.ActiveDocument.SendBackwardCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="8,4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="⏬" ToolTip="最背面へ" Command="{Binding DataContext.ActiveDocument.SendToBackCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="8,4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="⏫" ToolTip="最前面へ" Command="{Binding DataContext.ActiveDocument.BringToFrontCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
+                <Button Content="🔼" ToolTip="前面へ" Command="{Binding DataContext.ActiveDocument.BringForwardCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
+                <Button Content="🔽" ToolTip="背面へ" Command="{Binding DataContext.ActiveDocument.SendBackwardCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
+                <Button Content="⏬" ToolTip="最背面へ" Command="{Binding DataContext.ActiveDocument.SendToBackCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
 
                 <Border Width="1" Background="#FF555555" Margin="5,2"/>
 
                 <!-- グループ・削除 -->
-                <Button Content="📦" ToolTip="グループ化 (Ctrl+G)" Command="{Binding DataContext.ActiveDocument.GroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="8,4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="📤" ToolTip="グループ解除 (Ctrl+Shift+G)" Command="{Binding DataContext.ActiveDocument.UngroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="8,4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="🗑" ToolTip="削除 (Del)" Command="{Binding DataContext.ActiveDocument.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="3,1" Padding="8,4" Background="#FF6B2222" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="📦" ToolTip="グループ化 (Ctrl+G)" Command="{Binding DataContext.ActiveDocument.GroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
+                <Button Content="📤" ToolTip="グループ解除 (Ctrl+Shift+G)" Command="{Binding DataContext.ActiveDocument.UngroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
+                <Button Content="🗑" ToolTip="削除 (Del)" Command="{Binding DataContext.ActiveDocument.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="3,1" Padding="6,3" Background="#FF6B2222" Foreground="White" BorderThickness="0" FontSize="13"/>
             </StackPanel>
         </Border>
 
         <!-- Row 2: 図形ツールバー -->
         <Border Grid.Row="2" Background="#FF252526" BorderBrush="#FF3E3E42" BorderThickness="0,0,0,1">
             <StackPanel Orientation="Horizontal" Margin="5,2">
+                <!-- ファイル操作アイコン群 -->
+                <Button Content="&#xE7C3;" FontFamily="Segoe MDL2 Assets" ToolTip="新規キャンバス (Ctrl+N)" Command="{Binding NewDocumentCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
+                <Button Content="&#xE8B7;" FontFamily="Segoe MDL2 Assets" ToolTip="開く / インポート (Ctrl+O)" Command="{Binding OpenProjectCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
+                <Button Content="&#xE74E;" FontFamily="Segoe MDL2 Assets" ToolTip="上書き保存 (Ctrl+S)" Command="{Binding SaveProjectCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
+                <Button Content="&#xE792;" FontFamily="Segoe MDL2 Assets" ToolTip="別名で保存 (Ctrl+Shift+S)" Command="{Binding SaveAsProjectCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
+                <Button Content="&#xEADE;" FontFamily="Segoe MDL2 Assets" ToolTip="エクスポート (PNG/PDF/TIF)" Command="{Binding ExportMixedCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
+
+                <!-- セパレータ -->
+                <Border Width="1" Background="#FF555555" Margin="8,4"/>
+
                 <RadioButton Content="▢ 選択" Style="{StaticResource ToolButtonStyle}" 
                              IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Select}}"/>
                 <RadioButton Content="■ 四角形" Style="{StaticResource ToolButtonStyle}" 

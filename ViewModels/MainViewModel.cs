@@ -32,14 +32,12 @@ namespace FigCrafterApp.ViewModels
 
         public ICommand ChangeFillColorCommand { get; }
         public ICommand ChangeStrokeColorCommand { get; }
-        public ICommand ExportPngCommand { get; }
-        public ICommand ExportPdfCommand { get; }
-        public ICommand ExportTifCommand { get; }
 
         public ICommand ImportFileCommand { get; }
         public ICommand OpenProjectCommand { get; }
         public ICommand SaveProjectCommand { get; }
         public ICommand SaveAsProjectCommand { get; }
+        public ICommand ExportMixedCommand { get; }
 
         public MainViewModel()
         {
@@ -49,13 +47,11 @@ namespace FigCrafterApp.ViewModels
 
             ChangeFillColorCommand = new RelayCommand(p => ChangeSelectedObjectColor(p?.ToString(), true));
             ChangeStrokeColorCommand = new RelayCommand(p => ChangeSelectedObjectColor(p?.ToString(), false));
-            ExportPngCommand = new RelayCommand(p => ExportPng());
-            ExportPdfCommand = new RelayCommand(p => ExportPdf());
-            ExportTifCommand = new RelayCommand(p => ExportTif());
 
             OpenProjectCommand = new RelayCommand(async p => await OpenFileAsync());
             SaveProjectCommand = new RelayCommand(p => SaveProject());
             SaveAsProjectCommand = new RelayCommand(p => SaveProjectAs());
+            ExportMixedCommand = new RelayCommand(p => ExportMixed());
 
             // 起動時は何も初期化しない (空の状態から開始)
             // AddNewDocument();
@@ -187,79 +183,44 @@ namespace FigCrafterApp.ViewModels
             ActiveDocument.Invalidate();
         }
 
-        private void ExportPng()
+        private void ExportMixed()
         {
             if (ActiveDocument == null) return;
 
             var dialog = new SaveFileDialog
             {
-                Filter = "PNGファイル (*.png)|*.png",
-                FileName = $"{ActiveDocument.Title}.png",
-                Title = "PNG書き出し"
+                Filter = "PNG画像 (*.png)|*.png|PDFファイル (*.pdf)|*.pdf|TIFF画像 (*.tif;*.tiff)|*.tif;*.tiff",
+                FileName = ActiveDocument.Title,
+                Title = "エクスポート"
             };
 
             if (dialog.ShowDialog() == true)
             {
+                string extension = Path.GetExtension(dialog.FileName).ToLowerInvariant();
                 try
                 {
-                    // ファイル名に"_transparent"が含まれていれば透過背景（将来的にはUIでチェックボックス化）
-                    bool transparent = dialog.FileName.Contains("_transparent", StringComparison.OrdinalIgnoreCase);
-                    ActiveDocument.ExportPng(dialog.FileName, transparent);
-                    System.Windows.MessageBox.Show($"PNGを保存しました:\n{dialog.FileName}", "PNG書き出し", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    switch (extension)
+                    {
+                        case ".png":
+                            bool transparent = dialog.FileName.Contains("_transparent", StringComparison.OrdinalIgnoreCase);
+                            ActiveDocument.ExportPng(dialog.FileName, transparent);
+                            break;
+                        case ".pdf":
+                            ActiveDocument.ExportPdf(dialog.FileName);
+                            break;
+                        case ".tif":
+                        case ".tiff":
+                            ActiveDocument.ExportTif(dialog.FileName);
+                            break;
+                        default:
+                            System.Windows.MessageBox.Show("未対応の拡張子です。", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                            return;
+                    }
+                    System.Windows.MessageBox.Show($"正常にエクスポートしました:\n{dialog.FileName}", "エクスポート完了", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show($"PNGの保存に失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                }
-            }
-        }
-
-        private void ExportPdf()
-        {
-            if (ActiveDocument == null) return;
-
-            var dialog = new SaveFileDialog
-            {
-                Filter = "PDFファイル (*.pdf)|*.pdf",
-                FileName = $"{ActiveDocument.Title}.pdf",
-                Title = "PDF書き出し"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                try
-                {
-                    ActiveDocument.ExportPdf(dialog.FileName);
-                    System.Windows.MessageBox.Show($"PDFを保存しました:\n{dialog.FileName}", "PDF書き出し", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    System.Windows.MessageBox.Show($"PDFの保存に失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                }
-            }
-        }
-
-        private void ExportTif()
-        {
-            if (ActiveDocument == null) return;
-
-            var dialog = new SaveFileDialog
-            {
-                Filter = "TIFFファイル (*.tif;*.tiff)|*.tif;*.tiff",
-                FileName = $"{ActiveDocument.Title}.tif",
-                Title = "TIFF書き出し"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                try
-                {
-                    ActiveDocument.ExportTif(dialog.FileName);
-                    System.Windows.MessageBox.Show($"TIFFを保存しました:\n{dialog.FileName}", "TIFF書き出し", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    System.Windows.MessageBox.Show($"TIFFの保存に失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    System.Windows.MessageBox.Show($"エクスポートに失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 }
             }
         }
