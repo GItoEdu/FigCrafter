@@ -9,6 +9,7 @@ namespace FigCrafterApp.Models
     [JsonDerivedType(typeof(EllipseObject), typeDiscriminator: "Ellipse")]
     [JsonDerivedType(typeof(LineObject), typeDiscriminator: "Line")]
     [JsonDerivedType(typeof(TextObject), typeDiscriminator: "Text")]
+    [JsonDerivedType(typeof(PathObject), typeDiscriminator: "Path")]
     [JsonDerivedType(typeof(GroupObject), typeDiscriminator: "Group")]
     [JsonDerivedType(typeof(ImageObject), typeDiscriminator: "Image")]
     public abstract class GraphicObject : INotifyPropertyChanged, INotifyPropertyChanging
@@ -974,6 +975,89 @@ namespace FigCrafterApp.Models
             _imageData = null;
             _eraserMask?.Dispose();
             _eraserMask = null;
+        }
+    }
+
+    public class PathObject : GraphicObject
+    {
+        private string _pathData = "";
+        private SKPath? _cachedPath;
+
+        public string PathData
+        {
+            get => _pathData;
+            set
+            {
+                if (SetProperty(ref _pathData, value))
+                {
+                    _cachedPath?.Dispose();
+                    _cachedPath = null;
+                }
+            }
+        }
+
+        private SKPath GetPath()
+        {
+            if (_cachedPath == null)
+            {
+                _cachedPath = SKPath.ParseSvgPathData(PathData) ?? new SKPath();
+            }
+            return _cachedPath;
+        }
+
+        public override void Draw(SKCanvas canvas)
+        {
+            var path = GetPath();
+            if (path == null) return;
+
+            canvas.Save();
+            TransformCanvas(canvas);
+
+            var fillWithOpacity = FillColor.WithAlpha((byte)(FillColor.Alpha * Opacity));
+            var strokeWithOpacity = StrokeColor.WithAlpha((byte)(StrokeColor.Alpha * Opacity));
+
+            using var paint = new SKPaint
+            {
+                Color = fillWithOpacity,
+                Style = SKPaintStyle.Fill,
+                IsAntialias = true
+            };
+            canvas.DrawPath(path, paint);
+
+            paint.Color = strokeWithOpacity;
+            paint.Style = SKPaintStyle.Stroke;
+            paint.StrokeWidth = StrokeWidth / CurrentZoomLevel;
+            canvas.DrawPath(path, paint);
+
+            if (IsSelected)
+            {
+                var rect = path.Bounds;
+                DrawSelectionBox(canvas, rect);
+            }
+
+            canvas.Restore();
+        }
+
+        public override bool HitTest(SKPoint point)
+        {
+            var path = GetPath();
+            if (path == null) return false;
+
+            var p = UntransformPoint(point);
+            // 塗りつぶし部分または線上にヒットするか
+            if (path.Contains(p.X, p.Y)) return true;
+
+            // 線上のヒットテスト（簡易版：バウンディングボックス内かつ線に近いか）
+            // 実際にはもう少し複雑な判定が必要だが、一旦 Contains で十分な場合が多い
+            return false;
+        }
+
+        public override GraphicObject Clone()
+        {
+            var clone = new PathObject();
+            CopyPropertiesTo(clone);
+            clone.PathData = PathData;
+            return clone;
         }
     }
 }

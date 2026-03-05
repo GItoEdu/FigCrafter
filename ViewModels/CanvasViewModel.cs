@@ -1001,6 +1001,21 @@ namespace FigCrafterApp.ViewModels
             ExecuteCommand(new CompositeCommand(commands));
             
             SelectObject(groupObj);
+            ActiveLayer = newLayer;
+        }
+
+        /// <summary>
+        /// 解析済みのベクトルオブジェクト等を新規レイヤーにインポートする
+        /// </summary>
+        public void ImportGraphicObject(GraphicObject obj)
+        {
+            var commands = new List<IUndoableCommand>();
+            var newLayer = new Layer { Name = $"インポート {Layers.Count + 1}" };
+            commands.Add(new AddLayerCommand(this, newLayer));
+            commands.Add(new AddObjectCommand(newLayer.GraphicObjects, obj));
+            ExecuteCommand(new CompositeCommand(commands));
+            ActiveLayer = newLayer;
+            SelectObject(obj);
         }
 
         // --- PNG書き出し ---

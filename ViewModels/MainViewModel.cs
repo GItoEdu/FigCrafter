@@ -264,6 +264,35 @@ namespace FigCrafterApp.ViewModels
                             AddNewDocument();
                         }
                         
+                        string ext = System.IO.Path.GetExtension(dialog.FileName).ToLower();
+                        if (ext == ".emf" || ext == ".wmf")
+                        {
+                            var emfGroup = FigCrafterApp.Helpers.EmfParser.ParseEmf(dialog.FileName);
+                            if (emfGroup != null)
+                            {
+                                if (ActiveDocument != null)
+                                {
+                                    // 初期配置位置を (10, 10) に調整
+                                    float offsetX = 10 - emfGroup.X;
+                                    float offsetY = 10 - emfGroup.Y;
+                                    foreach (var child in emfGroup.Children)
+                                    {
+                                        child.X += offsetX;
+                                        child.Y += offsetY;
+                                        if (child is LineObject line)
+                                        {
+                                            line.EndX += offsetX;
+                                            line.EndY += offsetY;
+                                        }
+                                    }
+                                    emfGroup.RecalculateBounds();
+
+                                    ActiveDocument.ImportGraphicObject(emfGroup);
+                                    return;
+                                }
+                            }
+                        }
+
                         // 画像等としてインポート。新規レイヤーを作成してそこに配置する
                         var bitmap = await FigCrafterApp.Helpers.ImportHelper.ImportFileAsync(dialog.FileName);
                         if (bitmap != null)
