@@ -1,0 +1,12 @@
+<UserControl x:Class="FigCrafterApp.Views.HistogramView"
+             xmlns="http://schemas.microsoft.com/winfx/2003/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2003/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:skia="clr-namespace:SkiaSharp.Views.WPF;assembly=SkiaSharp.Views.WPF"
+             mc:Ignorable="d" 
+             d:DesignHeight="100" d:DesignWidth="256">
+    <Grid Background="#2D2D2D">
+        <skia:SKElement Name="SkiaElement" PaintSurface="SkiaElement_PaintSurface" IsHitTestVisible="False"/>
+    </Grid>
+</UserControl>

@@ -65,6 +65,7 @@ namespace FigCrafterApp.ViewModels
         public ICommand CutCommand { get; }
         public ICommand SelectAllCommand { get; }
         public ICommand MoveObjectToLayerCommand { get; }
+        public ICommand ResetImageAdjustmentCommand { get; }
 
         public ICommand IncreaseFontSizeCommand { get; }
         public ICommand DecreaseFontSizeCommand { get; }
@@ -343,6 +344,8 @@ namespace FigCrafterApp.ViewModels
                 nameof(LineObject.HasArrowStart),
                 nameof(LineObject.HasArrowEnd),
                 nameof(ImageObject.IsGrayscale),
+                nameof(ImageObject.Contrast),
+                nameof(ImageObject.Brightness),
                 nameof(ImageObject.CropX),
                 nameof(ImageObject.CropY),
                 nameof(ImageObject.CropWidth),
@@ -537,9 +540,8 @@ namespace FigCrafterApp.ViewModels
             UndoCommand = new RelayCommand(_ => Undo(), _ => _undoStack.Count > 0);
             RedoCommand = new RelayCommand(_ => Redo(), _ => _redoStack.Count > 0);
             ToggleCropModeCommand = new RelayCommand(_ => { IsCropMode = !IsCropMode; }, p => _selectedObject is ImageObject);
-            CutCommand = new RelayCommand(_ => CutSelected(), _ => _selectedObject != null);
-            SelectAllCommand = new RelayCommand(_ => SelectAll());
             MoveObjectToLayerCommand = new RelayCommand(p => MoveObjectToLayer(p as Layer), p => p is Layer && _selectedObject != null);
+            ResetImageAdjustmentCommand = new RelayCommand(_ => ResetImageAdjustment(), _ => _selectedObject is ImageObject);
 
             IncreaseFontSizeCommand = new RelayCommand(_ => { if (SelectedObject is TextObject text) text.FontSize += 1; });
             DecreaseFontSizeCommand = new RelayCommand(_ => { if (SelectedObject is TextObject text && text.FontSize > 1) text.FontSize -= 1; });
@@ -1275,6 +1277,16 @@ namespace FigCrafterApp.ViewModels
                 HeightMm = HeightMm,
                 Layers = layersCopy
             };
+        }
+
+        private void ResetImageAdjustment()
+        {
+            if (_selectedObject is ImageObject img)
+            {
+                img.Contrast = 1.0f;
+                img.Brightness = 0.0f;
+                Invalidate();
+            }
         }
 
         public void LoadFromProjectData(ProjectData data)

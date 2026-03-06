@@ -714,6 +714,9 @@ namespace FigCrafterApp.Models
         private SKBitmap? _imageData;
         private SKBitmap? _eraserMask; // 消しゴム用アルファマスク（白=不透明, 黒=透過）
         private bool _isGrayscale = false;
+        private float _contrast = 1.0f;
+        private float _brightness = 0.0f;
+        private int[]? _intensityHistogram;
 
         /// <summary>
         /// 消しゴム用アルファマスク。nullの場合はマスクなし。
@@ -779,6 +782,25 @@ namespace FigCrafterApp.Models
             set => SetProperty(ref _isGrayscale, value);
         }
 
+        public float Contrast
+        {
+            get => _contrast;
+            set => SetProperty(ref _contrast, value);
+        }
+
+        public float Brightness
+        {
+            get => _brightness;
+            set => SetProperty(ref _brightness, value);
+        }
+
+        [JsonIgnore]
+        public int[]? IntensityHistogram
+        {
+            get => _intensityHistogram;
+            private set => SetProperty(ref _intensityHistogram, value);
+        }
+
         private float _cropX = 0;
         private float _cropY = 0;
         private float _cropWidth = -1;
@@ -821,8 +843,44 @@ namespace FigCrafterApp.Models
                     Height = _imageData.Height;
                     if (_cropWidth < 0) CropWidth = _imageData.Width;
                     if (_cropHeight < 0) CropHeight = _imageData.Height;
+                    UpdateIntensityHistogram();
                 }
             }
+        }
+
+        /// <summary>
+        /// 画像の輝度ヒストグラムを計算します。
+        /// </summary>
+        public void UpdateIntensityHistogram()
+        {
+            if (_imageData == null)
+            {
+                IntensityHistogram = null;
+                return;
+            }
+
+            int[] histogram = new int[256];
+            unsafe
+            {
+                IntPtr pixels = _imageData.GetPixels();
+                int pixelCount = _imageData.Width * _imageData.Height;
+                byte* p = (byte*)pixels.ToPointer();
+
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    // Bgra8888 
+                    byte b = *p++;
+                    byte g = *p++;
+                    byte r = *p++;
+                    byte a = *p++;
+
+                    // 輝度 Y = 0.299R + 0.587G + 0.114B
+                    int y = (int)(0.299f * r + 0.587f * g + 0.114f * b);
+                    if (y > 255) y = 255;
+                    histogram[y]++;
+                }
+            }
+            IntensityHistogram = histogram;
         }
 
         /// <summary>
@@ -895,29 +953,54 @@ namespace FigCrafterApp.Models
         private SKPaint? _cachedPaint;
         private float _lastOpacity = -1f;
         private bool _lastIsGrayscale = false;
+        private float _lastContrast = -1f;
+        private float _lastBrightness = -1f;
 
         private void UpdateCachedPaint()
         {
-            if (_cachedPaint == null || _lastOpacity != Opacity || _lastIsGrayscale != IsGrayscale)
+            if (_cachedPaint == null || _lastOpacity != Opacity || _lastIsGrayscale != IsGrayscale || _lastContrast != Contrast || _lastBrightness != Brightness)
             {
                 _cachedPaint?.Dispose();
                 _cachedPaint = new SKPaint();
-                
-                var matrix = IsGrayscale ? new float[] {
-                    0.299f, 0.587f, 0.114f, 0, 0,
-                    0.299f, 0.587f, 0.114f, 0, 0,
-                    0.299f, 0.587f, 0.114f, 0, 0,
-                    0,      0,      0,      Opacity, 0
-                } : new float[] {
-                    1, 0, 0, 0,       0,
-                    0, 1, 0, 0,       0,
-                    0, 0, 1, 0,       0,
-                    0, 0, 0, Opacity, 0
-                };
+
+                // コントラスト調整行列:
+                // T = (1 - C) / 2
+                // [ C 0 0 0 T+B ]
+                // [ 0 C 0 0 T+B ]
+                // [ 0 0 C 0 T+B ]
+                // [ 0 0 0 1 0   ]
+                float c = Contrast;
+                float b = Brightness;
+                float t = (1.0f - c) / 2.0f;
+                float offset = (t + b) * 255.0f;
+
+                float[] matrix;
+                if (IsGrayscale)
+                {
+                    // グレースケール適用後にコントラスト調整
+                    // Y = 0.299R + 0.587G + 0.114B
+                    matrix = new float[] {
+                        0.299f * c, 0.587f * c, 0.114f * c, 0, offset,
+                        0.299f * c, 0.587f * c, 0.114f * c, 0, offset,
+                        0.299f * c, 0.587f * c, 0.114f * c, 0, offset,
+                        0,          0,          0,          Opacity, 0
+                    };
+                }
+                else
+                {
+                    matrix = new float[] {
+                        c, 0, 0, 0, offset,
+                        0, c, 0, 0, offset,
+                        0, 0, c, 0, offset,
+                        0, 0, 0, Opacity, 0
+                    };
+                }
 
                 _cachedPaint.ColorFilter = SKColorFilter.CreateColorMatrix(matrix);
                 _lastOpacity = Opacity;
                 _lastIsGrayscale = IsGrayscale;
+                _lastContrast = Contrast;
+                _lastBrightness = Brightness;
             }
         }
 
@@ -987,6 +1070,8 @@ namespace FigCrafterApp.Models
             var clone = new ImageObject();
             CopyPropertiesTo(clone);
             clone.IsGrayscale = IsGrayscale;
+            clone.Contrast = Contrast;
+            clone.Brightness = Brightness;
             clone.CropX = CropX;
             clone.CropY = CropY;
             clone.CropWidth = CropWidth;
