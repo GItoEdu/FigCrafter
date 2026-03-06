@@ -13,6 +13,7 @@ namespace FigCrafterApp.Helpers
 {
     public static class VectorFileParser
     {
+        private const float PxToMm = 25.4f / 96f; // Inkscape (96DPI) -> FigCrafter (mm)
         private static readonly string[] InkscapePaths = new[]
         {
             @"D:\Inkscape\bin\inkscape.exe",
@@ -69,7 +70,7 @@ namespace FigCrafterApp.Helpers
                 var group = new GroupObject();
                 
                 // 再帰的に要素を処理し、座標変換を継承させる
-                ProcessElement(root, SKMatrix.CreateIdentity(), group, ns);
+                ProcessElement(root, SKMatrix.CreateScale(PxToMm, PxToMm), group, ns);
 
                 if (group.Children.Count > 0)
                 {
@@ -109,7 +110,7 @@ namespace FigCrafterApp.Helpers
                 {
                     StrokeColor = ParseColor(GetAttributeOrStyle(element, "stroke")) ?? SKColors.Transparent,
                     FillColor = ParseColor(GetAttributeOrStyle(element, "fill")) ?? SKColors.Black,
-                    StrokeWidth = ParseFloat(GetAttributeOrStyle(element, "stroke-width")) ?? 0.5f,
+                    StrokeWidth = (ParseFloat(GetAttributeOrStyle(element, "stroke-width")) ?? 1.0f) * PxToMm,
                     Opacity = ParseFloat(GetAttributeOrStyle(element, "opacity")) ?? 1.0f
                 };
 
@@ -119,13 +120,17 @@ namespace FigCrafterApp.Helpers
                     if (path != null)
                     {
                         path.Transform(currentMatrix);
-                        pathObj.PathData = path.ToSvgPathData();
                         
                         var bounds = path.Bounds;
                         pathObj.X = bounds.Left;
                         pathObj.Y = bounds.Top;
                         pathObj.Width = bounds.Width;
                         pathObj.Height = bounds.Height;
+
+                        // パスデータ自体は原点 (0,0) をバウンディングボックスの左上として保存する
+                        // これを行わないと、GraphicObject の X/Y と重複してオフセットされる
+                        path.Offset(-bounds.Left, -bounds.Top);
+                        pathObj.PathData = path.ToSvgPathData();
                         
                         targetGroup.Children.Add(pathObj);
                     }
