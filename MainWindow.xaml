@@ -175,12 +175,12 @@
                 <Border Width="1" Background="#FF555555" Margin="8,2"/>
 
                 <!-- 整列ボタン -->
-                <Button Content="⬅" ToolTip="左揃え" Command="{Binding DataContext.ActiveDocument.AlignLeftCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="2" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
-                <Button Content="↔" ToolTip="水平中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterHCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
-                <Button Content="➡" ToolTip="右揃え" Command="{Binding DataContext.ActiveDocument.AlignRightCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
-                <Button Content="⬆" ToolTip="上揃え" Command="{Binding DataContext.ActiveDocument.AlignTopCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
-                <Button Content="↕" ToolTip="垂直中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterVCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
-                <Button Content="⬇" ToolTip="下揃え" Command="{Binding DataContext.ActiveDocument.AlignBottomCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
+                <Button Content="&#xE8E4;" FontFamily="Segoe MDL2 Assets" ToolTip="左揃え" Command="{Binding DataContext.ActiveDocument.AlignLeftCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="&#xE8E5;" FontFamily="Segoe MDL2 Assets" ToolTip="水平中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterHCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="&#xE8E6;" FontFamily="Segoe MDL2 Assets" ToolTip="右揃え" Command="{Binding DataContext.ActiveDocument.AlignRightCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="&#xE8E7;" FontFamily="Segoe MDL2 Assets" ToolTip="上揃え" Command="{Binding DataContext.ActiveDocument.AlignTopCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="&#xE8E8;" FontFamily="Segoe MDL2 Assets" ToolTip="垂直中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterVCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="&#xE8E9;" FontFamily="Segoe MDL2 Assets" ToolTip="下揃え" Command="{Binding DataContext.ActiveDocument.AlignBottomCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
 
                 <Border Width="1" Background="#FF555555" Margin="5,2"/>
 
