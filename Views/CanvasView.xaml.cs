@@ -20,7 +20,7 @@ namespace FigCrafterApp.Views
         private bool _isDragging = false;
         private bool _isResizing = false;
         private bool _isRotating = false; // 回転中フラグ
-        // 範囲選択中フラグ
+        private bool _isSelecting = false; // 範囲選択中フラグ
         private bool _isCropping = false; // トリミング中フラグ
         private SKRect _selectionRect; // 範囲選択の矩形
         private int _resizeHandleIndex = -1;
@@ -247,6 +247,27 @@ namespace FigCrafterApp.Views
                 }
             }
 
+            // 範囲選択矩形の描画
+            if (_isSelecting)
+            {
+                using var fillPaint = new SKPaint
+                {
+                    Color = new SKColor(0, 122, 204, 30), // 半透明の青
+                    Style = SKPaintStyle.Fill,
+                    IsAntialias = true
+                };
+                using var strokePaint = new SKPaint
+                {
+                    Color = new SKColor(0, 122, 204, 200),
+                    Style = SKPaintStyle.Stroke,
+                    StrokeWidth = 1.0f / currentZoom,
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 4 / currentZoom, 4 / currentZoom }, 0),
+                    IsAntialias = true
+                };
+                canvas.DrawRect(_selectionRect, fillPaint);
+                canvas.DrawRect(_selectionRect, strokePaint);
+            }
+
             // スナップガイド線の描画
             if (_isDragging && (_snapGuideX.HasValue || _snapGuideY.HasValue))
             {
@@ -455,11 +476,14 @@ namespace FigCrafterApp.Views
                         // 何もない場所をクリック: 全選択解除
                         vm.ClearSelection();
                         _selectedObject = null;
+                        
+                        // 範囲選択開始
+                        _isSelecting = true;
+                        _selectionRect = new SKRect(_startPoint.X, _startPoint.Y, _startPoint.X, _startPoint.Y);
+                        SkiaElement.CaptureMouse();
                         SkiaElement.InvalidateVisual();
                     }
                 }
-
-                SkiaElement.InvalidateVisual();
                 
                 if (_selectedObject != null && !isShiftHeld && vm.CurrentTool == DrawingTool.Select)
                 {
@@ -536,6 +560,19 @@ namespace FigCrafterApp.Views
             if (_isErasing && _eraserTarget != null)
             {
                 _eraserRect = new SKRect(
+                    Math.Min(_startPoint.X, currentPoint.X),
+                    Math.Min(_startPoint.Y, currentPoint.Y),
+                    Math.Max(_startPoint.X, currentPoint.X),
+                    Math.Max(_startPoint.Y, currentPoint.Y)
+                );
+                ThrottledInvalidateVisual();
+                return;
+            }
+
+            // 範囲選択ドラッグ中
+            if (_isSelecting)
+            {
+                _selectionRect = new SKRect(
                     Math.Min(_startPoint.X, currentPoint.X),
                     Math.Min(_startPoint.Y, currentPoint.Y),
                     Math.Max(_startPoint.X, currentPoint.X),
@@ -984,6 +1021,35 @@ namespace FigCrafterApp.Views
                 _isErasing = false;
                 _eraserTarget = null;
                 _preEraserMask = null;
+                SkiaElement.ReleaseMouseCapture();
+                SkiaElement.InvalidateVisual();
+                return;
+            }
+
+            if (_isSelecting)
+            {
+                _isSelecting = false;
+                if (_selectionRect.Width > 0.1f || _selectionRect.Height > 0.1f)
+                {
+                    // 矩形内のオブジェクトを選択
+                    bool anyHit = false;
+                    foreach (var layer in vmObj.Layers)
+                    {
+                        if (!layer.IsVisible || layer.IsLocked) continue;
+                        foreach (var obj in layer.GraphicObjects)
+                        {
+                            if (_selectionRect.IntersectsWith(GetBoundingRect(obj)))
+                            {
+                                vmObj.ToggleSelectObject(obj);
+                                anyHit = true;
+                            }
+                        }
+                    }
+                    if (anyHit)
+                    {
+                        _selectedObject = vmObj.SelectedObject;
+                    }
+                }
                 SkiaElement.ReleaseMouseCapture();
                 SkiaElement.InvalidateVisual();
                 return;
