@@ -44,7 +44,6 @@ namespace FigCrafterApp.Helpers
             try
             {
                 // Inkscape CLI で SVG に変換（文字をパス化）
-                // PDF, EMF, WMF 等に対応可能
                 var psi = new ProcessStartInfo
                 {
                     FileName = inkscapePath,
@@ -62,56 +61,15 @@ namespace FigCrafterApp.Helpers
 
                 if (!File.Exists(tempSvg)) return null;
 
-                // SVG を読み込み、パスを抽出
                 var doc = XDocument.Load(tempSvg);
                 XNamespace ns = "http://www.w3.org/2000/svg";
+                var root = doc.Root;
+                if (root == null) return null;
 
                 var group = new GroupObject();
-
-                // すべての <path> と <rect>, <ellipse>, <line>, <polyline>, <polygon> をパスとして抽出
-                // Inkscape の --export-text-to-path はテキストも <path> に変換してくれる
-                foreach (var element in doc.Descendants())
-                {
-                    string d = "";
-                    if (element.Name == ns + "path") d = element.Attribute("d")?.Value ?? "";
-                    else if (element.Name == ns + "rect") d = ConvertRectToPath(element);
-                    else if (element.Name == ns + "circle" || element.Name == ns + "ellipse") d = ConvertEllipseToPath(element);
-                    else if (element.Name == ns + "line") d = ConvertLineToPath(element);
-                    else if (element.Name == ns + "polyline" || element.Name == ns + "polygon") d = ConvertPolyToPath(element);
-
-                    if (string.IsNullOrEmpty(d)) continue;
-
-                    var pathObj = new PathObject
-                    {
-                        PathData = d,
-                        StrokeColor = ParseColor(GetAttributeOrStyle(element, "stroke")) ?? SKColors.Transparent,
-                        FillColor = ParseColor(GetAttributeOrStyle(element, "fill")) ?? SKColors.Black,
-                        StrokeWidth = ParseFloat(GetAttributeOrStyle(element, "stroke-width")) ?? 0.5f,
-                        Opacity = ParseFloat(GetAttributeOrStyle(element, "opacity")) ?? 1.0f
-                    };
-
-                    // transform 属性の処理 (簡易的に translate のみ)
-                    string transform = element.Attribute("transform")?.Value ?? "";
-                    if (!string.IsNullOrEmpty(transform))
-                    {
-                        ApplyTransformToPath(pathObj, transform);
-                    }
-
-                    // バウンディングボックスの設定 (GroupObject の RecalculateBounds で使用するため)
-                    using (var path = SKPath.ParseSvgPathData(pathObj.PathData))
-                    {
-                        if (path != null)
-                        {
-                            var bounds = path.Bounds;
-                            pathObj.X = bounds.Left;
-                            pathObj.Y = bounds.Top;
-                            pathObj.Width = bounds.Width;
-                            pathObj.Height = bounds.Height;
-                        }
-                    }
-
-                    group.Children.Add(pathObj);
-                }
+                
+                // 再帰的に要素を処理し、座標変換を継承させる
+                ProcessElement(root, SKMatrix.CreateIdentity(), group, ns);
 
                 if (group.Children.Count > 0)
                 {
@@ -131,6 +89,107 @@ namespace FigCrafterApp.Helpers
             return null;
         }
 
+        private static void ProcessElement(XElement element, SKMatrix parentMatrix, GroupObject targetGroup, XNamespace ns)
+        {
+            // ローカルの transform を取得し、親の行列と結合
+            string transformAttr = element.Attribute("transform")?.Value ?? "";
+            SKMatrix localMatrix = string.IsNullOrEmpty(transformAttr) ? SKMatrix.CreateIdentity() : ParseTransform(transformAttr);
+            SKMatrix currentMatrix = SKMatrix.Concat(parentMatrix, localMatrix);
+
+            string d = "";
+            if (element.Name == ns + "path") d = element.Attribute("d")?.Value ?? "";
+            else if (element.Name == ns + "rect") d = ConvertRectToPath(element);
+            else if (element.Name == ns + "circle" || element.Name == ns + "ellipse") d = ConvertEllipseToPath(element);
+            else if (element.Name == ns + "line") d = ConvertLineToPath(element);
+            else if (element.Name == ns + "polyline" || element.Name == ns + "polygon") d = ConvertPolyToPath(element);
+
+            if (!string.IsNullOrEmpty(d))
+            {
+                var pathObj = new PathObject
+                {
+                    StrokeColor = ParseColor(GetAttributeOrStyle(element, "stroke")) ?? SKColors.Transparent,
+                    FillColor = ParseColor(GetAttributeOrStyle(element, "fill")) ?? SKColors.Black,
+                    StrokeWidth = ParseFloat(GetAttributeOrStyle(element, "stroke-width")) ?? 0.5f,
+                    Opacity = ParseFloat(GetAttributeOrStyle(element, "opacity")) ?? 1.0f
+                };
+
+                // 行列を適用
+                using (var path = SKPath.ParseSvgPathData(d))
+                {
+                    if (path != null)
+                    {
+                        path.Transform(currentMatrix);
+                        pathObj.PathData = path.ToSvgPathData();
+                        
+                        var bounds = path.Bounds;
+                        pathObj.X = bounds.Left;
+                        pathObj.Y = bounds.Top;
+                        pathObj.Width = bounds.Width;
+                        pathObj.Height = bounds.Height;
+                        
+                        targetGroup.Children.Add(pathObj);
+                    }
+                }
+            }
+
+            // 子要素を再帰的に処理
+            foreach (var child in element.Elements())
+            {
+                ProcessElement(child, currentMatrix, targetGroup, ns);
+            }
+        }
+
+        private static SKMatrix ParseTransform(string transform)
+        {
+            var matrix = SKMatrix.CreateIdentity();
+            
+            // translate, matrix, scale, rotate などの複数の関数が並んでいる可能性がある
+            var matches = Regex.Matches(transform, @"(\w+)\s*\(([^)]+)\)");
+            foreach (Match match in matches)
+            {
+                string func = match.Groups[1].Value;
+                string argsStr = match.Groups[2].Value;
+                var args = Regex.Split(argsStr, @"[\s,]+").Where(s => !string.IsNullOrEmpty(s))
+                                .Select(s => float.Parse(s, CultureInfo.InvariantCulture)).ToArray();
+
+                if (func == "translate")
+                {
+                    float dx = args[0];
+                    float dy = args.Length > 1 ? args[1] : 0;
+                    matrix = SKMatrix.Concat(matrix, SKMatrix.CreateTranslation(dx, dy));
+                }
+                else if (func == "matrix" && args.Length == 6)
+                {
+                    var m = new SKMatrix
+                    {
+                        ScaleX = args[0],
+                        SkewY = args[1],
+                        SkewX = args[2],
+                        ScaleY = args[3],
+                        TransX = args[4],
+                        TransY = args[5],
+                        Persp0 = 0, Persp1 = 0, Persp2 = 1
+                    };
+                    matrix = SKMatrix.Concat(matrix, m);
+                }
+                else if (func == "scale")
+                {
+                    float sx = args[0];
+                    float sy = args.Length > 1 ? args[1] : sx;
+                    matrix = SKMatrix.Concat(matrix, SKMatrix.CreateScale(sx, sy));
+                }
+                else if (func == "rotate")
+                {
+                    float angle = args[0];
+                    if (args.Length == 1)
+                        matrix = SKMatrix.Concat(matrix, SKMatrix.CreateRotationDegrees(angle));
+                    else if (args.Length == 3)
+                        matrix = SKMatrix.Concat(matrix, SKMatrix.CreateRotationDegrees(angle, args[1], args[2]));
+                }
+            }
+            return matrix;
+        }
+
         private static string GetAttributeOrStyle(XElement element, string name)
         {
             string? attr = element.Attribute(name)?.Value;
@@ -145,41 +204,6 @@ namespace FigCrafterApp.Helpers
             return "";
         }
 
-        private static void ApplyTransformToPath(PathObject pathObj, string transform)
-        {
-            using var path = SKPath.ParseSvgPathData(pathObj.PathData);
-            if (path == null) return;
-
-            var matrix = SKMatrix.CreateIdentity();
-            
-            // translate(x, y) または translate(x)
-            var translateMatch = Regex.Match(transform, @"translate\(([-\d.]+),?\s*([-\d.]*)\)");
-            if (translateMatch.Success)
-            {
-                float dx = float.Parse(translateMatch.Groups[1].Value, CultureInfo.InvariantCulture);
-                float dy = string.IsNullOrEmpty(translateMatch.Groups[2].Value) ? 0 : float.Parse(translateMatch.Groups[2].Value, CultureInfo.InvariantCulture);
-                matrix = SKMatrix.Concat(matrix, SKMatrix.CreateTranslation(dx, dy));
-            }
-
-            // matrix(a, b, c, d, e, f)
-            var matrixMatch = Regex.Match(transform, @"matrix\(([-\d.e]+)\s+([-\d.e]+)\s+([-\d.e]+)\s+([-\d.e]+)\s+([-\d.e]+)\s+([-\d.e]+)\)");
-            if (matrixMatch.Success)
-            {
-                var m = new SKMatrix
-                {
-                    ScaleX = float.Parse(matrixMatch.Groups[1].Value, CultureInfo.InvariantCulture),
-                    SkewY = float.Parse(matrixMatch.Groups[2].Value, CultureInfo.InvariantCulture),
-                    SkewX = float.Parse(matrixMatch.Groups[3].Value, CultureInfo.InvariantCulture),
-                    ScaleY = float.Parse(matrixMatch.Groups[4].Value, CultureInfo.InvariantCulture),
-                    TransX = float.Parse(matrixMatch.Groups[5].Value, CultureInfo.InvariantCulture),
-                    TransY = float.Parse(matrixMatch.Groups[6].Value, CultureInfo.InvariantCulture)
-                };
-                matrix = SKMatrix.Concat(matrix, m);
-            }
-
-            path.Transform(matrix);
-            pathObj.PathData = path.ToSvgPathData();
-        }
 
         private static string ConvertRectToPath(XElement el)
         {
