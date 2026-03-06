@@ -364,6 +364,7 @@ namespace FigCrafterApp.ViewModels
                     // ※ 注意: このイベントハンドラ中での ExecuteCommand は再度 PropertyChanged を呼ぶ可能性はない（Executeしないため）。
                     // PropertyChangeCommand の Execute は既に UI 側でプロパティが Set されているため何もしない（あるいは再セットするだけ）ようにする方が良い。
                     
+                    System.Diagnostics.Debug.WriteLine($"Undo PUSH (Auto): {e.PropertyName}");
                     _undoStack.Push(new PropertyChangeCommand(obj, e.PropertyName, oldValue, newValue));
                     _redoStack.Clear();
                     

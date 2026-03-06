@@ -465,28 +465,32 @@ namespace FigCrafterApp.ViewModels
                 var dialog = new FigCrafterApp.Views.ContrastDialog(image);
                 if (dialog.ShowDialog() == true)
                 {
-                    // 確定時は Undo 用にコマンドを発行
-                    bool changed = false;
+                    // 確定時は Undo 用に一括コマンドを発行
+                    var commands = new List<FigCrafterApp.Commands.IUndoableCommand>();
                     
                     if (Math.Abs(image.Minimum - originalMin) > 0.001f)
                     {
-                        ActiveDocument.ExecuteCommand(new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.Minimum), originalMin, image.Minimum));
-                        changed = true;
+                        commands.Add(new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.Minimum), originalMin, image.Minimum));
                     }
 
                     if (Math.Abs(image.Maximum - originalMax) > 0.001f)
                     {
-                        ActiveDocument.ExecuteCommand(new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.Maximum), originalMax, image.Maximum));
-                        changed = true;
+                        commands.Add(new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.Maximum), originalMax, image.Maximum));
                     }
 
                     if (image.IsGrayscale != originalGrayscale)
                     {
-                        ActiveDocument.ExecuteCommand(new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.IsGrayscale), originalGrayscale, image.IsGrayscale));
-                        changed = true;
+                        commands.Add(new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.IsGrayscale), originalGrayscale, image.IsGrayscale));
                     }
 
-                    if (changed) ActiveDocument.Invalidate();
+                    if (commands.Count > 0)
+                    {
+                        // 1つのコマンドとして実行（Push）
+                        if (commands.Count == 1)
+                            ActiveDocument.ExecuteCommand(commands[0]);
+                        else
+                            ActiveDocument.ExecuteCommand(new FigCrafterApp.Commands.CompositeCommand(commands));
+                    }
                 }
             }
         }
