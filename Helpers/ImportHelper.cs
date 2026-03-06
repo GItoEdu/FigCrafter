@@ -93,13 +93,22 @@ namespace FigCrafterApp.Helpers
 
         private static SKBitmap? ImportTiffImage(string filePath)
         {
-#pragma warning disable CA1416 // プラットフォーム互換性の検証
-            using var bmp = new System.Drawing.Bitmap(filePath);
-            using var ms = new MemoryStream();
-            bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-            ms.Position = 0;
-            return SKBitmap.Decode(ms);
+            try
+            {
+                using var stream = File.OpenRead(filePath);
+                return SKBitmap.Decode(stream);
+            }
+            catch
+            {
+                // フォールバック: System.Drawing (ただし8bit化する)
+#pragma warning disable CA1416
+                using var bmp = new System.Drawing.Bitmap(filePath);
+                using var ms = new MemoryStream();
+                bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                ms.Position = 0;
+                return SKBitmap.Decode(ms);
 #pragma warning restore CA1416
+            }
         }
 
         /// <summary>

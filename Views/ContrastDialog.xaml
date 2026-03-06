@@ -1,7 +1,8 @@
 <Window x:Class="FigCrafterApp.Views.ContrastDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="画像調整" Height="285" Width="420"
+        xmlns:views="clr-namespace:FigCrafterApp.Views"
+        Title="画像調整" Height="480" Width="420"
         Background="#FF2D2D30" Foreground="White"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False">
     <Grid Margin="20">
@@ -16,48 +17,60 @@
                 <Setter Property="VerticalAlignment" Value="Center"/>
                 <Setter Property="Margin" Value="0,0,10,0"/>
                 <Setter Property="Foreground" Value="Gray"/>
-                <Setter Property="Width" Value="70"/>
+                <Setter Property="Width" Value="80"/>
+            </Style>
+
+            <Style TargetType="TextBox" x:Key="TextBoxStyle">
+                <Setter Property="Background" Value="#FF3E3E42"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="BorderBrush" Value="#FF555555"/>
+                <Setter Property="Padding" Value="3"/>
+                <Setter Property="Margin" Value="10,0,0,0"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
             </Style>
         </Grid.Resources>
 
-        <TextBlock Text="コントラストと明るさの調整" FontSize="16" FontWeight="Bold" Margin="0,0,0,20"/>
+        <TextBlock Text="画像調整 (ImageJ 方式)" FontSize="16" FontWeight="Bold" Margin="0,0,0,15"/>
 
         <StackPanel Grid.Row="1">
-            <Grid Margin="0,0,0,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="60"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="コントラスト:" Style="{StaticResource LabelStyle}"/>
-                <Slider x:Name="ContrastSlider" Grid.Column="1" 
-                        Minimum="0.1" Maximum="3.0" 
-                        Value="{Binding Contrast, UpdateSourceTrigger=PropertyChanged}" 
-                        SmallChange="0.01" LargeChange="0.1"
-                        VerticalAlignment="Center"/>
-                <TextBox Grid.Column="2" Width="60" Text="{Binding Contrast, StringFormat=\{0:F2\}, UpdateSourceTrigger=LostFocus}" 
-                         Background="#FF3E3E42" Foreground="White" BorderThickness="1" BorderBrush="#FF555555"
-                         Padding="3" Margin="10,0,0,0" VerticalAlignment="Center" HorizontalContentAlignment="Center"/>
+            <TextBlock Text="ヒストグラム (輝度):" Foreground="Gray" Margin="0,0,0,5" FontSize="11"/>
+            <views:HistogramView HistogramData="{Binding IntensityHistogram}" Height="80" Margin="0,0,0,5"/>
+            
+            <!-- Range Sliders (Min/Max) -->
+            <Grid Margin="0,0,0,5">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions>
+                <TextBlock Text="Minimum:" Style="{StaticResource LabelStyle}"/>
+                <Slider Grid.Column="1" Minimum="0.0" Maximum="1.0" Value="{Binding Minimum, UpdateSourceTrigger=PropertyChanged}" SmallChange="0.01" LargeChange="0.1" VerticalAlignment="Center"/>
+                <TextBox Grid.Column="2" Width="60" Text="{Binding Minimum, StringFormat=\{0:F2\}, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBoxStyle}"/>
+            </Grid>
+            <Grid Margin="0,0,0,15">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions>
+                <TextBlock Text="Maximum:" Style="{StaticResource LabelStyle}"/>
+                <Slider Grid.Column="1" Minimum="0.0" Maximum="1.0" Value="{Binding Maximum, UpdateSourceTrigger=PropertyChanged}" SmallChange="0.01" LargeChange="0.1" VerticalAlignment="Center"/>
+                <TextBox Grid.Column="2" Width="60" Text="{Binding Maximum, StringFormat=\{0:F2\}, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBoxStyle}"/>
             </Grid>
 
-            <Grid Margin="0,0,0,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="60"/>
-                </Grid.ColumnDefinitions>
+            <Separator Margin="0,0,0,15" Background="#FF3E3E42"/>
+            <CheckBox Content="グレースケール" IsChecked="{Binding IsGrayscale, UpdateSourceTrigger=PropertyChanged}" Foreground="White" Margin="0,0,0,15" FontSize="11"/>
+            <Separator Margin="0,0,0,15" Background="#FF3E3E42"/>
+
+            <!-- Indirect Controls (Brightness/Contrast) -->
+            <Grid Margin="0,0,0,5">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions>
                 <TextBlock Text="明るさ:" Style="{StaticResource LabelStyle}"/>
-                <Slider Grid.Column="1" 
-                        Minimum="-1.0" Maximum="1.0" 
-                        Value="{Binding Brightness, UpdateSourceTrigger=PropertyChanged}" 
-                        SmallChange="0.01" LargeChange="0.1"
-                        VerticalAlignment="Center"/>
-                <TextBox Grid.Column="2" Width="60" Text="{Binding Brightness, StringFormat=\{0:F2\}, UpdateSourceTrigger=LostFocus}" 
-                         Background="#FF3E3E42" Foreground="White" BorderThickness="1" BorderBrush="#FF555555"
-                         Padding="3" Margin="10,0,0,0" VerticalAlignment="Center" HorizontalContentAlignment="Center"/>
+                <Slider Grid.Column="1" Minimum="-0.5" Maximum="0.5" Value="{Binding Brightness, UpdateSourceTrigger=PropertyChanged}" SmallChange="0.01" LargeChange="0.1" VerticalAlignment="Center"/>
+                <TextBox Grid.Column="2" Width="60" Text="{Binding Brightness, StringFormat=\{0:F2\}, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBoxStyle}"/>
+            </Grid>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions>
+                <TextBlock Text="コントラスト:" Style="{StaticResource LabelStyle}"/>
+                <Slider Grid.Column="1" Minimum="0.1" Maximum="10.0" Value="{Binding Contrast, UpdateSourceTrigger=PropertyChanged}" SmallChange="0.01" LargeChange="0.1" VerticalAlignment="Center"/>
+                <TextBox Grid.Column="2" Width="60" Text="{Binding Contrast, StringFormat=\{0:F2\}, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBoxStyle}"/>
             </Grid>
 
-            <TextBlock Text="※スライダーを動かすとキャンバスにリアルタイムで反映されます。" FontSize="10" Foreground="Gray" HorizontalAlignment="Center"/>
+            <TextBlock Text="※Min/Maxを調整するとヒストグラム上の表示範囲が変化します。" FontSize="10" Foreground="Gray" HorizontalAlignment="Center"/>
         </StackPanel>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">

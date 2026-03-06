@@ -230,8 +230,8 @@ namespace FigCrafterApp.Views
 
                 // トリミングハンドルの描画
                 using var handlePaint = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true };
-                using var handleStrokePaint = new SKPaint { Color = SKColors.Orange, Style = SKPaintStyle.Stroke, StrokeWidth = 2 / currentZoom, IsAntialias = true };
-                float hs = 8 / currentZoom;
+                using var handleStrokePaint = new SKPaint { Color = SKColors.Orange, Style = SKPaintStyle.Stroke, StrokeWidth = 1 / currentZoom, IsAntialias = true };
+                float hs = 5 / currentZoom;
                 var points = new[]
                 {
                     new SKPoint(destRect.Left, destRect.Top),

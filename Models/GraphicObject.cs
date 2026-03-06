@@ -714,8 +714,8 @@ namespace FigCrafterApp.Models
         private SKBitmap? _imageData;
         private SKBitmap? _eraserMask; // 消しゴム用アルファマスク（白=不透明, 黒=透過）
         private bool _isGrayscale = false;
-        private float _contrast = 1.0f;
-        private float _brightness = 0.0f;
+        private float _minimum = 0.0f;
+        private float _maximum = 1.0f;
         private int[]? _intensityHistogram;
 
         /// <summary>
@@ -782,16 +782,56 @@ namespace FigCrafterApp.Models
             set => SetProperty(ref _isGrayscale, value);
         }
 
-        public float Contrast
+        public float Minimum
         {
-            get => _contrast;
-            set => SetProperty(ref _contrast, value);
+            get => _minimum;
+            set
+            {
+                if (SetProperty(ref _minimum, value))
+                {
+                    OnPropertyChanged(nameof(Contrast));
+                    OnPropertyChanged(nameof(Brightness));
+                }
+            }
         }
 
+        public float Maximum
+        {
+            get => _maximum;
+            set
+            {
+                if (SetProperty(ref _maximum, value))
+                {
+                    OnPropertyChanged(nameof(Contrast));
+                    OnPropertyChanged(nameof(Brightness));
+                }
+            }
+        }
+
+        [JsonIgnore]
+        public float Contrast
+        {
+            get { return 1.0f / (Maximum - Minimum + 0.0001f); }
+            set
+            {
+                float center = (Maximum + Minimum) / 2f;
+                float halfRange = 1.0f / (value * 2f);
+                Minimum = Math.Max(0, center - halfRange);
+                Maximum = Math.Min(1, center + halfRange);
+            }
+        }
+
+        [JsonIgnore]
         public float Brightness
         {
-            get => _brightness;
-            set => SetProperty(ref _brightness, value);
+            get { return (Maximum + Minimum) / 2f - 0.5f; }
+            set
+            {
+                float range = Maximum - Minimum;
+                float newCenter = value + 0.5f;
+                Minimum = Math.Max(0, newCenter - range / 2f);
+                Maximum = Math.Min(1, newCenter + range / 2f);
+            }
         }
 
         [JsonIgnore]
@@ -969,30 +1009,34 @@ namespace FigCrafterApp.Models
                 // [ 0 C 0 0 T+B ]
                 // [ 0 0 C 0 T+B ]
                 // [ 0 0 0 1 0   ]
-                float c = Contrast;
-                float b = Brightness;
-                float t = (1.0f - c) / 2.0f;
-                float offset = (t + b);
+                // ImageJ 方式の調整行列 (Min/Max):
+                // out = (in - min) / (max - min)
+                // out = in * scale + offset
+                // scale = 1.0 / (max - min)
+                // offset = -min * scale
+                float min = Minimum;
+                float max = Maximum;
+                float scale = 1.0f / (max - min + 0.0001f);
+                float offset = -min * scale;
 
                 float[] matrix;
                 if (IsGrayscale)
                 {
-                    // グレースケール適用後にコントラスト調整
-                    // Y = 0.299R + 0.587G + 0.114B
+                    // グレースケール適用後に Min/Max 調整
                     matrix = new float[] {
-                        0.299f * c, 0.587f * c, 0.114f * c, 0, offset,
-                        0.299f * c, 0.587f * c, 0.114f * c, 0, offset,
-                        0.299f * c, 0.587f * c, 0.114f * c, 0, offset,
-                        0,          0,          0,          Opacity, 0
+                        0.299f * scale, 0.587f * scale, 0.114f * scale, 0, offset,
+                        0.299f * scale, 0.587f * scale, 0.114f * scale, 0, offset,
+                        0.299f * scale, 0.587f * scale, 0.114f * scale, 0, offset,
+                        0,              0,              0,              Opacity, 0
                     };
                 }
                 else
                 {
                     matrix = new float[] {
-                        c, 0, 0, 0, offset,
-                        0, c, 0, 0, offset,
-                        0, 0, c, 0, offset,
-                        0, 0, 0, Opacity, 0
+                        scale, 0,     0,     0, offset,
+                        0,     scale, 0,     0, offset,
+                        0,     0,     scale, 0, offset,
+                        0,     0,     0,     Opacity, 0
                     };
                 }
 

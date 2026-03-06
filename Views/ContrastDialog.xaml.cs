@@ -5,17 +5,17 @@ namespace FigCrafterApp.Views
 {
     public partial class ContrastDialog : Window
     {
-        private readonly ImageObject _image;
-        private readonly float _originalContrast;
-        private readonly float _originalBrightness;
+        private float _originalMinimum;
+        private float _originalMaximum;
+        private readonly bool _originalIsGrayscale;
 
         public ContrastDialog(ImageObject image)
         {
             InitializeComponent();
-            _image = image;
-            _originalContrast = image.Contrast;
-            _originalBrightness = image.Brightness;
             DataContext = image;
+            _originalMinimum = image.Minimum;
+            _originalMaximum = image.Maximum;
+            _originalIsGrayscale = image.IsGrayscale;
             this.Owner = Application.Current.MainWindow;
         }
 
@@ -27,8 +27,12 @@ namespace FigCrafterApp.Views
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            _image.Contrast = _originalContrast;
-            _image.Brightness = _originalBrightness;
+            if (DataContext is ImageObject image)
+            {
+                image.Minimum = _originalMinimum;
+                image.Maximum = _originalMaximum;
+                image.IsGrayscale = _originalIsGrayscale;
+            }
             DialogResult = false;
             Close();
         }
