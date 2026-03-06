@@ -490,9 +490,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="30"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Contrast:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>
-                            <Slider Grid.Column="1" Minimum="0.1" Maximum="3.0" Value="{Binding Contrast, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" Margin="4,0"/>
-                            <TextBlock Grid.Column="2" Text="{Binding Contrast, StringFormat=\{0:F1\}}" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Right" FontSize="11"/>
+                        <Button Content="コントラスト調整..." Command="{Binding DataContext.ShowContrastDialogCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,4,0,8" Padding="4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
                         </Grid>
 
                         <Grid Margin="0,2">

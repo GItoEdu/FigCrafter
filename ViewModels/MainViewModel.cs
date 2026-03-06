@@ -38,6 +38,7 @@ namespace FigCrafterApp.ViewModels
         public ICommand SaveProjectCommand { get; }
         public ICommand SaveAsProjectCommand { get; }
         public ICommand ExportMixedCommand { get; }
+        public ICommand ShowContrastDialogCommand { get; }
 
         public MainViewModel()
         {
@@ -52,6 +53,7 @@ namespace FigCrafterApp.ViewModels
             SaveProjectCommand = new RelayCommand(p => SaveProject());
             SaveAsProjectCommand = new RelayCommand(p => SaveProjectAs());
             ExportMixedCommand = new RelayCommand(p => ExportMixed());
+            ShowContrastDialogCommand = new RelayCommand(p => ShowContrastDialog());
 
             // 起動時は何も初期化しない (空の状態から開始)
             // AddNewDocument();
@@ -444,6 +446,25 @@ namespace FigCrafterApp.ViewModels
                 {
                     System.Diagnostics.Debug.WriteLine($"Drop Error ({path}): {ex.Message}");
                 }
+            }
+        }
+
+        private void ShowContrastDialog()
+        {
+            if (ActiveDocument?.SelectedObject is ImageObject image)
+            {
+                float originalContrast = image.Contrast;
+                var dialog = new FigCrafterApp.Views.ContrastDialog(image);
+                if (dialog.ShowDialog() == true)
+                {
+                    // 確定時は Undo 用にコマンドを発行
+                    if (Math.Abs(image.Contrast - originalContrast) > 0.001f)
+                    {
+                        var cmd = new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.Contrast), originalContrast, image.Contrast);
+                        ActiveDocument.ExecuteCommand(cmd);
+                    }
+                }
+                // キャンセル時はダイアログ側で値を戻している
             }
         }
     }
