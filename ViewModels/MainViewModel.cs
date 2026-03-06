@@ -370,6 +370,73 @@ namespace FigCrafterApp.ViewModels
                 }
             }
         }
+
+        public async System.Threading.Tasks.Task ProcessDroppedFilesAsync(string[] filePaths)
+        {
+            if (filePaths == null || filePaths.Length == 0) return;
+
+            foreach (var path in filePaths)
+            {
+                try
+                {
+                    string extension = Path.GetExtension(path).ToLowerInvariant();
+                    if (extension == ".fcp")
+                    {
+                        // プロジェクトとして新しく開く
+                        string json = File.ReadAllText(path);
+                        var projectData = JsonSerializer.Deserialize<ProjectData>(json, ProjectData.GetSerializerOptions());
+                        if (projectData != null)
+                        {
+                            var newDoc = new CanvasViewModel();
+                            newDoc.LoadFromProjectData(projectData);
+                            newDoc.FilePath = path;
+                            Documents.Add(newDoc);
+                            ActiveDocument = newDoc;
+                        }
+                    }
+                    else
+                    {
+                        // アクティブなドキュメントがなければ新規作成
+                        if (ActiveDocument == null)
+                        {
+                            AddNewDocument();
+                        }
+
+                        if (extension == ".emf" || extension == ".wmf")
+                        {
+                            var emfGroup = FigCrafterApp.Helpers.EmfParser.ParseEmf(path);
+                            if (emfGroup != null && ActiveDocument != null)
+                            {
+                                // 初期配置位置を調整
+                                float offsetX = 10 - emfGroup.X;
+                                float offsetY = 10 - emfGroup.Y;
+                                foreach (var child in emfGroup.Children)
+                                {
+                                    child.X += offsetX;
+                                    child.Y += offsetY;
+                                }
+                                emfGroup.RecalculateBounds();
+                                ActiveDocument.ImportGraphicObject(emfGroup);
+                            }
+                        }
+                        else
+                        {
+                            // 画像としてインポート
+                            var bitmap = await FigCrafterApp.Helpers.ImportHelper.ImportFileAsync(path);
+                            if (bitmap != null && ActiveDocument != null)
+                            {
+                                var (dpiX, dpiY) = FigCrafterApp.Helpers.ImportHelper.GetImageDpi(path);
+                                ActiveDocument.ImportImageAsGroup(bitmap, dpiX, dpiY);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Drop Error ({path}): {ex.Message}");
+                }
+            }
+        }
     }
 
     // 簡易的なRelayCommandの実装

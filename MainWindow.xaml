@@ -8,7 +8,8 @@
         xmlns:views="clr-namespace:FigCrafterApp.Views"
         mc:Ignorable="d"
         Title="FigCrafter" Height="720" Width="1280"
-        Background="#FF1E1E1E" Foreground="White">
+        Background="#FF1E1E1E" Foreground="White"
+        AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver">
     
     <Window.DataContext>
         <vm:MainViewModel/>
