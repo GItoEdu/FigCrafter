@@ -113,11 +113,11 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- メニューバー -->
-            <RowDefinition Height="Auto"/> <!-- プロパティツールバー -->
-            <RowDefinition Height="Auto"/> <!-- 図形ツールバー -->
-            <RowDefinition Height="*"/>    <!-- メインコンテンツ -->
-            <RowDefinition Height="Auto"/> <!-- ステータスバー -->
+            <RowDefinition Height="Auto"/> <!-- メニューバー (0) -->
+            <RowDefinition Height="Auto"/> <!-- 図形ツールバー (1) -->
+            <RowDefinition Height="Auto"/> <!-- プロパティツールバー (2) -->
+            <RowDefinition Height="*"/>    <!-- メインコンテンツ (3) -->
+            <RowDefinition Height="Auto"/> <!-- ステータスバー (4) -->
         </Grid.RowDefinitions>
 
         <!-- Row 0: メニューバー -->
@@ -150,8 +150,8 @@
             </MenuItem>
         </Menu>
 
-        <!-- Row 1: プロパティツールバー（オブジェクト選択時に表示） -->
-        <Border Grid.Row="1" Background="#FF2D2D30" DataContext="{Binding ActiveDocument.SelectedObject}">
+        <!-- Row 2: プロパティツールバー（オブジェクト選択時に表示） -->
+        <Border Grid.Row="2" Background="#FF2D2D30" DataContext="{Binding ActiveDocument.SelectedObject}">
             <Border.Style>
                 <Style TargetType="Border">
                     <Setter Property="Visibility" Value="Visible"/>
@@ -207,8 +207,8 @@
             </StackPanel>
         </Border>
 
-        <!-- Row 2: 図形ツールバー -->
-        <Border Grid.Row="2" Background="#FF252526" BorderBrush="#FF3E3E42" BorderThickness="0,0,0,1">
+        <!-- Row 1: 図形ツールバー -->
+        <Border Grid.Row="1" Background="#FF252526" BorderBrush="#FF3E3E42" BorderThickness="0,0,0,1">
             <StackPanel Orientation="Horizontal" Margin="5,2">
                 <!-- ファイル操作アイコン群 -->
                 <Button Content="&#xE7C3;" FontFamily="Segoe MDL2 Assets" ToolTip="新規キャンバス (Ctrl+N)" Command="{Binding NewDocumentCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
