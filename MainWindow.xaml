@@ -193,9 +193,9 @@
                 <Border Width="1" Background="#FF555555" Margin="5,2"/>
 
                 <!-- グループ・削除 -->
-                <Button Content="📦" ToolTip="グループ化 (Ctrl+G)" Command="{Binding DataContext.ActiveDocument.GroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
-                <Button Content="📤" ToolTip="グループ解除 (Ctrl+Shift+G)" Command="{Binding DataContext.ActiveDocument.UngroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="13"/>
-                <Button Content="🗑" ToolTip="削除 (Del)" Command="{Binding DataContext.ActiveDocument.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="3,1" Padding="6,3" Background="#FF6B2222" Foreground="White" BorderThickness="0" FontSize="13"/>
+                <Button Content="&#xE8B3;" FontFamily="Segoe Fluent Icons" ToolTip="グループ化 (Ctrl+G)" Command="{Binding DataContext.ActiveDocument.GroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="&#xE8A9;" FontFamily="Segoe Fluent Icons" ToolTip="グループ解除 (Ctrl+Shift+G)" Command="{Binding DataContext.ActiveDocument.UngroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="&#xE74D;" FontFamily="Segoe Fluent Icons" ToolTip="削除 (Del)" Command="{Binding DataContext.ActiveDocument.DeleteSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="3,1" Padding="6,3" Background="#FF6B2222" Foreground="White" BorderThickness="0" FontSize="13"/>
             </StackPanel>
         </Border>
 
