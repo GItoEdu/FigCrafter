@@ -265,17 +265,17 @@ namespace FigCrafterApp.ViewModels
                         }
                         
                         string ext = System.IO.Path.GetExtension(dialog.FileName).ToLower();
-                        if (ext == ".emf" || ext == ".wmf")
+                        if (ext == ".emf" || ext == ".wmf" || ext == ".pdf")
                         {
-                            var emfGroup = FigCrafterApp.Helpers.EmfParser.ParseEmf(dialog.FileName);
-                            if (emfGroup != null)
+                            var vectorGroup = FigCrafterApp.Helpers.VectorFileParser.ParseVectorFile(dialog.FileName);
+                            if (vectorGroup != null)
                             {
                                 if (ActiveDocument != null)
                                 {
                                     // 初期配置位置を (10, 10) に調整
-                                    float offsetX = 10 - emfGroup.X;
-                                    float offsetY = 10 - emfGroup.Y;
-                                    foreach (var child in emfGroup.Children)
+                                    float offsetX = 10 - vectorGroup.X;
+                                    float offsetY = 10 - vectorGroup.Y;
+                                    foreach (var child in vectorGroup.Children)
                                     {
                                         child.X += offsetX;
                                         child.Y += offsetY;
@@ -285,11 +285,18 @@ namespace FigCrafterApp.ViewModels
                                             line.EndY += offsetY;
                                         }
                                     }
-                                    emfGroup.RecalculateBounds();
+                                    vectorGroup.RecalculateBounds();
 
-                                    ActiveDocument.ImportGraphicObject(emfGroup);
+                                    ActiveDocument.ImportGraphicObject(vectorGroup);
                                     return;
                                 }
+                            }
+                            
+                            // ベクター変換に失敗した場合、かつ .pdf の場合はビットマップとして読み込むフォールバックを行う
+                            if (ext != ".pdf")
+                            {
+                                System.Windows.MessageBox.Show("ファイルの解析に失敗しました。", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                                return;
                             }
                         }
 
@@ -402,32 +409,34 @@ namespace FigCrafterApp.ViewModels
                             AddNewDocument();
                         }
 
-                        if (extension == ".emf" || extension == ".wmf")
+                        if (extension == ".emf" || extension == ".wmf" || extension == ".pdf")
                         {
-                            var emfGroup = FigCrafterApp.Helpers.EmfParser.ParseEmf(path);
-                            if (emfGroup != null && ActiveDocument != null)
+                            var vectorGroup = FigCrafterApp.Helpers.VectorFileParser.ParseVectorFile(path);
+                            if (vectorGroup != null && ActiveDocument != null)
                             {
                                 // 初期配置位置を調整
-                                float offsetX = 10 - emfGroup.X;
-                                float offsetY = 10 - emfGroup.Y;
-                                foreach (var child in emfGroup.Children)
+                                float offsetX = 10 - vectorGroup.X;
+                                float offsetY = 10 - vectorGroup.Y;
+                                foreach (var child in vectorGroup.Children)
                                 {
                                     child.X += offsetX;
                                     child.Y += offsetY;
                                 }
-                                emfGroup.RecalculateBounds();
-                                ActiveDocument.ImportGraphicObject(emfGroup);
+                                vectorGroup.RecalculateBounds();
+                                ActiveDocument.ImportGraphicObject(vectorGroup);
+                                continue;
                             }
+                            
+                            // PDF の場合はベクター変換に失敗してもビットマップとして読み込むフォールバックを行う
+                            if (extension != ".pdf") continue;
                         }
-                        else
+
+                        // 画像としてインポート
+                        var bitmap = await FigCrafterApp.Helpers.ImportHelper.ImportFileAsync(path);
+                        if (bitmap != null && ActiveDocument != null)
                         {
-                            // 画像としてインポート
-                            var bitmap = await FigCrafterApp.Helpers.ImportHelper.ImportFileAsync(path);
-                            if (bitmap != null && ActiveDocument != null)
-                            {
-                                var (dpiX, dpiY) = FigCrafterApp.Helpers.ImportHelper.GetImageDpi(path);
-                                ActiveDocument.ImportImageAsGroup(bitmap, dpiX, dpiY);
-                            }
+                            var (dpiX, dpiY) = FigCrafterApp.Helpers.ImportHelper.GetImageDpi(path);
+                            ActiveDocument.ImportImageAsGroup(bitmap, dpiX, dpiY);
                         }
                     }
                 }

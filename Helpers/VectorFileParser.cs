@@ -11,7 +11,7 @@ using System.Globalization;
 
 namespace FigCrafterApp.Helpers
 {
-    public static class EmfParser
+    public static class VectorFileParser
     {
         private static readonly string[] InkscapePaths = new[]
         {
@@ -30,7 +30,7 @@ namespace FigCrafterApp.Helpers
             return null;
         }
 
-        public static GroupObject? ParseEmf(string filePath)
+        public static GroupObject? ParseVectorFile(string filePath)
         {
             string inkscapePath = GetInkscapePath() ?? "";
             if (string.IsNullOrEmpty(inkscapePath))
@@ -44,6 +44,7 @@ namespace FigCrafterApp.Helpers
             try
             {
                 // Inkscape CLI で SVG に変換（文字をパス化）
+                // PDF, EMF, WMF 等に対応可能
                 var psi = new ProcessStartInfo
                 {
                     FileName = inkscapePath,
@@ -120,7 +121,7 @@ namespace FigCrafterApp.Helpers
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"EMF/SVG Conversion Error: {ex.Message}");
+                Debug.WriteLine($"Vector File Conversion Error: {ex.Message}");
             }
             finally
             {

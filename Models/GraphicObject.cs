@@ -859,6 +859,39 @@ namespace FigCrafterApp.Models
             }
         }
 
+        /// <summary>
+        /// JSONシリアライズ/デシリアライズ用。消しゴムマスクのBase64エンコード文字列を取得・設定します。
+        /// </summary>
+        public string? EraserBase64
+        {
+            get
+            {
+                if (_eraserMask == null) return null;
+                using var image = SKImage.FromBitmap(_eraserMask);
+                using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+                return Convert.ToBase64String(data.ToArray());
+            }
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    _eraserMask = null;
+                }
+                else
+                {
+                    try
+                    {
+                        byte[] bytes = Convert.FromBase64String(value);
+                        _eraserMask = SKBitmap.Decode(bytes);
+                    }
+                    catch
+                    {
+                        _eraserMask = null;
+                    }
+                }
+            }
+        }
+
         private SKPaint? _cachedPaint;
         private float _lastOpacity = -1f;
         private bool _lastIsGrayscale = false;

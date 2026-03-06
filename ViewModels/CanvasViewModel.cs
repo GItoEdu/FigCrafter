@@ -1054,8 +1054,9 @@ namespace FigCrafterApp.ViewModels
                 }
             }
 
-            foreach (var layer in Layers)
+            for (int i = Layers.Count - 1; i >= 0; i--)
             {
+                var layer = Layers[i];
                 if (!layer.IsVisible) continue;
                 foreach (var obj in layer.GraphicObjects)
                 {
@@ -1100,8 +1101,9 @@ namespace FigCrafterApp.ViewModels
                 }
             }
 
-            foreach (var layer in Layers)
+            for (int i = Layers.Count - 1; i >= 0; i--)
             {
+                var layer = Layers[i];
                 if (!layer.IsVisible) continue;
                 foreach (var obj in layer.GraphicObjects)
                 {
@@ -1144,8 +1146,9 @@ namespace FigCrafterApp.ViewModels
                 }
             }
 
-            foreach (var layer in Layers)
+            for (int i = Layers.Count - 1; i >= 0; i--)
             {
+                var layer = Layers[i];
                 if (!layer.IsVisible) continue;
                 foreach (var obj in layer.GraphicObjects)
                 {
