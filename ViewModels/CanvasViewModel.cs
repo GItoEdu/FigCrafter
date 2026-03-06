@@ -962,6 +962,7 @@ namespace FigCrafterApp.ViewModels
         }
 
         // --- 画像インポート ---
+        // --- 画像インポート ---
         public void ImportImageAsGroup(SKBitmap bitmap, float dpiX = 96f, float dpiY = 96f)
         {
             // DPIからミリメートルサイズを計算 (1インチ = 25.4mm)
@@ -972,38 +973,20 @@ namespace FigCrafterApp.ViewModels
             { 
                 X = 10, Y = 10, 
                 ImageData = bitmap,
-                Width = widthMm, Height = heightMm 
-            };
-            var borderObj = new RectangleObject
-            {
-                X = 10, Y = 10,
                 Width = widthMm, Height = heightMm,
-                FillColor = SKColors.Transparent,
-                StrokeColor = SKColors.Black,
-                StrokeWidth = 2
+                StrokeWidth = 0 // 初期状態は枠なし
             };
-            var groupObj = new GroupObject
-            {
-                X = 10, Y = 10,
-                Width = widthMm, Height = heightMm
-            };
-            groupObj.Children.Add(imageObj);
-            groupObj.Children.Add(borderObj);
 
             var commands = new List<IUndoableCommand>();
-
-            // 新規レイヤーを作成してアクティブにするコマンド
             var newLayer = new Layer { Name = $"レイヤー {Layers.Count + 1}" };
             commands.Add(new AddLayerCommand(this, newLayer));
+            commands.Add(new AddObjectCommand(newLayer.GraphicObjects, imageObj));
 
-            // そのレイヤー（のアクティブ化後を想定）にオブジェクトを追加するコマンド
-            commands.Add(new AddObjectCommand(newLayer.GraphicObjects, groupObj));
-
-            // 複合コマンドとして一括で実行（登録）
             ExecuteCommand(new CompositeCommand(commands));
             
-            SelectObject(groupObj);
             ActiveLayer = newLayer;
+            SelectObject(imageObj);
+            Invalidate();
         }
 
         /// <summary>

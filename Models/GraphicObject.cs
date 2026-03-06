@@ -1094,6 +1094,19 @@ namespace FigCrafterApp.Models
                 canvas.DrawBitmap(_imageData, srcRect, destRect, _cachedPaint);
             }
 
+            // 枠線の描画 (ImageObject 自体で描画)
+            if (StrokeWidth > 0 && StrokeColor != SKColors.Transparent)
+            {
+                using var strokePaint = new SKPaint
+                {
+                    Color = StrokeColor.WithAlpha((byte)(StrokeColor.Alpha * Opacity)),
+                    Style = SKPaintStyle.Stroke,
+                    StrokeWidth = StrokeWidth / CurrentZoomLevel,
+                    IsAntialias = true
+                };
+                canvas.DrawRect(destRect, strokePaint);
+            }
+
             if (IsSelected)
             {
                 DrawSelectionBox(canvas, destRect);
