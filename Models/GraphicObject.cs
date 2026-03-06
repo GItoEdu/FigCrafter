@@ -254,7 +254,7 @@ namespace FigCrafterApp.Models
 
             paint.Color = strokeWithOpacity;
             paint.Style = SKPaintStyle.Stroke;
-            paint.StrokeWidth = StrokeWidth / CurrentZoomLevel; // ズーム補正
+            paint.StrokeWidth = StrokeWidth; // ズーム補正を削除（物理サイズ維持）
             canvas.DrawRect(X, Y, Width, Height, paint);
             
             if (IsSelected)
@@ -300,7 +300,7 @@ namespace FigCrafterApp.Models
 
             paint.Color = strokeWithOpacity;
             paint.Style = SKPaintStyle.Stroke;
-            paint.StrokeWidth = StrokeWidth / CurrentZoomLevel; // ズーム補正
+            paint.StrokeWidth = StrokeWidth; // ズーム補正を削除
             canvas.DrawOval(new SKRect(X, Y, X + Width, Y + Height), paint);
 
             if (IsSelected)
@@ -358,7 +358,7 @@ namespace FigCrafterApp.Models
             {
                 Color = strokeWithOpacity,
                 Style = SKPaintStyle.Stroke,
-                StrokeWidth = StrokeWidth / CurrentZoomLevel, // ズーム補正
+                StrokeWidth = StrokeWidth, // ズーム補正を削除
                 IsAntialias = true
             };
             canvas.DrawLine(X, Y, EndX, EndY, paint);
@@ -1201,7 +1201,7 @@ namespace FigCrafterApp.Models
 
             paint.Color = strokeWithOpacity;
             paint.Style = SKPaintStyle.Stroke;
-            paint.StrokeWidth = StrokeWidth / CurrentZoomLevel;
+            paint.StrokeWidth = StrokeWidth; // ズーム補正を削除
             canvas.DrawPath(path, paint);
 
             if (IsSelected)

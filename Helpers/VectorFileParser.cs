@@ -67,10 +67,19 @@ namespace FigCrafterApp.Helpers
                 var root = doc.Root;
                 if (root == null) return null;
 
+                // 単位の判定: width/height に mm などの単位が含まれているか確認
+                string widthAttr = root.Attribute("width")?.Value ?? "";
+                float scale = 1.0f;
+                if (!widthAttr.Contains("mm") && !widthAttr.Contains("cm") && !widthAttr.Contains("in"))
+                {
+                    // 単位がない場合はピクセル(96DPI)とみなして mm に変換
+                    scale = PxToMm;
+                }
+
                 var group = new GroupObject();
                 
                 // 再帰的に要素を処理し、座標変換を継承させる
-                ProcessElement(root, SKMatrix.CreateScale(PxToMm, PxToMm), group, ns);
+                ProcessElement(root, SKMatrix.CreateScale(scale, scale), group, ns);
 
                 if (group.Children.Count > 0)
                 {
@@ -126,10 +135,7 @@ namespace FigCrafterApp.Helpers
                         pathObj.Y = bounds.Top;
                         pathObj.Width = bounds.Width;
                         pathObj.Height = bounds.Height;
-
-                        // パスデータ自体は原点 (0,0) をバウンディングボックスの左上として保存する
-                        // これを行わないと、GraphicObject の X/Y と重複してオフセットされる
-                        path.Offset(-bounds.Left, -bounds.Top);
+                        
                         pathObj.PathData = path.ToSvgPathData();
                         
                         targetGroup.Children.Add(pathObj);
