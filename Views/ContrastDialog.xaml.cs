@@ -7,12 +7,14 @@ namespace FigCrafterApp.Views
     {
         private readonly ImageObject _image;
         private readonly float _originalContrast;
+        private readonly float _originalBrightness;
 
         public ContrastDialog(ImageObject image)
         {
             InitializeComponent();
             _image = image;
             _originalContrast = image.Contrast;
+            _originalBrightness = image.Brightness;
             DataContext = image;
             this.Owner = Application.Current.MainWindow;
         }
@@ -26,6 +28,7 @@ namespace FigCrafterApp.Views
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             _image.Contrast = _originalContrast;
+            _image.Brightness = _originalBrightness;
             DialogResult = false;
             Close();
         }

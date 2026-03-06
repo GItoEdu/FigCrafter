@@ -454,15 +454,25 @@ namespace FigCrafterApp.ViewModels
             if (ActiveDocument?.SelectedObject is ImageObject image)
             {
                 float originalContrast = image.Contrast;
+                float originalBrightness = image.Brightness;
                 var dialog = new FigCrafterApp.Views.ContrastDialog(image);
                 if (dialog.ShowDialog() == true)
                 {
                     // 確定時は Undo 用にコマンドを発行
+                    bool changed = false;
                     if (Math.Abs(image.Contrast - originalContrast) > 0.001f)
                     {
                         var cmd = new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.Contrast), originalContrast, image.Contrast);
                         ActiveDocument.ExecuteCommand(cmd);
+                        changed = true;
                     }
+                    if (Math.Abs(image.Brightness - originalBrightness) > 0.001f)
+                    {
+                        var cmd = new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.Brightness), originalBrightness, image.Brightness);
+                        ActiveDocument.ExecuteCommand(cmd);
+                        changed = true;
+                    }
+                    if (changed) ActiveDocument.Invalidate();
                 }
                 // キャンセル時はダイアログ側で値を戻している
             }

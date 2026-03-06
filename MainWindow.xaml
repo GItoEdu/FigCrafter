@@ -484,27 +484,7 @@
                         <TextBlock Text="ヒストグラム (輝度):" Foreground="Gray" Margin="0,4,0,2" FontSize="11"/>
                         <views:HistogramView HistogramData="{Binding IntensityHistogram}" Height="60" Margin="0,0,0,8"/>
 
-                        <Grid Margin="0,2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="65"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="30"/>
-                            </Grid.ColumnDefinitions>
-                        <Button Content="コントラスト調整..." Command="{Binding DataContext.ShowContrastDialogCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,4,0,8" Padding="4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
-                        </Grid>
-
-                        <Grid Margin="0,2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="65"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="30"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Brightness:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>
-                            <Slider Grid.Column="1" Minimum="-1.0" Maximum="1.0" Value="{Binding Brightness, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" Margin="4,0"/>
-                            <TextBlock Grid.Column="2" Text="{Binding Brightness, StringFormat=\{0:F1\}}" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Right" FontSize="11"/>
-                        </Grid>
-
-                        <Button Content="調整をリセット" Command="{Binding DataContext.ActiveDocument.ResetImageAdjustmentCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,4,0,8" Padding="4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="10"/>
+                        <Button Content="画像調整(コントラスト・明るさ)..." Command="{Binding DataContext.ShowContrastDialogCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,4,0,8" Padding="4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11"/>
 
                         <Button Content="トリミング" Command="{Binding DataContext.ActiveDocument.ToggleCropModeCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,2,0,4" Padding="4" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="11">
                             <Button.Style><Style TargetType="Button"><Style.Triggers><DataTrigger Binding="{Binding DataContext.ActiveDocument.IsCropMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"><Setter Property="Background" Value="#FF007ACC"/></DataTrigger></Style.Triggers></Style></Button.Style>

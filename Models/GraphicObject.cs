@@ -972,7 +972,7 @@ namespace FigCrafterApp.Models
                 float c = Contrast;
                 float b = Brightness;
                 float t = (1.0f - c) / 2.0f;
-                float offset = (t + b) * 255.0f;
+                float offset = (t + b);
 
                 float[] matrix;
                 if (IsGrayscale)
