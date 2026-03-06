@@ -175,12 +175,12 @@
                 <Border Width="1" Background="#FF555555" Margin="8,2"/>
 
                 <!-- 整列ボタン -->
-                <Button Content="&#xE8E4;" FontFamily="Segoe MDL2 Assets" ToolTip="左揃え" Command="{Binding DataContext.ActiveDocument.AlignLeftCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="&#xE8E5;" FontFamily="Segoe MDL2 Assets" ToolTip="水平中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterHCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="&#xE8E6;" FontFamily="Segoe MDL2 Assets" ToolTip="右揃え" Command="{Binding DataContext.ActiveDocument.AlignRightCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="&#xE8E7;" FontFamily="Segoe MDL2 Assets" ToolTip="上揃え" Command="{Binding DataContext.ActiveDocument.AlignTopCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="&#xE8E8;" FontFamily="Segoe MDL2 Assets" ToolTip="垂直中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterVCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
-                <Button Content="&#xE8E9;" FontFamily="Segoe MDL2 Assets" ToolTip="下揃え" Command="{Binding DataContext.ActiveDocument.AlignBottomCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="&#xE1AD;" FontFamily="Segoe Fluent Icons" ToolTip="左揃え" Command="{Binding DataContext.ActiveDocument.AlignLeftCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="&#xF1CB;" FontFamily="Segoe Fluent Icons" ToolTip="水平中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterHCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="&#xE150;" FontFamily="Segoe Fluent Icons" ToolTip="右揃え" Command="{Binding DataContext.ActiveDocument.AlignRightCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="&#xE11C;" FontFamily="Segoe Fluent Icons" ToolTip="上揃え" Command="{Binding DataContext.ActiveDocument.AlignTopCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="&#xE174;" FontFamily="Segoe Fluent Icons" ToolTip="垂直中央揃え" Command="{Binding DataContext.ActiveDocument.AlignCenterVCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
+                <Button Content="&#xE118;" FontFamily="Segoe Fluent Icons" ToolTip="下揃え" Command="{Binding DataContext.ActiveDocument.AlignBottomCommand, RelativeSource={RelativeSource AncestorType=Window}}" Margin="1" Padding="6,3" Background="#FF3E3E42" Foreground="White" BorderThickness="0" FontSize="14"/>
 
                 <Border Width="1" Background="#FF555555" Margin="5,2"/>
 
@@ -203,11 +203,11 @@
         <Border Grid.Row="1" Background="#FF252526" BorderBrush="#FF3E3E42" BorderThickness="0,0,0,1">
             <StackPanel Orientation="Horizontal" Margin="5,2">
                 <!-- ファイル操作アイコン群 -->
-                <Button Content="&#xE7C3;" FontFamily="Segoe MDL2 Assets" ToolTip="新規キャンバス (Ctrl+N)" Command="{Binding NewDocumentCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
-                <Button Content="&#xE8B7;" FontFamily="Segoe MDL2 Assets" ToolTip="開く / インポート (Ctrl+O)" Command="{Binding OpenProjectCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
-                <Button Content="&#xE74E;" FontFamily="Segoe MDL2 Assets" ToolTip="上書き保存 (Ctrl+S)" Command="{Binding SaveProjectCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
-                <Button Content="&#xE792;" FontFamily="Segoe MDL2 Assets" ToolTip="別名で保存 (Ctrl+Shift+S)" Command="{Binding SaveAsProjectCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
-                <Button Content="&#xEADE;" FontFamily="Segoe MDL2 Assets" ToolTip="エクスポート (PNG/PDF/TIF)" Command="{Binding ExportMixedCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
+                <Button Content="&#xE7C3;" FontFamily="Segoe Fluent Icons" ToolTip="新規キャンバス (Ctrl+N)" Command="{Binding NewDocumentCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
+                <Button Content="&#xE8B7;" FontFamily="Segoe Fluent Icons" ToolTip="開く / インポート (Ctrl+O)" Command="{Binding OpenProjectCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
+                <Button Content="&#xE74E;" FontFamily="Segoe Fluent Icons" ToolTip="上書き保存 (Ctrl+S)" Command="{Binding SaveProjectCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
+                <Button Content="&#xE792;" FontFamily="Segoe Fluent Icons" ToolTip="別名で保存 (Ctrl+Shift+S)" Command="{Binding SaveAsProjectCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
+                <Button Content="&#xEE71;" FontFamily="Segoe Fluent Icons" ToolTip="エクスポート (PNG/PDF/TIF)" Command="{Binding ExportMixedCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
 
                 <!-- セパレータ -->
                 <Border Width="1" Background="#FF555555" Margin="8,4"/>
