@@ -1022,13 +1022,16 @@ namespace FigCrafterApp.ViewModels
         /// <summary>
         /// キャンバスの内容をPNGファイルとして書き出す
         /// </summary>
-        public void ExportPng(string filePath, bool transparentBackground)
+        public void ExportPng(string filePath, bool transparentBackground, float dpi = 300f)
         {
-            int width = (int)Math.Ceiling(WidthPx);
-            int height = (int)Math.Ceiling(HeightPx);
+            float mmToPx = dpi / 25.4f;
+            int width = (int)Math.Ceiling(WidthMm * mmToPx);
+            int height = (int)Math.Ceiling(HeightMm * mmToPx);
 
             using var bitmap = new SKBitmap(width, height);
             using var canvas = new SKCanvas(bitmap);
+
+            canvas.Scale(mmToPx);
 
             // 背景
             if (transparentBackground)
@@ -1074,14 +1077,17 @@ namespace FigCrafterApp.ViewModels
         }
 
         // --- PDF書き出し ---
-        public void ExportPdf(string filePath)
+        public void ExportPdf(string filePath, float dpi = 300f)
         {
-            int width = (int)Math.Ceiling(WidthPx);
-            int height = (int)Math.Ceiling(HeightPx);
+            float mmToPx = dpi / 25.4f;
+            int width = (int)Math.Ceiling(WidthMm * mmToPx);
+            int height = (int)Math.Ceiling(HeightMm * mmToPx);
 
             using var stream = System.IO.File.OpenWrite(filePath);
-            using var document = SKDocument.CreatePdf(stream);
+            using var document = SKDocument.CreatePdf(stream, dpi);
             using var canvas = document.BeginPage(width, height);
+
+            canvas.Scale(mmToPx);
 
             var selectedStates = new List<(GraphicObject obj, bool wasSelected)>();
             foreach (var layer in Layers)
@@ -1114,13 +1120,16 @@ namespace FigCrafterApp.ViewModels
         }
 
         // --- TIF書き出し ---
-        public void ExportTif(string filePath)
+        public void ExportTif(string filePath, float dpi = 300f)
         {
-            int width = (int)Math.Ceiling(WidthPx);
-            int height = (int)Math.Ceiling(HeightPx);
+            float mmToPx = dpi / 25.4f;
+            int width = (int)Math.Ceiling(WidthMm * mmToPx);
+            int height = (int)Math.Ceiling(HeightMm * mmToPx);
 
             using var bitmap = new SKBitmap(width, height);
             using var canvas = new SKCanvas(bitmap);
+
+            canvas.Scale(mmToPx);
 
             canvas.Clear(SKColors.White);
 

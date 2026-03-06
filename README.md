@@ -14,5 +14,6 @@ FigCrafter は、学術論文用の図表（Figure）を多重レイヤーで構
 2. `FigCrafterApp.sln` を Visual Studio 2022 で開き、ビルド・実行してください。
 
 ## 開発状況
-現在、ベクターデータのインポート精度向上（Inkscape CLI連携）を実装済みです。
-詳細は `docs/emf_to_svg_conversion/` を参照してください。
+- **エクスポート解像度**: エクスポート時のスケーリング不具合を修正し、デフォルト **300 DPI** での出力をサポートしました。(`docs/export_scaling_fix/`)
+- **EMF解析**: Inkscape CLI を用いた SVG 変換・パス抽出により、高精度な EMF インポートを実現。(`docs/emf_to_svg_conversion/`)
+- **ドラッグ&ドロップ**: 複数ファイルの一括レイヤー読み込みに対応。(`docs/drag_and_drop/`)
