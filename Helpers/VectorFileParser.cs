@@ -67,19 +67,30 @@ namespace FigCrafterApp.Helpers
                 var root = doc.Root;
                 if (root == null) return null;
 
-                // 単位の判定: width/height に mm などの単位が含まれているか確認
-                string widthAttr = root.Attribute("width")?.Value ?? "";
-                float scale = 1.0f;
-                if (!widthAttr.Contains("mm") && !widthAttr.Contains("cm") && !widthAttr.Contains("in"))
+                // 単位と viewBox から正確なスケールを計算
+                float widthMm = ParseFloatWithUnit(root.Attribute("width")?.Value) ?? 0;
+                var viewBoxAttr = root.Attribute("viewBox")?.Value;
+                float scale = PxToMm; // デフォルト
+
+                if (!string.IsNullOrEmpty(viewBoxAttr))
                 {
-                    // 単位がない場合はピクセル(96DPI)とみなして mm に変換
-                    scale = PxToMm;
+                    var vb = viewBoxAttr.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries)
+                                       .Select(s => float.Parse(s, CultureInfo.InvariantCulture)).ToArray();
+                    if (vb.Length == 4 && vb[2] > 0 && widthMm > 0)
+                    {
+                        scale = widthMm / vb[2];
+                    }
+                }
+                else if (widthMm > 0)
+                {
+                    // viewBox がなく width がある場合（Inkscape 以外）
+                    // width が px 指定なら PxToMm になるはず
                 }
 
                 var group = new GroupObject();
                 
                 // 再帰的に要素を処理し、座標変換を継承させる
-                ProcessElement(root, SKMatrix.CreateScale(scale, scale), group, ns);
+                ProcessElement(root, SKMatrix.CreateScale(scale, scale), group, ns, scale);
 
                 if (group.Children.Count > 0)
                 {
@@ -99,7 +110,7 @@ namespace FigCrafterApp.Helpers
             return null;
         }
 
-        private static void ProcessElement(XElement element, SKMatrix parentMatrix, GroupObject targetGroup, XNamespace ns)
+        private static void ProcessElement(XElement element, SKMatrix parentMatrix, GroupObject targetGroup, XNamespace ns, float scale)
         {
             // ローカルの transform を取得し、親の行列と結合
             string transformAttr = element.Attribute("transform")?.Value ?? "";
@@ -118,8 +129,8 @@ namespace FigCrafterApp.Helpers
                 var pathObj = new PathObject
                 {
                     StrokeColor = ParseColor(GetAttributeOrStyle(element, "stroke")) ?? SKColors.Transparent,
-                    FillColor = ParseColor(GetAttributeOrStyle(element, "fill")) ?? SKColors.Black,
-                    StrokeWidth = (ParseFloat(GetAttributeOrStyle(element, "stroke-width")) ?? 1.0f) * PxToMm,
+                    FillColor = ParseColor(GetAttributeOrStyle(element, "fill")) ?? SKColors.Transparent,
+                    StrokeWidth = (ParseFloat(GetAttributeOrStyle(element, "stroke-width")) ?? 1.0f) * scale,
                     Opacity = ParseFloat(GetAttributeOrStyle(element, "opacity")) ?? 1.0f
                 };
 
@@ -135,7 +146,9 @@ namespace FigCrafterApp.Helpers
                         pathObj.Y = bounds.Top;
                         pathObj.Width = bounds.Width;
                         pathObj.Height = bounds.Height;
-                        
+
+                        // パスデータを X, Y を起点とした相対座標に変換して保存
+                        path.Offset(-bounds.Left, -bounds.Top);
                         pathObj.PathData = path.ToSvgPathData();
                         
                         targetGroup.Children.Add(pathObj);
@@ -146,7 +159,7 @@ namespace FigCrafterApp.Helpers
             // 子要素を再帰的に処理
             foreach (var child in element.Elements())
             {
-                ProcessElement(child, currentMatrix, targetGroup, ns);
+                ProcessElement(child, currentMatrix, targetGroup, ns, scale);
             }
         }
 
@@ -264,7 +277,7 @@ namespace FigCrafterApp.Helpers
 
         private static SKColor? ParseColor(string? colorStr)
         {
-            if (string.IsNullOrEmpty(colorStr) || colorStr == "none") return null;
+            if (string.IsNullOrEmpty(colorStr) || colorStr == "none") return SKColors.Transparent;
             if (colorStr.StartsWith("rgb"))
             {
                 var match = Regex.Match(colorStr, @"rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)");
@@ -272,6 +285,23 @@ namespace FigCrafterApp.Helpers
                     return new SKColor(byte.Parse(match.Groups[1].Value), byte.Parse(match.Groups[2].Value), byte.Parse(match.Groups[3].Value));
             }
             if (SKColor.TryParse(colorStr, out var color)) return color;
+            return null;
+        }
+
+        private static float? ParseFloatWithUnit(string? val)
+        {
+            if (string.IsNullOrEmpty(val)) return null;
+            float factor = 1.0f;
+            if (val.EndsWith("mm")) factor = 1.0f;
+            else if (val.EndsWith("cm")) factor = 10.0f;
+            else if (val.EndsWith("in")) factor = 25.4f;
+            else if (val.EndsWith("pt")) factor = 25.4f / 72.0f;
+            else if (val.EndsWith("pc")) factor = 25.4f / 6.0f;
+            else if (val.EndsWith("px")) factor = 25.4f / 96.0f;
+            else factor = 25.4f / 96.0f; // 単位なしは px (96DPI) 扱い
+
+            string clean = Regex.Replace(val, @"[^\d.-]+", "");
+            if (float.TryParse(clean, NumberStyles.Float, CultureInfo.InvariantCulture, out var f)) return f * factor;
             return null;
         }
 
