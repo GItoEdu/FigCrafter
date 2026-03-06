@@ -52,6 +52,7 @@ namespace FigCrafterApp.ViewModels
             OpenProjectCommand = new RelayCommand(async p => await OpenFileAsync());
             SaveProjectCommand = new RelayCommand(p => SaveProject());
             SaveAsProjectCommand = new RelayCommand(p => SaveProjectAs());
+            ImportFileCommand = new RelayCommand(async p => await OpenFileAsync());
             ExportMixedCommand = new RelayCommand(p => ExportMixed());
             ShowContrastDialogCommand = new RelayCommand(p => ShowContrastDialog());
 
@@ -440,6 +441,10 @@ namespace FigCrafterApp.ViewModels
                             var (dpiX, dpiY) = FigCrafterApp.Helpers.ImportHelper.GetImageDpi(path);
                             ActiveDocument.ImportImageAsGroup(bitmap, dpiX, dpiY);
                         }
+                        else
+                        {
+                            System.Windows.MessageBox.Show($"ファイルの読み込みに失敗しました: {path}", "インポートエラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -453,28 +458,36 @@ namespace FigCrafterApp.ViewModels
         {
             if (ActiveDocument?.SelectedObject is ImageObject image)
             {
-                float originalContrast = image.Contrast;
-                float originalBrightness = image.Brightness;
+                float originalMin = image.Minimum;
+                float originalMax = image.Maximum;
+                bool originalGrayscale = image.IsGrayscale;
+
                 var dialog = new FigCrafterApp.Views.ContrastDialog(image);
                 if (dialog.ShowDialog() == true)
                 {
                     // 確定時は Undo 用にコマンドを発行
                     bool changed = false;
-                    if (Math.Abs(image.Contrast - originalContrast) > 0.001f)
+                    
+                    if (Math.Abs(image.Minimum - originalMin) > 0.001f)
                     {
-                        var cmd = new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.Contrast), originalContrast, image.Contrast);
-                        ActiveDocument.ExecuteCommand(cmd);
+                        ActiveDocument.ExecuteCommand(new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.Minimum), originalMin, image.Minimum));
                         changed = true;
                     }
-                    if (Math.Abs(image.Brightness - originalBrightness) > 0.001f)
+
+                    if (Math.Abs(image.Maximum - originalMax) > 0.001f)
                     {
-                        var cmd = new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.Brightness), originalBrightness, image.Brightness);
-                        ActiveDocument.ExecuteCommand(cmd);
+                        ActiveDocument.ExecuteCommand(new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.Maximum), originalMax, image.Maximum));
                         changed = true;
                     }
+
+                    if (image.IsGrayscale != originalGrayscale)
+                    {
+                        ActiveDocument.ExecuteCommand(new FigCrafterApp.Commands.PropertyChangeCommand(image, nameof(ImageObject.IsGrayscale), originalGrayscale, image.IsGrayscale));
+                        changed = true;
+                    }
+
                     if (changed) ActiveDocument.Invalidate();
                 }
-                // キャンセル時はダイアログ側で値を戻している
             }
         }
     }

@@ -31,9 +31,10 @@ namespace FigCrafterApp.Helpers
                 }
                 else
                 {
-                    // 標準の画像読込
-                    using var stream = File.OpenRead(filePath);
-                    return SKBitmap.Decode(stream);
+                    // 標準の画像読込 (SKData を使用してより堅牢に)
+                    using var data = SKData.Create(filePath);
+                    if (data == null) return null;
+                    return SKBitmap.Decode(data);
                 }
             }
             catch (Exception ex)
@@ -95,8 +96,11 @@ namespace FigCrafterApp.Helpers
         {
             try
             {
-                using var stream = File.OpenRead(filePath);
-                return SKBitmap.Decode(stream);
+                using var data = SKData.Create(filePath);
+                if (data == null) throw new Exception("Failed to load TIFF data");
+                var bitmap = SKBitmap.Decode(data);
+                if (bitmap == null) throw new Exception("Failed to decode TIFF");
+                return bitmap;
             }
             catch
             {

@@ -32,21 +32,38 @@
             </Style>
         </Grid.Resources>
 
-        <TextBlock Text="画像調整 (ImageJ 方式)" FontSize="16" FontWeight="Bold" Margin="0,0,0,15"/>
+        <TextBlock Text="画像調整" FontSize="16" FontWeight="Bold" Margin="0,0,0,15"/>
 
         <StackPanel Grid.Row="1">
-            <TextBlock Text="ヒストグラム (輝度):" Foreground="Gray" Margin="0,0,0,5" FontSize="11"/>
-            <views:HistogramView HistogramData="{Binding IntensityHistogram}" Height="80" Margin="0,0,0,5"/>
-            
-            <!-- Range Sliders (Min/Max) -->
+            <!-- Header for orientation -->
             <Grid Margin="0,0,0,5">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="70"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="1" Text="輝度ヒストグラム" Foreground="Gray" FontSize="11" HorizontalAlignment="Center"/>
+            </Grid>
+
+            <!-- Aligned Histogram -->
+            <Grid Margin="0,0,0,5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="70"/>
+                </Grid.ColumnDefinitions>
+                <views:HistogramView Grid.Column="1" HistogramData="{Binding IntensityHistogram}" Height="80"/>
+            </Grid>
+            
+            <!-- Range Sliders (Min/Max) - Aligned with Histogram -->
+            <Grid Margin="0,0,0,5">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="80"/><ColumnDefinition Width="*"/><ColumnDefinition Width="70"/></Grid.ColumnDefinitions>
                 <TextBlock Text="Minimum:" Style="{StaticResource LabelStyle}"/>
                 <Slider Grid.Column="1" Minimum="0.0" Maximum="1.0" Value="{Binding Minimum, UpdateSourceTrigger=PropertyChanged}" SmallChange="0.01" LargeChange="0.1" VerticalAlignment="Center"/>
                 <TextBox Grid.Column="2" Width="60" Text="{Binding Minimum, StringFormat=\{0:F2\}, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBoxStyle}"/>
             </Grid>
             <Grid Margin="0,0,0,15">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="80"/><ColumnDefinition Width="*"/><ColumnDefinition Width="70"/></Grid.ColumnDefinitions>
                 <TextBlock Text="Maximum:" Style="{StaticResource LabelStyle}"/>
                 <Slider Grid.Column="1" Minimum="0.0" Maximum="1.0" Value="{Binding Maximum, UpdateSourceTrigger=PropertyChanged}" SmallChange="0.01" LargeChange="0.1" VerticalAlignment="Center"/>
                 <TextBox Grid.Column="2" Width="60" Text="{Binding Maximum, StringFormat=\{0:F2\}, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBoxStyle}"/>
@@ -58,13 +75,13 @@
 
             <!-- Indirect Controls (Brightness/Contrast) -->
             <Grid Margin="0,0,0,5">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="80"/><ColumnDefinition Width="*"/><ColumnDefinition Width="70"/></Grid.ColumnDefinitions>
                 <TextBlock Text="明るさ:" Style="{StaticResource LabelStyle}"/>
                 <Slider Grid.Column="1" Minimum="-0.5" Maximum="0.5" Value="{Binding Brightness, UpdateSourceTrigger=PropertyChanged}" SmallChange="0.01" LargeChange="0.1" VerticalAlignment="Center"/>
                 <TextBox Grid.Column="2" Width="60" Text="{Binding Brightness, StringFormat=\{0:F2\}, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBoxStyle}"/>
             </Grid>
             <Grid Margin="0,0,0,10">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="60"/></Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="80"/><ColumnDefinition Width="*"/><ColumnDefinition Width="70"/></Grid.ColumnDefinitions>
                 <TextBlock Text="コントラスト:" Style="{StaticResource LabelStyle}"/>
                 <Slider Grid.Column="1" Minimum="0.1" Maximum="10.0" Value="{Binding Contrast, UpdateSourceTrigger=PropertyChanged}" SmallChange="0.01" LargeChange="0.1" VerticalAlignment="Center"/>
                 <TextBox Grid.Column="2" Width="60" Text="{Binding Contrast, StringFormat=\{0:F2\}, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBoxStyle}"/>

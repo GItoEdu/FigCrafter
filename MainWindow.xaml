@@ -28,6 +28,8 @@
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding ActiveDocument.UndoCommand}"/>
         <!-- Ctrl+Y: Redo -->
         <KeyBinding Key="Y" Modifiers="Control" Command="{Binding ActiveDocument.RedoCommand}"/>
+        <!-- Ctrl+Shift+C: 画像調整ダイアログ表示 -->
+        <KeyBinding Key="C" Modifiers="Control+Shift" Command="{Binding ShowContrastDialogCommand}"/>
     </Window.InputBindings>
 
     <Window.Resources>
