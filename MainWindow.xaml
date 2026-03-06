@@ -151,17 +151,7 @@
         </Menu>
 
         <!-- Row 2: プロパティツールバー（オブジェクト選択時に表示） -->
-        <Border Grid.Row="2" Background="#FF2D2D30" DataContext="{Binding ActiveDocument.SelectedObject}">
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="Visibility" Value="Visible"/>
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding}" Value="{x:Null}">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
+        <Border Grid.Row="2" Background="#FF2D2D30" DataContext="{Binding ActiveDocument.SelectedObject}" MinHeight="32">
             <StackPanel Orientation="Horizontal" Margin="5,3">
                 <!-- 座標・サイズ -->
                 <TextBlock Text="X:" Foreground="Gray" VerticalAlignment="Center" Margin="5,0,2,0"/>
@@ -337,7 +327,6 @@
                 </Grid>
                 <Separator Margin="0,8" Background="#FF3E3E42"/>
                 <StackPanel DataContext="{Binding ActiveDocument.SelectedObject}">
-                    <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Visible"/><Style.Triggers><DataTrigger Binding="{Binding}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
                     <TextBlock Text="線" FontWeight="Bold" Margin="0,0,0,6" Foreground="White" FontSize="13"/>
                     <Grid Margin="0,2"><Grid.ColumnDefinitions><ColumnDefinition Width="50"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                         <TextBlock Text="太さ:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>

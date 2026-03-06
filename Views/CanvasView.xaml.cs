@@ -195,8 +195,8 @@ namespace FigCrafterApp.Views
                 {
                     Color = new SKColor(255, 0, 0, 180),
                     Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 0.5f / currentZoom,
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 4 / currentZoom, 4 / currentZoom }, 0),
+                    StrokeWidth = 0.25f / currentZoom, // 0.5 -> 0.25
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 2 / currentZoom, 2 / currentZoom }, 0), // 4 -> 2
                     IsAntialias = true
                 };
                 canvas.DrawRect(_eraserRect, fillPaint);
@@ -260,8 +260,8 @@ namespace FigCrafterApp.Views
                 {
                     Color = new SKColor(0, 122, 204, 200),
                     Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 1.0f / currentZoom,
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 4 / currentZoom, 4 / currentZoom }, 0),
+                    StrokeWidth = 0.5f / currentZoom, // 1.0 -> 0.5
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 2.5f / currentZoom, 2.5f / currentZoom }, 0), // 4 -> 2.5
                     IsAntialias = true
                 };
                 canvas.DrawRect(_selectionRect, fillPaint);
@@ -1038,7 +1038,7 @@ namespace FigCrafterApp.Views
                         if (!layer.IsVisible || layer.IsLocked) continue;
                         foreach (var obj in layer.GraphicObjects)
                         {
-                            if (_selectionRect.IntersectsWith(GetBoundingRect(obj)))
+                            if (_selectionRect.Contains(GetBoundingRect(obj)))
                             {
                                 vmObj.ToggleSelectObject(obj);
                                 anyHit = true;

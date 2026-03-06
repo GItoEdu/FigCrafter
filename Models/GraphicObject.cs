@@ -182,8 +182,8 @@ namespace FigCrafterApp.Models
             {
                 Color = SKColors.DeepSkyBlue,
                 Style = SKPaintStyle.Stroke,
-                StrokeWidth = 1 / CurrentZoomLevel, // ズーム補正
-                PathEffect = SKPathEffect.CreateDash(new float[] { 5 / CurrentZoomLevel, 5 / CurrentZoomLevel }, 0), // 破線も補正
+                StrokeWidth = 0.5f / CurrentZoomLevel, // ズーム補正
+                PathEffect = SKPathEffect.CreateDash(new float[] { 3 / CurrentZoomLevel, 3 / CurrentZoomLevel }, 0), // 破線も補正
                 IsAntialias = true
             };
             canvas.DrawRect(rect, paint);
@@ -199,7 +199,7 @@ namespace FigCrafterApp.Models
             {
                 Color = SKColors.DeepSkyBlue,
                 Style = SKPaintStyle.Stroke,
-                StrokeWidth = 1 / CurrentZoomLevel, // ズーム補正
+                StrokeWidth = 0.5f / CurrentZoomLevel, // ズーム補正
                 IsAntialias = true
             };
             

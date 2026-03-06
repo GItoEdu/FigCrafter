@@ -542,6 +542,8 @@ namespace FigCrafterApp.ViewModels
             ToggleCropModeCommand = new RelayCommand(_ => { IsCropMode = !IsCropMode; }, p => _selectedObject is ImageObject);
             MoveObjectToLayerCommand = new RelayCommand(p => MoveObjectToLayer(p as Layer), p => p is Layer && _selectedObject != null);
             ResetImageAdjustmentCommand = new RelayCommand(_ => ResetImageAdjustment(), _ => _selectedObject is ImageObject);
+            CutCommand = new RelayCommand(_ => CutSelected(), _ => _selectedObject != null);
+            SelectAllCommand = new RelayCommand(_ => SelectAll());
 
             IncreaseFontSizeCommand = new RelayCommand(_ => { if (SelectedObject is TextObject text) text.FontSize += 1; });
             DecreaseFontSizeCommand = new RelayCommand(_ => { if (SelectedObject is TextObject text && text.FontSize > 1) text.FontSize -= 1; });
