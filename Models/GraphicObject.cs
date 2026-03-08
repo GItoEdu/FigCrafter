@@ -457,12 +457,14 @@ namespace FigCrafterApp.Models
         private float _fontSize = 24;
         private bool _isBold = false;
         private bool _isItalic = false;
+        private SKTextAlign _horizontalAlignment = SKTextAlign.Left;
 
         public string Text { get => _text; set => SetProperty(ref _text, value); }
         public string FontFamily { get => _fontFamily; set => SetProperty(ref _fontFamily, value); }
         public float FontSize { get => _fontSize; set => SetProperty(ref _fontSize, value); }
         public bool IsBold { get => _isBold; set => SetProperty(ref _isBold, value); }
         public bool IsItalic { get => _isItalic; set => SetProperty(ref _isItalic, value); }
+        public SKTextAlign HorizontalAlignment { get => _horizontalAlignment; set => SetProperty(ref _horizontalAlignment, value); }
 
         public override void Draw(SKCanvas canvas)
         {
@@ -481,13 +483,21 @@ namespace FigCrafterApp.Models
                     IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal, 
                     SKFontStyleWidth.Normal, 
                     IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright),
-                TextSize = FontSize
+                TextSize = FontSize,
+                TextAlign = HorizontalAlignment
             };
 
             var lines = Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
             float spacing = paint.FontSpacing;
-            float totalWidth = 0;
-            float totalHeight = 0;
+            
+            // 全体の幅を計算（配置用）
+            float maxWidth = 0;
+            foreach (var line in lines)
+            {
+                maxWidth = Math.Max(maxWidth, paint.MeasureText(line));
+            }
+            // オブジェクトの幅を内容に合わせる（または既存のWidthを使用するが、現状は内容優先）
+            Width = maxWidth;
 
             for (int i = 0; i < lines.Length; i++)
             {
@@ -495,21 +505,20 @@ namespace FigCrafterApp.Models
                 var lineBounds = new SKRect();
                 paint.MeasureText(line, ref lineBounds);
                 
-                totalWidth = Math.Max(totalWidth, lineBounds.Width);
-                
-                // 各行を描画
-                // baseline = Y + (行指数 * 行間) - (最初の行のTop)
-                // ただし、単純に Y + i*spacing でベースラインをずらしていくのが一般的
-                // 最初の行を (X, Y) の位置（上端）に合わせるには Y - firstLineBounds.Top
+                float xAnchor = X;
+                if (HorizontalAlignment == SKTextAlign.Center) xAnchor = X + maxWidth / 2;
+                else if (HorizontalAlignment == SKTextAlign.Right) xAnchor = X + maxWidth;
+
                 float lineY = Y - lineBounds.Top + (i * spacing);
-                canvas.DrawText(line, X, lineY, paint);
+                canvas.DrawText(line, xAnchor, lineY, paint);
             }
 
-            totalHeight = (lines.Length - 1) * spacing + paint.TextSize; // 簡易的な高さ計算
+            float totalHeight = (lines.Length - 1) * spacing + paint.TextSize;
+            Height = totalHeight;
 
             if (IsSelected)
             {
-                var rect = new SKRect(X, Y, X + totalWidth, Y + totalHeight);
+                var rect = new SKRect(X, Y, X + Width, Y + Height);
                 DrawSelectionBox(canvas, rect);
             }
 
@@ -554,6 +563,7 @@ namespace FigCrafterApp.Models
             clone.FontSize = FontSize;
             clone.IsBold = IsBold;
             clone.IsItalic = IsItalic;
+            clone.HorizontalAlignment = HorizontalAlignment;
             return clone;
         }
     }
