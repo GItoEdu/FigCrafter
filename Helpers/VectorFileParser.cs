@@ -90,7 +90,7 @@ namespace FigCrafterApp.Helpers
                 var group = new GroupObject();
                 
                 // 再帰的に要素を処理し、座標変換を継承させる
-                ProcessElement(root, SKMatrix.CreateScale(scale, scale), group, ns, scale);
+                ProcessElement(root, SKMatrix.CreateScale(scale, scale), group, ns, scale, SvgStyle.Default);
 
                 if (group.Children.Count > 0)
                 {
@@ -110,12 +110,45 @@ namespace FigCrafterApp.Helpers
             return null;
         }
 
-        private static void ProcessElement(XElement element, SKMatrix parentMatrix, GroupObject targetGroup, XNamespace ns, float scale)
+        private struct SvgStyle
+        {
+            public SKColor? Fill;
+            public SKColor? Stroke;
+            public float? StrokeWidth;
+            public float? Opacity;
+
+            public static SvgStyle Default => new SvgStyle
+            {
+                Fill = SKColors.Black, // SVG default fill is black
+                Stroke = SKColors.Transparent,
+                StrokeWidth = 1.0f,
+                Opacity = 1.0f
+            };
+
+            public SvgStyle Clone() => (SvgStyle)this.MemberwiseClone();
+        }
+
+        private static void ProcessElement(XElement element, SKMatrix parentMatrix, GroupObject targetGroup, XNamespace ns, float scale, SvgStyle parentStyle)
         {
             // ローカルの transform を取得し、親の行列と結合
             string transformAttr = element.Attribute("transform")?.Value ?? "";
             SKMatrix localMatrix = string.IsNullOrEmpty(transformAttr) ? SKMatrix.CreateIdentity() : ParseTransform(transformAttr);
             SKMatrix currentMatrix = SKMatrix.Concat(parentMatrix, localMatrix);
+
+            // スタイルの継承と解決
+            var currentStyle = parentStyle;
+            
+            string fillStr = GetAttributeOrStyle(element, "fill");
+            if (!string.IsNullOrEmpty(fillStr)) currentStyle.Fill = ParseColor(fillStr);
+
+            string strokeStr = GetAttributeOrStyle(element, "stroke");
+            if (!string.IsNullOrEmpty(strokeStr)) currentStyle.Stroke = ParseColor(strokeStr);
+
+            string strokeWidthStr = GetAttributeOrStyle(element, "stroke-width");
+            if (!string.IsNullOrEmpty(strokeWidthStr)) currentStyle.StrokeWidth = ParseFloat(strokeWidthStr);
+
+            string opacityStr = GetAttributeOrStyle(element, "opacity");
+            if (!string.IsNullOrEmpty(opacityStr)) currentStyle.Opacity = ParseFloat(opacityStr);
 
             string d = "";
             if (element.Name == ns + "path") d = element.Attribute("d")?.Value ?? "";
@@ -128,10 +161,10 @@ namespace FigCrafterApp.Helpers
             {
                 var pathObj = new PathObject
                 {
-                    StrokeColor = ParseColor(GetAttributeOrStyle(element, "stroke")) ?? SKColors.Transparent,
-                    FillColor = ParseColor(GetAttributeOrStyle(element, "fill")) ?? SKColors.Transparent,
-                    StrokeWidth = (ParseFloat(GetAttributeOrStyle(element, "stroke-width")) ?? 1.0f) * scale,
-                    Opacity = ParseFloat(GetAttributeOrStyle(element, "opacity")) ?? 1.0f
+                    StrokeColor = currentStyle.Stroke ?? SKColors.Transparent,
+                    FillColor = currentStyle.Fill ?? SKColors.Transparent,
+                    StrokeWidth = (currentStyle.StrokeWidth ?? 1.0f) * scale,
+                    Opacity = currentStyle.Opacity ?? 1.0f
                 };
 
                 // 行列を適用
@@ -159,7 +192,7 @@ namespace FigCrafterApp.Helpers
             // 子要素を再帰的に処理
             foreach (var child in element.Elements())
             {
-                ProcessElement(child, currentMatrix, targetGroup, ns, scale);
+                ProcessElement(child, currentMatrix, targetGroup, ns, scale, currentStyle);
             }
         }
 
