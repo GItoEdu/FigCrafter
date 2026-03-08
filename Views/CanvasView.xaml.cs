@@ -1629,20 +1629,21 @@ namespace FigCrafterApp.Views
             InlineEditingTextBox.SelectAll();
         }
 
-        private void EndInlineEditing()
+        private void EndInlineEditing(bool isCancel = false)
         {
             if (_editingTextObject == null) return;
             var vm = DataContext as CanvasViewModel;
             if (vm == null) return;
             
-            // 編集結果を取得
-            string newText = InlineEditingTextBox.Text;
+            // 編集結果を取得（キャンセル時は元のテキストを使用）
+            string newText = isCancel ? _editingOriginalText : InlineEditingTextBox.Text;
             if (string.IsNullOrEmpty(newText)) newText = _editingOriginalText;
 
-            // 一旦、表示用に隠していたテキストを元の値に戻す（Undo抑制下で）
+            // プロパティ変更通知が走らないように抑制
             vm.IsUndoSuppressed = true;
             try
             {
+                // 一旦、表示用に隠していたテキストを元の値に戻す
                 _editingTextObject.Text = _editingOriginalText;
             }
             finally
@@ -1650,8 +1651,8 @@ namespace FigCrafterApp.Views
                 vm.IsUndoSuppressed = false;
             }
 
-            // 改めて、元の値から新しい値への変更を「コマンド」として実行する
-            if (newText != _editingOriginalText)
+            // キャンセルでない、かつ変更がある場合のみコマンド登録
+            if (!isCancel && newText != _editingOriginalText)
             {
                 vm.ExecuteCommand(new PropertyChangeCommand(_editingTextObject, nameof(TextObject.Text), _editingOriginalText, newText));
             }
@@ -1660,6 +1661,7 @@ namespace FigCrafterApp.Views
                 vm.Invalidate();
             }
             
+            // UI終了処理
             InlineEditingTextBox.Visibility = Visibility.Hidden;
             _editingTextObject = null;
             _editingOriginalText = "";
@@ -1672,6 +1674,14 @@ namespace FigCrafterApp.Views
 
         private void InlineEditingTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.Z && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
+            {
+                // 編集中の Undo は「編集のキャンセル」として扱う
+                EndInlineEditing(true);
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.Enter)
             {
                 if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
