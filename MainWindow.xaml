@@ -38,6 +38,7 @@
         <local:EnumToBoolConverter x:Key="EnumToBoolConverter"/>
         <local:SKColorToSolidColorBrushConverter x:Key="SKColorToSolidColorBrushConverter"/>
         <local:LogZoomConverter x:Key="LogZoomConverter"/>
+        <local:FontSizeConverter x:Key="FontSizeConverter"/>
         <!-- タブのスタイル定義（ダークモード用） -->
         <Style TargetType="TabItem">
             <Setter Property="Background" Value="#FF2D2D30"/>
@@ -439,7 +440,7 @@
                         </Grid>
                         <Grid Margin="0,3"><Grid.ColumnDefinitions><ColumnDefinition Width="50"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBlock Text="サイズ:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>
-                            <TextBox Grid.Column="1" Text="{Binding FontSize, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11"/>
+                            <TextBox Grid.Column="1" Text="{Binding FontSize, Converter={StaticResource FontSizeConverter}, StringFormat=\{0:F1\}, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11"/>
                             <StackPanel Grid.Column="2" Orientation="Vertical" Margin="2,0,0,0">
                                 <RepeatButton Content="▲" Command="{Binding DataContext.ActiveDocument.IncreaseFontSizeCommand, RelativeSource={RelativeSource AncestorType=Window}}" Padding="2,0" FontSize="7" Background="#FF3E3E42" Foreground="White" BorderThickness="0"/>
                                 <RepeatButton Content="▼" Command="{Binding DataContext.ActiveDocument.DecreaseFontSizeCommand, RelativeSource={RelativeSource AncestorType=Window}}" Padding="2,0" FontSize="7" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Margin="0,1,0,0"/>

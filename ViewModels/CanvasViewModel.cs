@@ -581,8 +581,8 @@ namespace FigCrafterApp.ViewModels
             CutCommand = new RelayCommand(_ => CutSelected(), _ => _selectedObject != null);
             SelectAllCommand = new RelayCommand(_ => SelectAll());
 
-            IncreaseFontSizeCommand = new RelayCommand(_ => { if (SelectedObject is TextObject text) text.FontSize += 1; });
-            DecreaseFontSizeCommand = new RelayCommand(_ => { if (SelectedObject is TextObject text && text.FontSize > 1) text.FontSize -= 1; });
+            IncreaseFontSizeCommand = new RelayCommand(_ => { if (SelectedObject is TextObject text) text.FontSize += (float)(25.4 / 72.0); });
+            DecreaseFontSizeCommand = new RelayCommand(_ => { if (SelectedObject is TextObject text && text.FontSize > (float)(25.4 / 72.0)) text.FontSize -= (float)(25.4 / 72.0); });
             InsertSpecialCharCommand = new RelayCommand(p => { if (SelectedObject is TextObject text && p is string charStr) text.Text += charStr; });
 
             ZoomInCommand = new RelayCommand(p => ZoomLevel += 0.1);
