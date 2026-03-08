@@ -94,6 +94,7 @@ namespace FigCrafterApp.Helpers
 
                 if (group.Children.Count > 0)
                 {
+                    MergeTextObjects(group);
                     group.RecalculateBounds();
                     return group;
                 }
@@ -108,6 +109,78 @@ namespace FigCrafterApp.Helpers
             }
 
             return null;
+        }
+
+        private static void MergeTextObjects(GroupObject group)
+        {
+            if (group.Children.Count < 2) return;
+
+            var texts = group.Children.OfType<TextObject>().ToList();
+            if (texts.Count < 2) return;
+
+            // 回転、フォント、サイズ、色、垂直方向の近接度でグループ化
+            // 垂直方向の近接度は FontSize の 0.5倍程度を許容
+            var remainingTexts = new List<TextObject>(texts);
+            var mergedList = new List<TextObject>();
+
+            while (remainingTexts.Count > 0)
+            {
+                var current = remainingTexts[0];
+                remainingTexts.RemoveAt(0);
+
+                bool merged = false;
+                for (int i = 0; i < mergedList.Count; i++)
+                {
+                    var target = mergedList[i];
+
+                    // 属性の一致確認
+                    if (Math.Abs(current.Rotation - target.Rotation) < 0.1 &&
+                        current.FontFamily == target.FontFamily &&
+                        Math.Abs(current.FontSize - target.FontSize) < 0.1 &&
+                        current.FillColor == target.FillColor &&
+                        current.IsBold == target.IsBold &&
+                        current.IsItalic == target.IsItalic)
+                    {
+                        // 距離の判定（同一行かつ横に並んでいるか）
+                        // 回転を考慮した相対的な座標ではなく、まずは単純な距離で判定
+                        float dist = (float)Math.Sqrt(Math.Pow(current.X - target.X, 2) + Math.Pow(current.Y - target.Y, 2));
+                        
+                        // 非常に近い場合はマージ
+                        // PDFの文字間隔は FontSize の数倍になることもあるが、ここでは文字幅程度を閾値とする
+                        float threshold = current.FontSize * 2.0f; 
+
+                        if (dist < threshold)
+                        {
+                            // 前後の判定（X座標で判断）
+                            if (current.X > target.X)
+                                target.Text += current.Text;
+                            else
+                            {
+                                target.Text = current.Text + target.Text;
+                                target.X = current.X;
+                                target.Y = current.Y;
+                            }
+                            merged = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!merged)
+                {
+                    mergedList.Add(current);
+                }
+            }
+
+            // 元のリストから TextObject を取り除き、統合されたものを追加
+            foreach (var t in texts) group.Children.Remove(t);
+            foreach (var t in mergedList) group.Children.Add(t);
+
+            // 再帰的に子グループも処理
+            foreach (var child in group.Children.OfType<GroupObject>())
+            {
+                MergeTextObjects(child);
+            }
         }
 
         private struct SvgStyle
@@ -251,7 +324,7 @@ namespace FigCrafterApp.Helpers
             // SVGはベースライン基準、FigCrafterは上端基準。
             // また、回転がある場合は X, Y を起点に TransformCanvas が回転されるため、
             // 完全に一致させるのは難しいが、まずは位置を合わせる。
-            textObj.Y = p.Y - (textObj.FontSize * 0.85f); 
+            textObj.Y = p.Y - (textObj.FontSize * 0.8f); 
 
             targetGroup.Children.Add(textObj);
         }

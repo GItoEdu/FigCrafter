@@ -1581,24 +1581,40 @@ namespace FigCrafterApp.Views
             _editingTextObject = textObj;
             _editingOriginalText = textObj.Text;
 
-            // 編集中は元のテキスト描画を非表示にする（テキストを空にすることで描画されなくする）
+            // 編集中は元のテキスト描画を非表示にする
             textObj.Text = "";
             vm.Invalidate();
 
+            // 単位変換係数 (mm -> px)
+            const double mmToPx = 96.0 / 25.4;
+
             InlineEditingTextBox.Text = _editingOriginalText;
             InlineEditingTextBox.FontFamily = new System.Windows.Media.FontFamily(textObj.FontFamily);
-            InlineEditingTextBox.FontSize = textObj.FontSize * vm.ZoomLevel;
+            // FontSize を mm から px に変換し、ズームを適用
+            InlineEditingTextBox.FontSize = textObj.FontSize * mmToPx * vm.ZoomLevel;
             InlineEditingTextBox.FontWeight = textObj.IsBold ? FontWeights.Bold : FontWeights.Normal;
             InlineEditingTextBox.FontStyle = textObj.IsItalic ? FontStyles.Italic : FontStyles.Normal;
 
-            // TextBoxのBorder(1px)の分を補正してずれを防ぐ
-            double offsetX = textObj.X * vm.ZoomLevel - 1;
-            double offsetY = textObj.Y * vm.ZoomLevel - 1;
+            // TextBoxの位置（Margin）を mm から px に変換し、ズームを適用
+            // TextBoxのBorder(1px)の分を補正
+            double offsetX = textObj.X * mmToPx * vm.ZoomLevel - 1;
+            double offsetY = textObj.Y * mmToPx * vm.ZoomLevel - 1;
             InlineEditingTextBox.Margin = new Thickness(offsetX, offsetY, 0, 0);
             
             InlineEditingTextBox.MinWidth = 100;
-            InlineEditingTextBox.MinHeight = textObj.FontSize * vm.ZoomLevel + 4;
+            InlineEditingTextBox.MinHeight = (textObj.FontSize * mmToPx * vm.ZoomLevel) + 4;
             
+            // 回転の適用
+            if (Math.Abs(textObj.Rotation) > 0.01)
+            {
+                InlineEditingTextBox.RenderTransformOrigin = new Point(0, 0);
+                InlineEditingTextBox.RenderTransform = new System.Windows.Media.RotateTransform(textObj.Rotation);
+            }
+            else
+            {
+                InlineEditingTextBox.RenderTransform = System.Windows.Media.Transform.Identity;
+            }
+
             InlineEditingTextBox.Visibility = Visibility.Visible;
             InlineEditingTextBox.Focus();
             InlineEditingTextBox.SelectAll();
