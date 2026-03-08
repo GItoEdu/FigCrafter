@@ -88,6 +88,11 @@ namespace FigCrafterApp.Models
             target.Opacity = Opacity;
         }
 
+        public virtual SKPoint GetRotationCenter()
+        {
+            return new SKPoint(X + Width / 2, Y + Height / 2);
+        }
+
         /// <summary>
         /// オブジェクトの中心を原点としてキャンバスに回転を適用する
         /// 呼び出し元で必ず canvas.Save() / canvas.Restore() を行うこと
@@ -96,11 +101,10 @@ namespace FigCrafterApp.Models
         {
             if (Rotation != 0)
             {
-                float cx = X + Width / 2;
-                float cy = Y + Height / 2;
-                canvas.Translate(cx, cy);
+                var center = GetRotationCenter();
+                canvas.Translate(center.X, center.Y);
                 canvas.RotateDegrees(Rotation);
-                canvas.Translate(-cx, -cy);
+                canvas.Translate(-center.X, -center.Y);
             }
         }
 
@@ -112,12 +116,11 @@ namespace FigCrafterApp.Models
         {
             if (Rotation == 0) return point;
 
-            float cx = X + Width / 2;
-            float cy = Y + Height / 2;
+            var center = GetRotationCenter();
 
             // 中心を原点に移動
-            float dx = point.X - cx;
-            float dy = point.Y - cy;
+            float dx = point.X - center.X;
+            float dy = point.Y - center.Y;
 
             // 逆回転
             float rad = -Rotation * (float)Math.PI / 180.0f;
@@ -128,7 +131,7 @@ namespace FigCrafterApp.Models
             float ny = dx * sin + dy * cos;
 
             // 元の位置に戻す
-            return new SKPoint(nx + cx, ny + cy);
+            return new SKPoint(nx + center.X, ny + center.Y);
         }
 
         /// <summary>
@@ -138,11 +141,10 @@ namespace FigCrafterApp.Models
         {
             if (Rotation == 0) return point;
 
-            float cx = X + Width / 2;
-            float cy = Y + Height / 2;
+            var center = GetRotationCenter();
 
-            float dx = point.X - cx;
-            float dy = point.Y - cy;
+            float dx = point.X - center.X;
+            float dy = point.Y - center.Y;
 
             float rad = Rotation * (float)Math.PI / 180.0f;
             float cos = (float)Math.Cos(rad);
@@ -151,7 +153,7 @@ namespace FigCrafterApp.Models
             float nx = dx * cos - dy * sin;
             float ny = dx * sin + dy * cos;
 
-            return new SKPoint(nx + cx, ny + cy);
+            return new SKPoint(nx + center.X, ny + center.Y);
         }
 
         /// <summary>
@@ -454,7 +456,7 @@ namespace FigCrafterApp.Models
     {
         private string _text = "Text";
         private string _fontFamily = "Arial";
-        private float _fontSize = 24;
+        private float _fontSize = 8.0f * (25.4f / 72.0f); // 8pt
         private bool _isBold = false;
         private bool _isItalic = false;
         private SKTextAlign _horizontalAlignment = SKTextAlign.Left;
@@ -552,6 +554,11 @@ namespace FigCrafterApp.Models
             return rect.Contains(p.X, p.Y);
         }
 
+        public override SKPoint GetRotationCenter()
+        {
+            return new SKPoint(X, Y);
+        }
+
         public override SKPoint[] GetTransformedCorners()
         {
             if (string.IsNullOrEmpty(Text)) return new[] { new SKPoint(X, Y), new SKPoint(X, Y), new SKPoint(X, Y), new SKPoint(X, Y) };
@@ -580,32 +587,11 @@ namespace FigCrafterApp.Models
                 new SKPoint(left, Y + totalHeight)
             };
 
-            if (Rotation == 0) return corners;
-
-            // アンカー点 (X, Y) を中心に回転
-            // 注意: TransformPoint は Width/2 を中心に回転するため、ここでは自前で計算するか
-            // TransformCanvas の挙動に合わせる必要があります。
-            // 現状の TransformCanvas は Width=0, Height=0 の場合 X, Y を中心に回転します。
             for (int i = 0; i < corners.Length; i++)
             {
-                corners[i] = RotatePoint(corners[i], new SKPoint(X, Y), Rotation);
+                corners[i] = TransformPoint(corners[i]);
             }
             return corners;
-        }
-
-        private SKPoint RotatePoint(SKPoint point, SKPoint center, float angle)
-        {
-            float rad = angle * (float)Math.PI / 180.0f;
-            float cos = (float)Math.Cos(rad);
-            float sin = (float)Math.Sin(rad);
-
-            float dx = point.X - center.X;
-            float dy = point.Y - center.Y;
-
-            return new SKPoint(
-                center.X + (dx * cos - dy * sin),
-                center.Y + (dx * sin + dy * cos)
-            );
         }
 
         public override GraphicObject Clone()

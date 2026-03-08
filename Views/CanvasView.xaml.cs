@@ -30,6 +30,7 @@ namespace FigCrafterApp.Views
         private SKRect _originalCropRect;
         private float _originalAspectRatio;
         private float _originalRotation; // 回転開始時の角度を保持
+        private float _startRotationMouseAngle; // 回転開始時のマウス角度を保持
         
         // Undo用の一時保存
         private List<(GraphicObject Obj, float OldX, float OldY)> _preDragPositions = new();
@@ -442,6 +443,11 @@ namespace FigCrafterApp.Views
                         {
                             _isRotating = true;
                             _originalRotation = _selectedObject.Rotation; // 回転開始時の角度を記録
+                            
+                            var pivot = _selectedObject.GetRotationCenter();
+                            float angleRad = (float)Math.Atan2(_startPoint.Y - pivot.Y, _startPoint.X - pivot.X);
+                            _startRotationMouseAngle = angleRad * 180.0f / (float)Math.PI;
+
                             _originalResizeRect = GetBoundingRect(_selectedObject);
                             SkiaElement.CaptureMouse();
                             return;
@@ -636,16 +642,14 @@ namespace FigCrafterApp.Views
 
             if (_isRotating && _selectedObject != null)
             {
-                var rect = GetBoundingRect(_selectedObject);
-                float centerX = rect.Left + rect.Width / 2;
-                float centerY = rect.Top + rect.Height / 2;
+                var pivot = _selectedObject.GetRotationCenter();
 
                 // 中心点から現在のマウス位置への角度を計算
-                float angleRad = (float)Math.Atan2(currentPoint.Y - centerY, currentPoint.X - centerX);
-                float angleDeg = angleRad * 180.0f / (float)Math.PI;
+                float angleRad = (float)Math.Atan2(currentPoint.Y - pivot.Y, currentPoint.X - pivot.X);
+                float currentMouseAngle = angleRad * 180.0f / (float)Math.PI;
 
-                // SkiaSharp の描画 (上方向を 0 度とする場合) に合わせて +90 度調整
-                float rotation = angleDeg + 90.0f;
+                // 開始時のマウス角度と現在の角度の差を、開始時のオブジェクト角度に加える
+                float rotation = _originalRotation + (currentMouseAngle - _startRotationMouseAngle);
 
                 // Shiftキー押下で15度刻みスナップ
                 if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
