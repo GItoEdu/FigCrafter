@@ -30,6 +30,8 @@
         <KeyBinding Key="Y" Modifiers="Control" Command="{Binding ActiveDocument.RedoCommand}"/>
         <!-- Ctrl+Shift+C: 画像調整ダイアログ表示 -->
         <KeyBinding Key="C" Modifiers="Control+Shift" Command="{Binding ShowContrastDialogCommand}"/>
+        <!-- Ctrl+0: ウィンドウに合わせる -->
+        <KeyBinding Key="D0" Modifiers="Control" Command="{Binding ActiveDocument.ZoomToFitCommand}"/>
     </Window.InputBindings>
 
     <Window.Resources>

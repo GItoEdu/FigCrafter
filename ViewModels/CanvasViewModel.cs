@@ -35,6 +35,9 @@ namespace FigCrafterApp.ViewModels
         private bool _isSnapEnabled = true; // スナップ機能のON/OFF
         private string? _filePath; // 保存先ファイルパス
         private bool _isUndoSuppressed = false; // Undo記録を抑制するかどうか
+        private double _viewportWidth = 800; // ビューポートの幅
+        private double _viewportHeight = 600; // ビューポートの高さ
+        private bool _shouldZoomToFitOnSizeChange = false; // 次回のサイズ変更時にズームフィットさせるか
 
         // Undo / Redo 用の履歴スタック
         private readonly Stack<IUndoableCommand> _undoStack = new();
@@ -75,6 +78,7 @@ namespace FigCrafterApp.ViewModels
         public ICommand ZoomInCommand { get; }
         public ICommand ZoomOutCommand { get; }
         public ICommand ResetZoomCommand { get; }
+        public ICommand ZoomToFitCommand { get; }
 
         public void Invalidate() => InvalidateRequested?.Invoke(this, EventArgs.Empty);
 
@@ -195,6 +199,24 @@ namespace FigCrafterApp.ViewModels
         {
             get => _isUndoSuppressed;
             set => SetProperty(ref _isUndoSuppressed, value);
+        }
+
+        public double ViewportWidth
+        {
+            get => _viewportWidth;
+            set => SetProperty(ref _viewportWidth, value);
+        }
+
+        public double ViewportHeight
+        {
+            get => _viewportHeight;
+            set => SetProperty(ref _viewportHeight, value);
+        }
+
+        public bool ShouldZoomToFitOnSizeChange
+        {
+            get => _shouldZoomToFitOnSizeChange;
+            set => SetProperty(ref _shouldZoomToFitOnSizeChange, value);
         }
 
         public ObservableCollection<Layer> Layers
@@ -559,6 +581,7 @@ namespace FigCrafterApp.ViewModels
             ZoomInCommand = new RelayCommand(p => ZoomLevel += 0.1);
             ZoomOutCommand = new RelayCommand(p => ZoomLevel -= 0.1);
             ResetZoomCommand = new RelayCommand(p => ZoomLevel = 1.0);
+            ZoomToFitCommand = new RelayCommand(p => ZoomToFit());
 
             AddLayerCommand = new RelayCommand(_ => AddLayer());
             RemoveLayerCommand = new RelayCommand(_ => RemoveLayer(), _ => Layers.Count > 1 && ActiveLayer != null);
@@ -995,7 +1018,38 @@ namespace FigCrafterApp.ViewModels
             
             ActiveLayer = newLayer;
             SelectObject(imageObj);
+            
+            // ビューポートサイズが確定していれば即座に適用、そうでなければフラグを立てる
+            if (ViewportWidth > 0 && ViewportHeight > 0)
+            {
+                ZoomToFit();
+            }
+            else
+            {
+                ShouldZoomToFitOnSizeChange = true;
+            }
+
             Invalidate();
+        }
+
+        /// <summary>
+        /// キャンバス全体を現在のウィンドウ（ビューポート）に収まるようにズーム調整する
+        /// </summary>
+        public void ZoomToFit()
+        {
+            if (ViewportWidth <= 0 || ViewportHeight <= 0) return;
+
+            // マージン分（40px * 2 = 80px）を考慮
+            double availableWidth = ViewportWidth - 80;
+            double availableHeight = ViewportHeight - 80;
+
+            if (availableWidth <= 0 || availableHeight <= 0) return;
+
+            double zoomX = availableWidth / WidthPx;
+            double zoomY = availableHeight / HeightPx;
+
+            // 小さい方の倍率を採用し、さらに少し余裕(0.95)を持たせる
+            ZoomLevel = Math.Min(zoomX, zoomY) * 0.95;
         }
 
         /// <summary>
@@ -1010,6 +1064,15 @@ namespace FigCrafterApp.ViewModels
             ExecuteCommand(new CompositeCommand(commands));
             ActiveLayer = newLayer;
             SelectObject(obj);
+
+            if (ViewportWidth > 0 && ViewportHeight > 0)
+            {
+                ZoomToFit();
+            }
+            else
+            {
+                ShouldZoomToFitOnSizeChange = true;
+            }
         }
 
         // --- PNG書き出し ---

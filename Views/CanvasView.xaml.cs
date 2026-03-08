@@ -113,6 +113,23 @@ namespace FigCrafterApp.Views
             // SKElementはFrameworkElement派生のためMouseDoubleClickイベントがない
             // PreviewMouseLeftButtonDownでClickCount==2を検出する
             SkiaElement.PreviewMouseLeftButtonDown += SkiaElement_PreviewDoubleClick;
+            // ビューポート（表示領域）のサイズ変更を検知
+            CanvasScrollViewer.SizeChanged += CanvasScrollViewer_SizeChanged;
+        }
+
+        private void CanvasScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (DataContext is CanvasViewModel vm)
+            {
+                vm.ViewportWidth = e.NewSize.Width;
+                vm.ViewportHeight = e.NewSize.Height;
+
+                if (vm.ShouldZoomToFitOnSizeChange)
+                {
+                    vm.ZoomToFit();
+                    vm.ShouldZoomToFitOnSizeChange = false;
+                }
+            }
         }
 
         private void SkiaElement_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -136,6 +153,17 @@ namespace FigCrafterApp.Views
             if (e.NewValue is CanvasViewModel newVm)
             {
                 newVm.InvalidateRequested += OnInvalidateRequested;
+                
+                // 初回のビューポートサイズを同期
+                newVm.ViewportWidth = CanvasScrollViewer.ActualWidth;
+                newVm.ViewportHeight = CanvasScrollViewer.ActualHeight;
+
+                if (newVm.ShouldZoomToFitOnSizeChange)
+                {
+                    newVm.ZoomToFit();
+                    newVm.ShouldZoomToFitOnSizeChange = false;
+                }
+
                 SkiaElement.InvalidateVisual(); // DataContext変更時に再描画を強制する
             }
         }
