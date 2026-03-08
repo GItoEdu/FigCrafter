@@ -1582,7 +1582,16 @@ namespace FigCrafterApp.Views
             _editingOriginalText = textObj.Text;
 
             // 編集中は元のテキスト描画を非表示にする
-            textObj.Text = "";
+            // この変更はUndoに記録しない
+            vm.IsUndoSuppressed = true;
+            try
+            {
+                textObj.Text = "";
+            }
+            finally
+            {
+                vm.IsUndoSuppressed = false;
+            }
             vm.Invalidate();
 
             // 単位変換係数 (mm -> px)
@@ -1623,12 +1632,33 @@ namespace FigCrafterApp.Views
         private void EndInlineEditing()
         {
             if (_editingTextObject == null) return;
+            var vm = DataContext as CanvasViewModel;
+            if (vm == null) return;
             
-            // 編集結果を反映（空のままの場合は元のテキストを復元）
+            // 編集結果を取得
             string newText = InlineEditingTextBox.Text;
-            _editingTextObject.Text = string.IsNullOrEmpty(newText) ? _editingOriginalText : newText;
+            if (string.IsNullOrEmpty(newText)) newText = _editingOriginalText;
 
-            (DataContext as CanvasViewModel)?.Invalidate();
+            // 一旦、表示用に隠していたテキストを元の値に戻す（Undo抑制下で）
+            vm.IsUndoSuppressed = true;
+            try
+            {
+                _editingTextObject.Text = _editingOriginalText;
+            }
+            finally
+            {
+                vm.IsUndoSuppressed = false;
+            }
+
+            // 改めて、元の値から新しい値への変更を「コマンド」として実行する
+            if (newText != _editingOriginalText)
+            {
+                vm.ExecuteCommand(new PropertyChangeCommand(_editingTextObject, nameof(TextObject.Text), _editingOriginalText, newText));
+            }
+            else
+            {
+                vm.Invalidate();
+            }
             
             InlineEditingTextBox.Visibility = Visibility.Hidden;
             _editingTextObject = null;

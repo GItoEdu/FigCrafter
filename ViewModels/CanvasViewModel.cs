@@ -34,6 +34,7 @@ namespace FigCrafterApp.ViewModels
         private GraphicObject? _clipboard; // コピー用クリップボード
         private bool _isSnapEnabled = true; // スナップ機能のON/OFF
         private string? _filePath; // 保存先ファイルパス
+        private bool _isUndoSuppressed = false; // Undo記録を抑制するかどうか
 
         // Undo / Redo 用の履歴スタック
         private readonly Stack<IUndoableCommand> _undoStack = new();
@@ -190,6 +191,12 @@ namespace FigCrafterApp.ViewModels
             set => SetProperty(ref _filePath, value);
         }
 
+        public bool IsUndoSuppressed
+        {
+            get => _isUndoSuppressed;
+            set => SetProperty(ref _isUndoSuppressed, value);
+        }
+
         public ObservableCollection<Layer> Layers
         {
             get => _layers;
@@ -323,6 +330,8 @@ namespace FigCrafterApp.ViewModels
         {
             // 選択オブジェクトのプロパティ変更時は再描画を要求する
             Invalidate();
+
+            if (IsUndoSuppressed) return; // Undo抑制中は記録しない
 
             if (sender is not GraphicObject obj) return;
             if (e.PropertyName == null) return;
