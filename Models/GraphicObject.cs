@@ -479,46 +479,44 @@ namespace FigCrafterApp.Models
             {
                 Color = fillWithOpacity,
                 IsAntialias = true,
-                Typeface = SKTypeface.FromFamilyName(FontFamily, 
-                    IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal, 
-                    SKFontStyleWidth.Normal, 
-                    IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright),
-                TextSize = FontSize,
                 TextAlign = HorizontalAlignment
             };
 
+            using var typeface = SKTypeface.FromFamilyName(FontFamily, 
+                IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal, 
+                SKFontStyleWidth.Normal, 
+                IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
+            using var font = new SKFont(typeface, FontSize);
+
             var lines = Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-            float spacing = paint.FontSpacing;
+            float spacing = font.Spacing;
             
-            // 全体の幅を計算（配置用）
+            // 全体の幅を計算（配置用・ローカル変数を使用）
             float maxWidth = 0;
             foreach (var line in lines)
             {
-                maxWidth = Math.Max(maxWidth, paint.MeasureText(line));
+                maxWidth = Math.Max(maxWidth, font.MeasureText(line));
             }
-            // オブジェクトの幅を内容に合わせる（または既存のWidthを使用するが、現状は内容優先）
-            Width = maxWidth;
+
+            font.GetFontMetrics(out var metrics);
 
             for (int i = 0; i < lines.Length; i++)
             {
                 var line = lines[i];
-                var lineBounds = new SKRect();
-                paint.MeasureText(line, ref lineBounds);
                 
                 float xAnchor = X;
                 if (HorizontalAlignment == SKTextAlign.Center) xAnchor = X + maxWidth / 2;
                 else if (HorizontalAlignment == SKTextAlign.Right) xAnchor = X + maxWidth;
 
-                float lineY = Y - lineBounds.Top + (i * spacing);
-                canvas.DrawText(line, xAnchor, lineY, paint);
+                // ベースライン計算: Y座標は上端を基準にするため、-metrics.Ascent (正の値) を加算
+                float lineY = Y - metrics.Ascent + (i * spacing);
+                canvas.DrawText(line, xAnchor, lineY, font, paint);
             }
-
-            float totalHeight = (lines.Length - 1) * spacing + paint.TextSize;
-            Height = totalHeight;
 
             if (IsSelected)
             {
-                var rect = new SKRect(X, Y, X + Width, Y + Height);
+                float totalHeight = (lines.Length - 1) * spacing + FontSize;
+                var rect = new SKRect(X, Y, X + maxWidth, Y + totalHeight);
                 DrawSelectionBox(canvas, rect);
             }
 
@@ -531,25 +529,22 @@ namespace FigCrafterApp.Models
 
             var p = UntransformPoint(point);
 
-            using var paint = new SKPaint
-            {
-                Typeface = SKTypeface.FromFamilyName(FontFamily, 
-                    IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal, 
-                    SKFontStyleWidth.Normal, 
-                    IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright),
-                TextSize = FontSize
-            };
+            using var typeface = SKTypeface.FromFamilyName(FontFamily, 
+                IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal, 
+                SKFontStyleWidth.Normal, 
+                IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
+            using var font = new SKFont(typeface, FontSize);
 
             var lines = Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-            float spacing = paint.FontSpacing;
+            float spacing = font.Spacing;
             float maxWidth = 0;
             
             foreach (var line in lines)
             {
-                maxWidth = Math.Max(maxWidth, paint.MeasureText(line));
+                maxWidth = Math.Max(maxWidth, font.MeasureText(line));
             }
 
-            float totalHeight = (lines.Length - 1) * spacing + paint.TextSize;
+            float totalHeight = (lines.Length - 1) * spacing + FontSize;
             var rect = new SKRect(X, Y, X + maxWidth, Y + totalHeight);
             return rect.Contains(p.X, p.Y);
         }

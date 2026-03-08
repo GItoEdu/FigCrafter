@@ -1263,25 +1263,22 @@ namespace FigCrafterApp.Views
                 if (string.IsNullOrEmpty(textObj.Text))
                     return new SKRect(obj.X, obj.Y, obj.X + 10, obj.Y + textObj.FontSize);
 
-                using var paint = new SKPaint
-                {
-                    Typeface = SKTypeface.FromFamilyName(textObj.FontFamily,
-                        textObj.IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
-                        SKFontStyleWidth.Normal,
-                        textObj.IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright),
-                    TextSize = textObj.FontSize
-                };
+                using var typeface = SKTypeface.FromFamilyName(textObj.FontFamily,
+                    textObj.IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
+                    SKFontStyleWidth.Normal,
+                    textObj.IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
+                using var font = new SKFont(typeface, textObj.FontSize);
 
                 var lines = textObj.Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-                float spacing = paint.FontSpacing;
+                float spacing = font.Spacing;
                 float maxWidth = 0;
 
                 foreach (var line in lines)
                 {
-                    maxWidth = Math.Max(maxWidth, paint.MeasureText(line));
+                    maxWidth = Math.Max(maxWidth, font.MeasureText(line));
                 }
 
-                float totalHeight = (lines.Length - 1) * spacing + paint.TextSize;
+                float totalHeight = (lines.Length - 1) * spacing + textObj.FontSize;
                 return new SKRect(obj.X, obj.Y, obj.X + maxWidth, obj.Y + totalHeight);
             }
             return new SKRect(obj.X, obj.Y, obj.X + obj.Width, obj.Y + obj.Height);
