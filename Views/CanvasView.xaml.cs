@@ -1644,10 +1644,12 @@ namespace FigCrafterApp.Views
             };
 
             // TextBoxの位置（Margin）を計算。アンカー点 X から、配置に応じたオフセットを適用
-            var paint = new SKPaint { Typeface = SKTypeface.FromFamilyName(textObj.FontFamily), TextSize = textObj.FontSize };
+            using var typefaceForMeasure = SKTypeface.FromFamilyName(textObj.FontFamily);
+            using var fontForMeasure = new SKFont(typefaceForMeasure, textObj.FontSize);
+
             float maxWidth = 0;
             var lines = _editingOriginalText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-            foreach (var line in lines) maxWidth = Math.Max(maxWidth, paint.MeasureText(line));
+            foreach (var line in lines) maxWidth = Math.Max(maxWidth, fontForMeasure.MeasureText(line));
             
             float visualLeft = textObj.X;
             if (textObj.HorizontalAlignment == SKTextAlign.Center) visualLeft -= maxWidth / 2;

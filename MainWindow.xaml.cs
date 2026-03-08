@@ -45,4 +45,22 @@ public partial class MainWindow : Window
             }
         }
     }
+
+    private void FontSizeInput_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            if (sender is TextBox tb)
+            {
+                // フォーカスを外すことでバインディング（LostFocus）をトリガーする
+                DependencyObject parent = VisualTreeHelper.GetParent(tb);
+                while (parent != null && !(parent is FrameworkElement))
+                {
+                    parent = VisualTreeHelper.GetParent(parent);
+                }
+                (parent as FrameworkElement)?.Focus();
+                e.Handled = true;
+            }
+        }
+    }
 }
