@@ -491,7 +491,7 @@ namespace FigCrafterApp.Models
             var lines = Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
             float spacing = font.Spacing;
             
-            // 全体の幅を計算（配置用・ローカル変数を使用）
+            // 全体の幅を計算
             float maxWidth = 0;
             foreach (var line in lines)
             {
@@ -503,20 +503,19 @@ namespace FigCrafterApp.Models
             for (int i = 0; i < lines.Length; i++)
             {
                 var line = lines[i];
-                
-                float xAnchor = X;
-                if (HorizontalAlignment == SKTextAlign.Center) xAnchor = X + maxWidth / 2;
-                else if (HorizontalAlignment == SKTextAlign.Right) xAnchor = X + maxWidth;
-
-                // ベースライン計算: Y座標は上端を基準にするため、-metrics.Ascent (正の値) を加算
+                // X をアンカーとして直接使用 (TextAlign が実際のシフトを担当)
                 float lineY = Y - metrics.Ascent + (i * spacing);
-                canvas.DrawText(line, xAnchor, lineY, font, paint);
+                canvas.DrawText(line, X, lineY, font, paint);
             }
 
             if (IsSelected)
             {
                 float totalHeight = (lines.Length - 1) * spacing + FontSize;
-                var rect = new SKRect(X, Y, X + maxWidth, Y + totalHeight);
+                float left = X;
+                if (HorizontalAlignment == SKTextAlign.Center) left -= maxWidth / 2;
+                else if (HorizontalAlignment == SKTextAlign.Right) left -= maxWidth;
+
+                var rect = new SKRect(left, Y, left + maxWidth, Y + totalHeight);
                 DrawSelectionBox(canvas, rect);
             }
 
@@ -545,8 +544,68 @@ namespace FigCrafterApp.Models
             }
 
             float totalHeight = (lines.Length - 1) * spacing + FontSize;
-            var rect = new SKRect(X, Y, X + maxWidth, Y + totalHeight);
+            float left = X;
+            if (HorizontalAlignment == SKTextAlign.Center) left -= maxWidth / 2;
+            else if (HorizontalAlignment == SKTextAlign.Right) left -= maxWidth;
+
+            var rect = new SKRect(left, Y, left + maxWidth, Y + totalHeight);
             return rect.Contains(p.X, p.Y);
+        }
+
+        public override SKPoint[] GetTransformedCorners()
+        {
+            if (string.IsNullOrEmpty(Text)) return new[] { new SKPoint(X, Y), new SKPoint(X, Y), new SKPoint(X, Y), new SKPoint(X, Y) };
+
+            using var typeface = SKTypeface.FromFamilyName(FontFamily, 
+                IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal, 
+                SKFontStyleWidth.Normal, 
+                IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
+            using var font = new SKFont(typeface, FontSize);
+
+            var lines = Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            float spacing = font.Spacing;
+            float maxWidth = 0;
+            foreach (var line in lines) maxWidth = Math.Max(maxWidth, font.MeasureText(line));
+
+            float totalHeight = (lines.Length - 1) * spacing + FontSize;
+            float left = X;
+            if (HorizontalAlignment == SKTextAlign.Center) left -= maxWidth / 2;
+            else if (HorizontalAlignment == SKTextAlign.Right) left -= maxWidth;
+
+            var corners = new[]
+            {
+                new SKPoint(left, Y),
+                new SKPoint(left + maxWidth, Y),
+                new SKPoint(left + maxWidth, Y + totalHeight),
+                new SKPoint(left, Y + totalHeight)
+            };
+
+            if (Rotation == 0) return corners;
+
+            // アンカー点 (X, Y) を中心に回転
+            // 注意: TransformPoint は Width/2 を中心に回転するため、ここでは自前で計算するか
+            // TransformCanvas の挙動に合わせる必要があります。
+            // 現状の TransformCanvas は Width=0, Height=0 の場合 X, Y を中心に回転します。
+            for (int i = 0; i < corners.Length; i++)
+            {
+                corners[i] = RotatePoint(corners[i], new SKPoint(X, Y), Rotation);
+            }
+            return corners;
+        }
+
+        private SKPoint RotatePoint(SKPoint point, SKPoint center, float angle)
+        {
+            float rad = angle * (float)Math.PI / 180.0f;
+            float cos = (float)Math.Cos(rad);
+            float sin = (float)Math.Sin(rad);
+
+            float dx = point.X - center.X;
+            float dy = point.Y - center.Y;
+
+            return new SKPoint(
+                center.X + (dx * cos - dy * sin),
+                center.Y + (dx * sin + dy * cos)
+            );
         }
 
         public override GraphicObject Clone()

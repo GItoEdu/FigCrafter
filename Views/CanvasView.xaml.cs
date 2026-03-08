@@ -1279,7 +1279,11 @@ namespace FigCrafterApp.Views
                 }
 
                 float totalHeight = (lines.Length - 1) * spacing + textObj.FontSize;
-                return new SKRect(obj.X, obj.Y, obj.X + maxWidth, obj.Y + totalHeight);
+                float left = obj.X;
+                if (textObj.HorizontalAlignment == SKTextAlign.Center) left -= maxWidth / 2;
+                else if (textObj.HorizontalAlignment == SKTextAlign.Right) left -= maxWidth;
+
+                return new SKRect(left, obj.Y, left + maxWidth, obj.Y + totalHeight);
             }
             return new SKRect(obj.X, obj.Y, obj.X + obj.Width, obj.Y + obj.Height);
         }
@@ -1631,13 +1635,29 @@ namespace FigCrafterApp.Views
             InlineEditingTextBox.FontWeight = textObj.IsBold ? FontWeights.Bold : FontWeights.Normal;
             InlineEditingTextBox.FontStyle = textObj.IsItalic ? FontStyles.Italic : FontStyles.Normal;
 
-            // TextBoxの位置（Margin）を mm から px に変換し、ズームを適用
-            // TextBoxのBorder(1px)の分を補正
-            double offsetX = textObj.X * mmToPx * vm.ZoomLevel - 1;
+            // TextBoxの配置を設定
+            InlineEditingTextBox.TextAlignment = textObj.HorizontalAlignment switch
+            {
+                SKTextAlign.Center => TextAlignment.Center,
+                SKTextAlign.Right => TextAlignment.Right,
+                _ => TextAlignment.Left
+            };
+
+            // TextBoxの位置（Margin）を計算。アンカー点 X から、配置に応じたオフセットを適用
+            var paint = new SKPaint { Typeface = SKTypeface.FromFamilyName(textObj.FontFamily), TextSize = textObj.FontSize };
+            float maxWidth = 0;
+            var lines = _editingOriginalText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            foreach (var line in lines) maxWidth = Math.Max(maxWidth, paint.MeasureText(line));
+            
+            float visualLeft = textObj.X;
+            if (textObj.HorizontalAlignment == SKTextAlign.Center) visualLeft -= maxWidth / 2;
+            else if (textObj.HorizontalAlignment == SKTextAlign.Right) visualLeft -= maxWidth;
+
+            double offsetX = visualLeft * mmToPx * vm.ZoomLevel - 1;
             double offsetY = textObj.Y * mmToPx * vm.ZoomLevel - 1;
             InlineEditingTextBox.Margin = new Thickness(offsetX, offsetY, 0, 0);
             
-            InlineEditingTextBox.MinWidth = 100;
+            InlineEditingTextBox.Width = maxWidth * mmToPx * vm.ZoomLevel + 4; // 少し余裕を持たせる
             InlineEditingTextBox.MinHeight = (textObj.FontSize * mmToPx * vm.ZoomLevel) + 4;
             
             // 回転の適用
