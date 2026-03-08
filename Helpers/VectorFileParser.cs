@@ -68,7 +68,7 @@ namespace FigCrafterApp.Helpers
                 if (root == null) return null;
 
                 // 単位と viewBox から正確なスケールを計算
-                float widthMm = ParseFloatWithUnit(root.Attribute("width")?.Value) ?? 0;
+                float widthMm = (ParseSvgUnit(root.Attribute("width")?.Value) ?? 0) * PxToMm;
                 var viewBoxAttr = root.Attribute("viewBox")?.Value;
                 float scale = PxToMm; // デフォルト
 
@@ -114,7 +114,7 @@ namespace FigCrafterApp.Helpers
         {
             public SKColor? Fill;
             public SKColor? Stroke;
-            public float? StrokeWidth;
+            public float? StrokeWidth; // SVGユーザーユニット (px)
             public float? Opacity;
 
             public static SvgStyle Default => new SvgStyle
@@ -145,7 +145,7 @@ namespace FigCrafterApp.Helpers
             if (!string.IsNullOrEmpty(strokeStr)) currentStyle.Stroke = ParseColor(strokeStr);
 
             string strokeWidthStr = GetAttributeOrStyle(element, "stroke-width");
-            if (!string.IsNullOrEmpty(strokeWidthStr)) currentStyle.StrokeWidth = ParseFloat(strokeWidthStr);
+            if (!string.IsNullOrEmpty(strokeWidthStr)) currentStyle.StrokeWidth = ParseSvgUnit(strokeWidthStr);
 
             string opacityStr = GetAttributeOrStyle(element, "opacity");
             if (!string.IsNullOrEmpty(opacityStr)) currentStyle.Opacity = ParseFloat(opacityStr);
@@ -163,7 +163,7 @@ namespace FigCrafterApp.Helpers
                 {
                     StrokeColor = currentStyle.Stroke ?? SKColors.Transparent,
                     FillColor = currentStyle.Fill ?? SKColors.Transparent,
-                    StrokeWidth = (currentStyle.StrokeWidth ?? 1.0f) * scale,
+                    StrokeWidth = (currentStyle.StrokeWidth ?? 1.0f) * GetMatrixScale(currentMatrix),
                     Opacity = currentStyle.Opacity ?? 1.0f
                 };
 
@@ -194,6 +194,13 @@ namespace FigCrafterApp.Helpers
             {
                 ProcessElement(child, currentMatrix, targetGroup, ns, scale, currentStyle);
             }
+        }
+
+        private static float GetMatrixScale(SKMatrix matrix)
+        {
+            // 行列の平均スケールを計算 (sqrt((m11^2 + m21^2 + m12^2 + m22^2)/2))
+            return (float)Math.Sqrt((matrix.ScaleX * matrix.ScaleX + matrix.SkewY * matrix.SkewY + 
+                                     matrix.SkewX * matrix.SkewX + matrix.ScaleY * matrix.ScaleY) / 2.0);
         }
 
         private static SKMatrix ParseTransform(string transform)
@@ -321,17 +328,17 @@ namespace FigCrafterApp.Helpers
             return null;
         }
 
-        private static float? ParseFloatWithUnit(string? val)
+        private static float? ParseSvgUnit(string? val)
         {
             if (string.IsNullOrEmpty(val)) return null;
             float factor = 1.0f;
-            if (val.EndsWith("mm")) factor = 1.0f;
-            else if (val.EndsWith("cm")) factor = 10.0f;
-            else if (val.EndsWith("in")) factor = 25.4f;
-            else if (val.EndsWith("pt")) factor = 25.4f / 72.0f;
-            else if (val.EndsWith("pc")) factor = 25.4f / 6.0f;
-            else if (val.EndsWith("px")) factor = 25.4f / 96.0f;
-            else factor = 25.4f / 96.0f; // 単位なしは px (96DPI) 扱い
+            if (val.EndsWith("mm")) factor = 96.0f / 25.4f;
+            else if (val.EndsWith("cm")) factor = 960.0f / 25.4f;
+            else if (val.EndsWith("in")) factor = 96.0f;
+            else if (val.EndsWith("pt")) factor = 96.0f / 72.0f;
+            else if (val.EndsWith("pc")) factor = 96.0f / 6.0f;
+            else if (val.EndsWith("px")) factor = 1.0f;
+            else factor = 1.0f; // 単位なしは px 扱い
 
             string clean = Regex.Replace(val, @"[^\d.-]+", "");
             if (float.TryParse(clean, NumberStyles.Float, CultureInfo.InvariantCulture, out var f)) return f * factor;

@@ -358,7 +358,7 @@ namespace FigCrafterApp.Models
             {
                 Color = strokeWithOpacity,
                 Style = SKPaintStyle.Stroke,
-                StrokeWidth = StrokeWidth / CurrentZoomLevel, // ズーム補正
+                StrokeWidth = StrokeWidth, // ズーム補正を削除
                 IsAntialias = true
             };
             canvas.DrawLine(X, Y, EndX, EndY, paint);
@@ -369,7 +369,7 @@ namespace FigCrafterApp.Models
                 float dx = EndX - X;
                 float dy = EndY - Y;
                 float angle = (float)Math.Atan2(dy, dx);
-                float arrowLength = (15f + StrokeWidth) / CurrentZoomLevel;
+                float arrowLength = 15f + StrokeWidth; // ズーム補正を削除
                 float arrowAngle = (float)(Math.PI / 6); // 30度
 
                 using var arrowPaint = new SKPaint
@@ -1101,7 +1101,7 @@ namespace FigCrafterApp.Models
                 {
                     Color = StrokeColor.WithAlpha((byte)(StrokeColor.Alpha * Opacity)),
                     Style = SKPaintStyle.Stroke,
-                    StrokeWidth = StrokeWidth / CurrentZoomLevel,
+                    StrokeWidth = StrokeWidth,
                     IsAntialias = true
                 };
                 canvas.DrawRect(destRect, strokePaint);
@@ -1202,7 +1202,7 @@ namespace FigCrafterApp.Models
 
             paint.Color = strokeWithOpacity;
             paint.Style = SKPaintStyle.Stroke;
-            paint.StrokeWidth = StrokeWidth / CurrentZoomLevel; // ズーム補正（視認性維持）
+            paint.StrokeWidth = StrokeWidth; // ズーム補正を削除
             canvas.DrawPath(path, paint);
 
             if (IsSelected)
