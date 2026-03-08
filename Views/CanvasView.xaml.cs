@@ -12,6 +12,7 @@ namespace FigCrafterApp.Views
 {
     public partial class CanvasView : UserControl
     {
+        public CanvasViewModel ViewModel => (CanvasViewModel)DataContext;
         private GraphicObject? _tempObject;
         private SKPoint _startPoint;
         private GraphicObject? _selectedObject; // 現在選択中のオブジェクト
@@ -754,35 +755,39 @@ namespace FigCrafterApp.Views
                 }
                 else
                 {
-                    // 矩形・楽円・テキスト・画像などのリサイズ
+                    // キャンバス上の増分移動量を、オブジェクトのローカル回転に応じて変換
+                    float localDx = dx;
+                    float localDy = dy;
+                    if (_selectedObject.Rotation != 0)
+                    {
+                        float rad = -_selectedObject.Rotation * (float)Math.PI / 180.0f;
+                        float cos = (float)Math.Cos(rad);
+                        float sin = (float)Math.Sin(rad);
+                        localDx = dx * cos - dy * sin;
+                        localDy = dx * sin + dy * cos;
+                    }
+
+                    // 矩形・楕円・テキスト・画像などのリサイズ
                     var rect = GetBoundingRect(_selectedObject);
                     float left = rect.Left, top = rect.Top, right = rect.Right, bottom = rect.Bottom;
 
                     switch (_resizeHandleIndex)
                     {
-                        case 0: left += dx; top += dy; break;      // TopLeft
-                        case 1: right += dx; top += dy; break;     // TopRight
-                        case 2: right += dx; bottom += dy; break;  // BottomRight
-                        case 3: left += dx; bottom += dy; break;   // BottomLeft
+                        case 0: left += localDx; top += localDy; break;      // TopLeft
+                        case 1: right += localDx; top += localDy; break;     // TopRight
+                        case 2: right += localDx; bottom += localDy; break;  // BottomRight
+                        case 3: left += localDx; bottom += localDy; break;   // BottomLeft
                     }
 
-                    // Shiftが押されている場合は縦横比を維持（後からShiftを押しても対応）
+                    // Shiftが押されている場合は縦横比を維持
                     if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && _originalAspectRatio > 0)
                     {
                         float newWidth = Math.Abs(right - left);
                         float newHeight = Math.Abs(bottom - top);
 
-                        // ドラッグ量の大きい方を基準に調整
-                        if (Math.Abs(dx) >= Math.Abs(dy))
-                        {
-                            newHeight = newWidth / _originalAspectRatio;
-                        }
-                        else
-                        {
-                            newWidth = newHeight * _originalAspectRatio;
-                        }
+                        if (Math.Abs(localDx) >= Math.Abs(localDy)) newHeight = newWidth / _originalAspectRatio;
+                        else newWidth = newHeight * _originalAspectRatio;
 
-                        // ハンドルの位置に応じて座標を再計算
                         switch (_resizeHandleIndex)
                         {
                             case 0: left = right - newWidth; top = bottom - newHeight; break;
@@ -793,48 +798,42 @@ namespace FigCrafterApp.Views
                     }
 
                     // 幅・高さが負にならないよう調整
-                    float newX = Math.Min(left, right);
-                    float newY = Math.Min(top, bottom);
-                    float newW = Math.Abs(right - left);
-                    float newH = Math.Abs(bottom - top);
+                    _selectedObject.X = Math.Min(left, right);
+                    _selectedObject.Y = Math.Min(top, bottom);
+                    _selectedObject.Width = Math.Max(0.1f, Math.Abs(right - left));
+                    _selectedObject.Height = Math.Max(0.1f, Math.Abs(bottom - top));
 
                     // GroupObject の場合は子オブジェクトも比例的にスケーリング
                     if (_selectedObject is GroupObject groupObj && rect.Width > 0 && rect.Height > 0)
                     {
-                        float scaleX = newW / rect.Width;
-                        float scaleY = newH / rect.Height;
+                        float scaleW = _selectedObject.Width / rect.Width;
+                        float scaleH = _selectedObject.Height / rect.Height;
 
                         foreach (var child in groupObj.Children)
                         {
-                            // 元のバウンディングボックスに対する相対位置を計算して再配置
                             float relX = (child.X - rect.Left) / rect.Width;
                             float relY = (child.Y - rect.Top) / rect.Height;
-                            child.X = newX + relX * newW;
-                            child.Y = newY + relY * newH;
-                            child.Width *= scaleX;
-                            child.Height *= scaleY;
+                            child.X = _selectedObject.X + relX * _selectedObject.Width;
+                            child.Y = _selectedObject.Y + relY * _selectedObject.Height;
+                            child.Width *= scaleW;
+                            child.Height *= scaleH;
 
                             if (child is LineObject childLine)
                             {
                                 float relEndX = (childLine.EndX - rect.Left) / rect.Width;
                                 float relEndY = (childLine.EndY - rect.Top) / rect.Height;
-                                childLine.EndX = newX + relEndX * newW;
-                                childLine.EndY = newY + relEndY * newH;
+                                childLine.EndX = _selectedObject.X + relEndX * _selectedObject.Width;
+                                childLine.EndY = _selectedObject.Y + relEndY * _selectedObject.Height;
                             }
                         }
                     }
-
-                    _selectedObject.X = newX;
-                    _selectedObject.Y = newY;
-                    _selectedObject.Width = newW;
-                    _selectedObject.Height = newH;
                 }
                 
                 ThrottledInvalidateVisual();
                 return;
             }
 
-                if (_isDragging && _selectedObject != null)
+            if (_isDragging && _selectedObject != null)
             {
                 // ドラッグ開始時からの総移動量
                 float totalDx = currentPoint.X - _startPoint.X;
@@ -1206,7 +1205,9 @@ namespace FigCrafterApp.Views
 
         private int GetHandleHitIndex(GraphicObject obj, SKPoint hitPoint)
         {
-            float handleRadius = 6.0f; // Clickable area
+            float zoom = (float)(ViewModel?.ZoomLevel ?? 1.0f);
+            float handleRadius = 6.0f / (float)zoom * (96.0f / 25.4f) / 2.0f; // 約6px程度のヒット判定
+            if (handleRadius < 4.0f / (float)zoom) handleRadius = 4.0f / (float)zoom; // 最小ヒット半径
             
             // 図形の回転を加味するため、マウス座標を図形のローカル座標系に逆変換する
             var localHitPoint = obj.UntransformPoint(hitPoint);
@@ -1236,7 +1237,7 @@ namespace FigCrafterApp.Views
             }
 
             // 回転ハンドル (インデックス 4) の判定
-            float rotationHandleOffset = 20.0f; // GraphicObject.DrawSelectionBox と合わせる
+            float rotationHandleOffset = obj.SelectionBoxRotationHandleOffset;
             float midX = (rect.Left + rect.Right) / 2;
             var rotationHandlePos = new SKPoint(midX, rect.Top - rotationHandleOffset);
             if (HitTestHandle(rotationHandlePos, localHitPoint, handleRadius)) return 4;

@@ -21,7 +21,7 @@ namespace FigCrafterApp.Models
         private float _rotation; // 回転角 (度)
         private SKColor _fillColor = SKColors.Blue;
         private SKColor _strokeColor = SKColors.Black;
-        private float _strokeWidth = 0.5f;
+        private float _strokeWidth = 0.2f; // デフォルトを 0.2mm (約0.8px) に変更
         private float _opacity = 1.0f; // 1.0 = 不透明, 0.0 = 透明
         private bool _isSelected = false;
 
@@ -45,6 +45,10 @@ namespace FigCrafterApp.Models
             get => _currentZoomLevel;
             set => _currentZoomLevel = value;
         }
+
+        // 選択枠表示用の定数（ピクセル単位）
+        [JsonIgnore] public float SelectionBoxHandleSize => 6f / CurrentZoomLevel;
+        [JsonIgnore] public float SelectionBoxRotationHandleOffset => 20f / CurrentZoomLevel;
 
         public event PropertyChangedEventHandler? PropertyChanged;
         public event PropertyChangingEventHandler? PropertyChanging;
@@ -205,7 +209,7 @@ namespace FigCrafterApp.Models
                 IsAntialias = true
             };
             
-            float handleSize = 6 / CurrentZoomLevel; // ズーム補正
+            float handleSize = SelectionBoxHandleSize;
             var points = new[]
             {
                 new SKPoint(rect.Left, rect.Top),
@@ -222,7 +226,7 @@ namespace FigCrafterApp.Models
             }
 
             // 回転ハンドルを描画 (上部中央から上に伸ばした位置)
-            float rotationHandleOffset = 20 / CurrentZoomLevel;
+            float rotationHandleOffset = SelectionBoxRotationHandleOffset;
             float midX = (rect.Left + rect.Right) / 2;
             var rotationHandlePos = new SKPoint(midX, rect.Top - rotationHandleOffset);
 
@@ -371,7 +375,7 @@ namespace FigCrafterApp.Models
                 float dx = EndX - X;
                 float dy = EndY - Y;
                 float angle = (float)Math.Atan2(dy, dx);
-                float arrowLength = 15f + StrokeWidth; // ズーム補正を削除
+                float arrowLength = (15f / CurrentZoomLevel) + StrokeWidth; // 15px相当を維持しつつ線幅を加味
                 float arrowAngle = (float)(Math.PI / 6); // 30度
 
                 using var arrowPaint = new SKPaint
@@ -437,8 +441,8 @@ namespace FigCrafterApp.Models
             float projY = Y + t * (EndY - Y);
 
             float distSq = (p.X - projX) * (p.X - projX) + (p.Y - projY) * (p.Y - projY);
-            // 許容幅 5px
-            float threshold = Math.Max(5.0f, StrokeWidth / 2 + 2);
+            // 許容幅：画面上の5px相当、または線幅の半分 + 2px相当のいずれか大きい方
+            float threshold = Math.Max(5.0f / CurrentZoomLevel, StrokeWidth / 2 + (2.0f / CurrentZoomLevel));
             return distSq <= threshold * threshold;
         }
 
@@ -1280,8 +1284,8 @@ namespace FigCrafterApp.Models
             // 線上のヒットテスト
             if (StrokeWidth > 0 && StrokeColor != SKColors.Transparent)
             {
-                // 判定用のマージン（線の太さの半分 + 最小クリック領域）
-                float margin = Math.Max(StrokeWidth / 2f, 2.0f);
+                // 判定用のマージン（線の太さの半分 + 画面上の約2px相当）
+                float margin = Math.Max(StrokeWidth / 2f, 2.0f / CurrentZoomLevel);
                 using var outlinePath = new SKPath();
                 using var paint = new SKPaint { Style = SKPaintStyle.Stroke, StrokeWidth = margin * 2 };
                 paint.GetFillPath(path, outlinePath);
