@@ -38,6 +38,7 @@ namespace FigCrafterApp.ViewModels
         private double _viewportWidth = 800; // ビューポートの幅
         private double _viewportHeight = 600; // ビューポートの高さ
         private bool _shouldZoomToFitOnSizeChange = false; // 次回のサイズ変更時にズームフィットさせるか
+        private GraphicObject? _zoomTargetObject = null; // ズーム対象のオブジェクト
 
         // Undo / Redo 用の履歴スタック
         private readonly Stack<IUndoableCommand> _undoStack = new();
@@ -217,6 +218,12 @@ namespace FigCrafterApp.ViewModels
         {
             get => _shouldZoomToFitOnSizeChange;
             set => SetProperty(ref _shouldZoomToFitOnSizeChange, value);
+        }
+
+        public GraphicObject? ZoomTargetObject
+        {
+            get => _zoomTargetObject;
+            set => SetProperty(ref _zoomTargetObject, value);
         }
 
         public ObservableCollection<Layer> Layers
@@ -581,7 +588,7 @@ namespace FigCrafterApp.ViewModels
             ZoomInCommand = new RelayCommand(p => ZoomLevel += 0.1);
             ZoomOutCommand = new RelayCommand(p => ZoomLevel -= 0.1);
             ResetZoomCommand = new RelayCommand(p => ZoomLevel = 1.0);
-            ZoomToFitCommand = new RelayCommand(p => ZoomToFit());
+            ZoomToFitCommand = new RelayCommand(p => ZoomToFit(SelectedObject));
 
             AddLayerCommand = new RelayCommand(_ => AddLayer());
             RemoveLayerCommand = new RelayCommand(_ => RemoveLayer(), _ => Layers.Count > 1 && ActiveLayer != null);
@@ -1022,10 +1029,11 @@ namespace FigCrafterApp.ViewModels
             // ビューポートサイズが確定していれば即座に適用、そうでなければフラグを立てる
             if (ViewportWidth > 0 && ViewportHeight > 0)
             {
-                ZoomToFit();
+                ZoomToFit(imageObj);
             }
             else
             {
+                ZoomTargetObject = imageObj;
                 ShouldZoomToFitOnSizeChange = true;
             }
 
@@ -1033,9 +1041,9 @@ namespace FigCrafterApp.ViewModels
         }
 
         /// <summary>
-        /// キャンバス全体を現在のウィンドウ（ビューポート）に収まるようにズーム調整する
+        /// キャンバス全体または指定したオブジェクトが現在のウィンドウ（ビューポート）に収まるようにズーム調整する
         /// </summary>
-        public void ZoomToFit()
+        public void ZoomToFit(GraphicObject? target = null)
         {
             if (ViewportWidth <= 0 || ViewportHeight <= 0) return;
 
@@ -1045,8 +1053,17 @@ namespace FigCrafterApp.ViewModels
 
             if (availableWidth <= 0 || availableHeight <= 0) return;
 
-            double zoomX = availableWidth / WidthPx;
-            double zoomY = availableHeight / HeightPx;
+            double targetWidth = WidthPx;
+            double targetHeight = HeightPx;
+
+            if (target != null)
+            {
+                targetWidth = target.Width;
+                targetHeight = target.Height;
+            }
+
+            double zoomX = availableWidth / targetWidth;
+            double zoomY = availableHeight / targetHeight;
 
             // 小さい方の倍率を採用し、さらに少し余裕(0.95)を持たせる
             ZoomLevel = Math.Min(zoomX, zoomY) * 0.95;
@@ -1067,10 +1084,11 @@ namespace FigCrafterApp.ViewModels
 
             if (ViewportWidth > 0 && ViewportHeight > 0)
             {
-                ZoomToFit();
+                ZoomToFit(obj);
             }
             else
             {
+                ZoomTargetObject = obj;
                 ShouldZoomToFitOnSizeChange = true;
             }
         }

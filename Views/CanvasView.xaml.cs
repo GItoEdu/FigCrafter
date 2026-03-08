@@ -126,8 +126,9 @@ namespace FigCrafterApp.Views
 
                 if (vm.ShouldZoomToFitOnSizeChange)
                 {
-                    vm.ZoomToFit();
+                    vm.ZoomToFit(vm.ZoomTargetObject);
                     vm.ShouldZoomToFitOnSizeChange = false;
+                    vm.ZoomTargetObject = null;
                 }
             }
         }
@@ -160,8 +161,9 @@ namespace FigCrafterApp.Views
 
                 if (newVm.ShouldZoomToFitOnSizeChange)
                 {
-                    newVm.ZoomToFit();
+                    newVm.ZoomToFit(newVm.ZoomTargetObject);
                     newVm.ShouldZoomToFitOnSizeChange = false;
+                    newVm.ZoomTargetObject = null;
                 }
 
                 SkiaElement.InvalidateVisual(); // DataContext変更時に再描画を強制する
