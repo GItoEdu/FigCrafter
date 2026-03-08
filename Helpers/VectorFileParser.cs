@@ -44,11 +44,11 @@ namespace FigCrafterApp.Helpers
 
             try
             {
-                // Inkscape CLI で SVG に変換（文字をパス化）
+                // Inkscape CLI で SVG に変換（テキストは保持）
                 var psi = new ProcessStartInfo
                 {
                     FileName = inkscapePath,
-                    Arguments = $"--export-type=svg --export-text-to-path --export-filename=\"{tempSvg}\" \"{filePath}\"",
+                    Arguments = $"--export-type=svg --export-filename=\"{tempSvg}\" \"{filePath}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardError = true,
@@ -156,6 +156,14 @@ namespace FigCrafterApp.Helpers
             else if (element.Name == ns + "circle" || element.Name == ns + "ellipse") d = ConvertEllipseToPath(element);
             else if (element.Name == ns + "line") d = ConvertLineToPath(element);
             else if (element.Name == ns + "polyline" || element.Name == ns + "polygon") d = ConvertPolyToPath(element);
+            else if (element.Name == ns + "text" || element.Name == ns + "tspan")
+            {
+                ProcessTextElement(element, currentMatrix, targetGroup, currentStyle);
+            }
+            else if (element.Name == ns + "image")
+            {
+                ProcessImageElement(element, currentMatrix, targetGroup, currentStyle);
+            }
 
             if (!string.IsNullOrEmpty(d))
             {
@@ -192,7 +200,111 @@ namespace FigCrafterApp.Helpers
             // 子要素を再帰的に処理
             foreach (var child in element.Elements())
             {
+                // text 要素の子要素としての tspan は ProcessTextElement 内で個別に処理する場合もあるが、
+                // ここでは単純な再帰で処理し、親子関係を継承する
                 ProcessElement(child, currentMatrix, targetGroup, ns, scale, currentStyle);
+            }
+        }
+
+        private static void ProcessTextElement(XElement el, SKMatrix matrix, GroupObject targetGroup, SvgStyle style)
+        {
+            XNamespace ns = el.Name.Namespace;
+            // <text> 要素に <tspan> 子要素がある場合、<text> 自体としてのテキスト処理はスキップして
+            // 子要素（tspan）に任せる（重複防止と各行の座標精度向上のため）
+            if (el.Name == ns + "text" && el.Elements(ns + "tspan").Any())
+            {
+                return;
+            }
+
+            string text = el.Value; 
+            if (string.IsNullOrWhiteSpace(text)) return;
+
+            // 座標 (x, y)
+            float x = ParseFloat(el.Attribute("x")?.Value) ?? 0;
+            float y = ParseFloat(el.Attribute("y")?.Value) ?? 0;
+
+            // 文字サイズ
+            float fontSize = ParseSvgUnit(GetAttributeOrStyle(el, "font-size")) ?? 12f;
+            string fontFamily = GetAttributeOrStyle(el, "font-family") ?? "Arial";
+            string fontWeight = GetAttributeOrStyle(el, "font-weight") ?? "";
+            string fontStyleStr = GetAttributeOrStyle(el, "font-style") ?? "";
+
+            // 行列からスケールと回転を抽出
+            float scale = (float)Math.Sqrt(matrix.ScaleX * matrix.ScaleX + matrix.SkewY * matrix.SkewY);
+            float rotation = (float)(Math.Atan2(matrix.SkewY, matrix.ScaleX) * 180.0 / Math.PI);
+
+            var textObj = new TextObject
+            {
+                Text = text,
+                FontSize = fontSize * scale,
+                FontFamily = fontFamily,
+                IsBold = fontWeight.Contains("bold") || fontWeight == "700" || fontWeight == "800" || fontWeight == "900",
+                IsItalic = fontStyleStr.Contains("italic"),
+                FillColor = style.Fill ?? SKColors.Black,
+                Opacity = style.Opacity ?? 1.0f,
+                Rotation = rotation
+            };
+
+            // 行列適用後の座標計算
+            var p = matrix.MapPoint(x, y);
+            textObj.X = p.X;
+            // SVGはベースライン基準、FigCrafterは上端基準。
+            // また、回転がある場合は X, Y を起点に TransformCanvas が回転されるため、
+            // 完全に一致させるのは難しいが、まずは位置を合わせる。
+            textObj.Y = p.Y - (textObj.FontSize * 0.85f); 
+
+            targetGroup.Children.Add(textObj);
+        }
+
+        private static void ProcessImageElement(XElement el, SKMatrix matrix, GroupObject targetGroup, SvgStyle style)
+        {
+            string href = el.Attribute("{http://www.w3.org/1999/xlink}href")?.Value 
+                       ?? el.Attribute("href")?.Value ?? "";
+
+            if (string.IsNullOrEmpty(href)) return;
+
+            SKBitmap? bitmap = null;
+
+            if (href.StartsWith("data:image/"))
+            {
+                // Base64 データのデコード
+                var match = Regex.Match(href, @"data:image/(?<type>[^;]+);base64,(?<data>.+)");
+                if (match.Success)
+                {
+                    try
+                    {
+                        byte[] bytes = Convert.FromBase64String(match.Groups["data"].Value);
+                        bitmap = SKBitmap.Decode(bytes);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Image Decode Error: {ex.Message}");
+                    }
+                }
+            }
+
+            if (bitmap != null)
+            {
+                float x = ParseFloat(el.Attribute("x")?.Value) ?? 0;
+                float y = ParseFloat(el.Attribute("y")?.Value) ?? 0;
+                float w = ParseFloat(el.Attribute("width")?.Value) ?? bitmap.Width;
+                float h = ParseFloat(el.Attribute("height")?.Value) ?? bitmap.Height;
+
+                var imgObj = new ImageObject
+                {
+                    ImageData = bitmap,
+                    Opacity = style.Opacity ?? 1.0f
+                };
+
+                // 行列を適用して座標とサイズを決定
+                var p = matrix.MapPoint(x, y);
+                float s = GetMatrixScale(matrix);
+                imgObj.X = p.X;
+                imgObj.Y = p.Y;
+                imgObj.Width = w * s;
+                imgObj.Height = h * s;
+
+                targetGroup.Children.Add(imgObj);
             }
         }
 

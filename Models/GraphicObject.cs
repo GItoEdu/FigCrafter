@@ -1220,11 +1220,24 @@ namespace FigCrafterApp.Models
             if (path == null) return false;
 
             var p = UntransformPoint(point);
-            // 塗りつぶし部分または線上にヒットするか
+            // オブジェクトの基準点 (X, Y) からの相対座標に変換
+            p.X -= X;
+            p.Y -= Y;
+
+            // 塗りつぶし部分にヒットするか
             if (path.Contains(p.X, p.Y)) return true;
 
-            // 線上のヒットテスト（簡易版：バウンディングボックス内かつ線に近いか）
-            // 実際にはもう少し複雑な判定が必要だが、一旦 Contains で十分な場合が多い
+            // 線上のヒットテスト
+            if (StrokeWidth > 0 && StrokeColor != SKColors.Transparent)
+            {
+                // 判定用のマージン（線の太さの半分 + 最小クリック領域）
+                float margin = Math.Max(StrokeWidth / 2f, 2.0f);
+                using var outlinePath = new SKPath();
+                using var paint = new SKPaint { Style = SKPaintStyle.Stroke, StrokeWidth = margin * 2 };
+                paint.GetFillPath(path, outlinePath);
+                return outlinePath.Contains(p.X, p.Y);
+            }
+
             return false;
         }
 
