@@ -1053,17 +1053,25 @@ namespace FigCrafterApp.ViewModels
 
             if (availableWidth <= 0 || availableHeight <= 0) return;
 
-            double targetWidth = WidthPx;
-            double targetHeight = HeightPx;
+            double targetWidthPx;
+            double targetHeightPx;
 
             if (target != null)
             {
-                targetWidth = target.Width;
-                targetHeight = target.Height;
+                // GraphicObject の Width/Height は mm 単位なのでピクセルに変換
+                targetWidthPx = target.Width / MmPerInch * Dpi;
+                targetHeightPx = target.Height / MmPerInch * Dpi;
+            }
+            else
+            {
+                targetWidthPx = WidthPx;
+                targetHeightPx = HeightPx;
             }
 
-            double zoomX = availableWidth / targetWidth;
-            double zoomY = availableHeight / targetHeight;
+            if (targetWidthPx <= 0 || targetHeightPx <= 0) return;
+
+            double zoomX = availableWidth / targetWidthPx;
+            double zoomY = availableHeight / targetHeightPx;
 
             // 小さい方の倍率を採用し、さらに少し余裕(0.95)を持たせる
             ZoomLevel = Math.Min(zoomX, zoomY) * 0.95;
