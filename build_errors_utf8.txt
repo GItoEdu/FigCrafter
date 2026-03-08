@@ -1,13 +1,7 @@
-﻿  Determining projects to restore...
-  All projects are up-to-date for restore.
-I:\Ubuntu\VSCode\FigCrafter\ViewModels\MainViewModel.cs(450,9): error CS0106: The modifier 'private' is not valid for this item [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_i1la4gfk_wpftmp.csproj]
-I:\Ubuntu\VSCode\FigCrafter\ViewModels\MainViewModel.cs(495,2): error CS1513: } expected [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_i1la4gfk_wpftmp.csproj]
+﻿I:\Ubuntu\VSCode\FigCrafter\Helpers\VectorFileParser.cs(301,88): error CS0103: The name 'scale' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_i3gxkwbx_wpftmp.csproj]
 
 Build FAILED.
+    22 Warning(s)
+    1 Error(s)
 
-I:\Ubuntu\VSCode\FigCrafter\ViewModels\MainViewModel.cs(450,9): error CS0106: The modifier 'private' is not valid for this item [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_i1la4gfk_wpftmp.csproj]
-I:\Ubuntu\VSCode\FigCrafter\ViewModels\MainViewModel.cs(495,2): error CS1513: } expected [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_i1la4gfk_wpftmp.csproj]
-    0 Warning(s)
-    2 Error(s)
-
-Time Elapsed 00:00:02.08
+Time Elapsed 00:00:02.27

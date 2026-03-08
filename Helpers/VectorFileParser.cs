@@ -68,7 +68,8 @@ namespace FigCrafterApp.Helpers
                 if (root == null) return null;
 
                 // 単位と viewBox から正確なスケールを計算
-                float widthMm = (ParseSvgUnit(root.Attribute("width")?.Value) ?? 0) * PxToMm;
+                // widthMm は文字通りミリメートル単位である必要がある
+                float widthMm = ParseSvgToMm(root.Attribute("width")?.Value) ?? 0;
                 var viewBoxAttr = root.Attribute("viewBox")?.Value;
                 float scale = PxToMm; // デフォルト
 
@@ -218,7 +219,7 @@ namespace FigCrafterApp.Helpers
             if (!string.IsNullOrEmpty(strokeStr)) currentStyle.Stroke = ParseColor(strokeStr);
 
             string strokeWidthStr = GetAttributeOrStyle(element, "stroke-width");
-            if (!string.IsNullOrEmpty(strokeWidthStr)) currentStyle.StrokeWidth = ParseSvgUnit(strokeWidthStr);
+            if (!string.IsNullOrEmpty(strokeWidthStr)) currentStyle.StrokeWidth = ParseSvgToUserUnits(strokeWidthStr, scale);
 
             string opacityStr = GetAttributeOrStyle(element, "opacity");
             if (!string.IsNullOrEmpty(opacityStr)) currentStyle.Opacity = ParseFloat(opacityStr);
@@ -231,7 +232,7 @@ namespace FigCrafterApp.Helpers
             else if (element.Name == ns + "polyline" || element.Name == ns + "polygon") d = ConvertPolyToPath(element);
             else if (element.Name == ns + "text" || element.Name == ns + "tspan")
             {
-                ProcessTextElement(element, currentMatrix, targetGroup, currentStyle);
+                ProcessTextElement(element, currentMatrix, targetGroup, currentStyle, scale);
             }
             else if (element.Name == ns + "image")
             {
@@ -279,7 +280,7 @@ namespace FigCrafterApp.Helpers
             }
         }
 
-        private static void ProcessTextElement(XElement el, SKMatrix matrix, GroupObject targetGroup, SvgStyle style)
+        private static void ProcessTextElement(XElement el, SKMatrix matrix, GroupObject targetGroup, SvgStyle style, float scale)
         {
             XNamespace ns = el.Name.Namespace;
             // <text> 要素に <tspan> 子要素がある場合、<text> 自体としてのテキスト処理はスキップして
@@ -297,19 +298,20 @@ namespace FigCrafterApp.Helpers
             float y = ParseFloat(el.Attribute("y")?.Value) ?? 0;
 
             // 文字サイズ
-            float fontSize = ParseSvgUnit(GetAttributeOrStyle(el, "font-size")) ?? 12f;
+            // scale は mm/unit。fontSize (unit) * scale (mm/unit) で mm に変換される。
+            float fontSize = ParseSvgToUserUnits(GetAttributeOrStyle(el, "font-size"), scale) ?? 12f;
             string fontFamily = GetAttributeOrStyle(el, "font-family") ?? "Arial";
             string fontWeight = GetAttributeOrStyle(el, "font-weight") ?? "";
             string fontStyleStr = GetAttributeOrStyle(el, "font-style") ?? "";
 
             // 行列からスケールと回転を抽出
-            float scale = (float)Math.Sqrt(matrix.ScaleX * matrix.ScaleX + matrix.SkewY * matrix.SkewY);
+            float matrixScale = (float)Math.Sqrt(matrix.ScaleX * matrix.ScaleX + matrix.SkewY * matrix.SkewY);
             float rotation = (float)(Math.Atan2(matrix.SkewY, matrix.ScaleX) * 180.0 / Math.PI);
 
             var textObj = new TextObject
             {
                 Text = text,
-                FontSize = fontSize * scale,
+                FontSize = fontSize * matrixScale, // フォントサイズ自体はSVGの単位系なので行列のスケールを乗算
                 FontFamily = fontFamily,
                 IsBold = fontWeight.Contains("bold") || fontWeight == "700" || fontWeight == "800" || fontWeight == "900",
                 IsItalic = fontStyleStr.Contains("italic"),
@@ -513,20 +515,55 @@ namespace FigCrafterApp.Helpers
             return null;
         }
 
-        private static float? ParseSvgUnit(string? val)
+        /// <summary>
+        /// SVGの値を常にミリメートル(mm)に換算して返すユーティリティ
+        /// </summary>
+        private static float? ParseSvgToMm(string? val)
         {
             if (string.IsNullOrEmpty(val)) return null;
-            float factor = 1.0f;
-            if (val.EndsWith("mm")) factor = 96.0f / 25.4f;
-            else if (val.EndsWith("cm")) factor = 960.0f / 25.4f;
-            else if (val.EndsWith("in")) factor = 96.0f;
-            else if (val.EndsWith("pt")) factor = 96.0f / 72.0f;
-            else if (val.EndsWith("pc")) factor = 96.0f / 6.0f;
-            else if (val.EndsWith("px")) factor = 1.0f;
-            else factor = 1.0f; // 単位なしは px 扱い
+            
+            float factorToMm = 1.0f;
+            // 単位があるか確認 (px, mm, cm, in, pt, pc)
+            // 単位なしは px (SVGの標準として 96DPI 相当) とみなす
+            if (val.EndsWith("mm")) factorToMm = 1.0f;
+            else if (val.EndsWith("cm")) factorToMm = 10.0f;
+            else if (val.EndsWith("in")) factorToMm = 25.4f;
+            else if (val.EndsWith("pt")) factorToMm = 25.4f / 72.0f;
+            else if (val.EndsWith("pc")) factorToMm = 25.4f / 6.0f;
+            else if (val.EndsWith("px")) factorToMm = 25.4f / 96.0f;
+            else factorToMm = 25.4f / 96.0f; // 単位なし = ユーザー単位が 96DPI であると仮定
 
             string clean = Regex.Replace(val, @"[^\d.-]+", "");
-            if (float.TryParse(clean, NumberStyles.Float, CultureInfo.InvariantCulture, out var f)) return f * factor;
+            if (float.TryParse(clean, NumberStyles.Float, CultureInfo.InvariantCulture, out var f))
+            {
+                return f * factorToMm;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// SVGの単位付き文字列をユーザー単位（内部座標系）に変換する。
+        /// mmPerUserUnit: 1ユーザー単位が何ミリメートルに相当するか（スケール）
+        /// </summary>
+        private static float? ParseSvgToUserUnits(string? val, float mmPerUserUnit)
+        {
+            if (string.IsNullOrEmpty(val)) return null;
+            
+            // 単位があるか確認
+            bool hasUnit = Regex.IsMatch(val, @"[a-zA-Z]+$");
+            
+            if (hasUnit)
+            {
+                // 単位がある場合、一旦ミリメートルに変換し、それを現在のスケールで割ってユーザー単位にする
+                float? mm = ParseSvgToMm(val);
+                if (mm == null) return null;
+                return mm.Value / mmPerUserUnit;
+            }
+            else
+            {
+                // 単位がない場合は既にユーザー単位（unit）であるとみなす
+                if (float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out var f)) return f;
+            }
             return null;
         }
 
