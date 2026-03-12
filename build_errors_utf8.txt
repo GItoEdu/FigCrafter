@@ -1,7 +1,0 @@
-﻿I:\Ubuntu\VSCode\FigCrafter\Helpers\VectorFileParser.cs(301,88): error CS0103: The name 'scale' does not exist in the current context [I:\Ubuntu\VSCode\FigCrafter\FigCrafterApp_i3gxkwbx_wpftmp.csproj]
-
-Build FAILED.
-    22 Warning(s)
-    1 Error(s)
-
-Time Elapsed 00:00:02.27
