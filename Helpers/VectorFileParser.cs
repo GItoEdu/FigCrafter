@@ -89,9 +89,8 @@ namespace FigCrafterApp.Helpers
                 }
 
                 var group = new GroupObject();
-                
-                // 再帰的に要素を処理し、座標変換を継承させる
-                ProcessElement(root, SKMatrix.CreateScale(scale, scale), group, ns, scale, SvgStyle.Default);
+                var styleDict = ParseStyles(root, ns);
+                ProcessElement(root, SKMatrix.CreateScale(scale, scale), group, ns, scale, SvgStyle.Default, styleDict);
 
                 if (group.Children.Count > 0)
                 {
@@ -234,7 +233,7 @@ namespace FigCrafterApp.Helpers
             public SvgStyle Clone() => (SvgStyle)this.MemberwiseClone();
         }
 
-        private static void ProcessElement(XElement element, SKMatrix parentMatrix, GroupObject targetGroup, XNamespace ns, float scale, SvgStyle parentStyle)
+        private static void ProcessElement(XElement element, SKMatrix parentMatrix, GroupObject targetGroup, XNamespace ns, float scale, SvgStyle parentStyle, Dictionary<string, string> styleDict)
         {
             // ローカルの transform を取得し、親の行列と結合
             string transformAttr = element.Attribute("transform")?.Value ?? "";
@@ -244,16 +243,16 @@ namespace FigCrafterApp.Helpers
             // スタイルの継承と解決
             var currentStyle = parentStyle;
             
-            string fillStr = GetAttributeOrStyle(element, "fill");
+            string fillStr = GetAttributeOrStyle(element, "fill", styleDict);
             if (!string.IsNullOrEmpty(fillStr)) currentStyle.Fill = ParseColor(fillStr);
 
-            string strokeStr = GetAttributeOrStyle(element, "stroke");
+            string strokeStr = GetAttributeOrStyle(element, "stroke", styleDict);
             if (!string.IsNullOrEmpty(strokeStr)) currentStyle.Stroke = ParseColor(strokeStr);
 
-            string strokeWidthStr = GetAttributeOrStyle(element, "stroke-width");
+            string strokeWidthStr = GetAttributeOrStyle(element, "stroke-width", styleDict);
             if (!string.IsNullOrEmpty(strokeWidthStr)) currentStyle.StrokeWidth = ParseSvgToUserUnits(strokeWidthStr, scale);
 
-            string opacityStr = GetAttributeOrStyle(element, "opacity");
+            string opacityStr = GetAttributeOrStyle(element, "opacity", styleDict);
             if (!string.IsNullOrEmpty(opacityStr)) currentStyle.Opacity = ParseFloat(opacityStr);
 
             string d = "";
@@ -264,11 +263,11 @@ namespace FigCrafterApp.Helpers
             else if (element.Name == ns + "polyline" || element.Name == ns + "polygon") d = ConvertPolyToPath(element);
             else if (element.Name == ns + "text" || element.Name == ns + "tspan")
             {
-                ProcessTextElement(element, currentMatrix, targetGroup, currentStyle, scale);
+                ProcessTextElement(element, currentMatrix, targetGroup, currentStyle, scale, styleDict);
             }
             else if (element.Name == ns + "image")
             {
-                ProcessImageElement(element, currentMatrix, targetGroup, currentStyle);
+                ProcessImageElement(element, currentMatrix, targetGroup, currentStyle, styleDict);
             }
 
             if (!string.IsNullOrEmpty(d))
@@ -308,11 +307,11 @@ namespace FigCrafterApp.Helpers
             {
                 // text 要素の子要素としての tspan は ProcessTextElement 内で個別に処理する場合もあるが、
                 // ここでは単純な再帰で処理し、親子関係を継承する
-                ProcessElement(child, currentMatrix, targetGroup, ns, scale, currentStyle);
+                ProcessElement(child, currentMatrix, targetGroup, ns, scale, currentStyle, styleDict);
             }
         }
 
-        private static void ProcessTextElement(XElement el, SKMatrix matrix, GroupObject targetGroup, SvgStyle style, float scale)
+        private static void ProcessTextElement(XElement el, SKMatrix matrix, GroupObject targetGroup, SvgStyle style, float scale, Dictionary<string, string> styleDict)
         {
             XNamespace ns = el.Name.Namespace;
             // <text> 要素に <tspan> 子要素がある場合、<text> 自体としてのテキスト処理はスキップして
@@ -331,10 +330,10 @@ namespace FigCrafterApp.Helpers
 
             // 文字サイズ
             // scale は mm/unit。fontSize (unit) * scale (mm/unit) で mm に変換される。
-            float fontSize = ParseSvgToUserUnits(GetAttributeOrStyle(el, "font-size"), scale) ?? 12f;
-            string fontFamily = GetAttributeOrStyle(el, "font-family") ?? "Arial";
-            string fontWeight = GetAttributeOrStyle(el, "font-weight") ?? "";
-            string fontStyleStr = GetAttributeOrStyle(el, "font-style") ?? "";
+            float fontSize = ParseSvgToUserUnits(GetAttributeOrStyle(el, "font-size", styleDict), scale) ?? 12f;
+            string fontFamily = GetAttributeOrStyle(el, "font-family", styleDict) ?? "Arial";
+            string fontWeight = GetAttributeOrStyle(el, "font-weight", styleDict) ?? "";
+            string fontStyleStr = GetAttributeOrStyle(el, "font-style", styleDict) ?? "";
 
             // 行列からスケールと回転を抽出
             float matrixScale = (float)Math.Sqrt(matrix.ScaleX * matrix.ScaleX + matrix.SkewY * matrix.SkewY);
@@ -362,7 +361,7 @@ namespace FigCrafterApp.Helpers
             targetGroup.Children.Add(textObj);
         }
 
-        private static void ProcessImageElement(XElement el, SKMatrix matrix, GroupObject targetGroup, SvgStyle style)
+        private static void ProcessImageElement(XElement el, SKMatrix matrix, GroupObject targetGroup, SvgStyle style, Dictionary<string, string> styleDict)
         {
             string href = el.Attribute("{http://www.w3.org/1999/xlink}href")?.Value 
                        ?? el.Attribute("href")?.Value ?? "";
@@ -472,7 +471,7 @@ namespace FigCrafterApp.Helpers
             return matrix;
         }
 
-        private static string GetAttributeOrStyle(XElement element, string name)
+        private static string GetAttributeOrStyle(XElement element, string name, Dictionary<string, string> styleDict)
         {
             string? attr = element.Attribute(name)?.Value;
             if (attr != null) return attr;
@@ -482,6 +481,20 @@ namespace FigCrafterApp.Helpers
             {
                 var match = Regex.Match(style, $@"{name}:\s*([^;]+)");
                 if (match.Success) return match.Groups[1].Value.Trim();
+            }
+
+            string? cls = element.Attribute("class")?.Value;
+            if (cls != null)
+            {
+                var classes = cls.Split(new[] { ' '}, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var c in classes)
+                {
+                    if (styleDict.TryGetValue(c, out var classStyle))
+                    {
+                        var match = Regex.Match(classStyle, $@"{name}:\s*([^;]+)");
+                        if (match.Success) return match.Groups[1].Value.Trim();
+                    }
+                }
             }
             return "";
         }
@@ -604,6 +617,29 @@ namespace FigCrafterApp.Helpers
             string clean = Regex.Replace(val, @"[^\d.-]+", "");
             if (float.TryParse(clean, NumberStyles.Float, CultureInfo.InvariantCulture, out var f)) return f;
             return null;
+        }
+
+        // SVG内の<style>タグからCSSクラスの辞書を生成するメソッド
+        private static Dictionary<string, string> ParseStyles(XElement root, XNamespace ns)
+        {
+            var dict = new Dictionary<string, string>();
+            foreach (var styleNode in root.Descendants(ns + "style"))
+            {
+                var css = styleNode.Value;
+                // セレクタとプロパティを抽出
+                var matches = Regex.Matches(css, @"([^{]+)\s*\{\s*([^}]+)\s*\}");
+                foreach (Match m in matches)
+                {
+                    string selectors = m.Groups[1].Value;
+                    string properties = m.Groups[2].Value;
+                    var classes = Regex.Matches(selectors, @"\.([a-zA-Z0-9_-]+)");
+                    foreach (Match cm in classes)
+                    {
+                        dict[cm.Groups[1].Value] = properties;
+                    }
+                }
+            }
+            return dict;
         }
     }
 }
