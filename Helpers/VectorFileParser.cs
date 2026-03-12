@@ -142,21 +142,33 @@ namespace FigCrafterApp.Helpers
                         current.IsBold == target.IsBold &&
                         current.IsItalic == target.IsItalic)
                     {
-                        // 距離の判定（同一行かつ横に並んでいるか）
-                        // 回転を考慮した相対的な座標ではなく、まずは単純な距離で判定
-                        float dist = (float)Math.Sqrt(Math.Pow(current.X - target.X, 2) + Math.Pow(current.Y - target.Y, 2));
-                        
-                        // 非常に近い場合はマージ
-                        // PDFの文字間隔は FontSize の数倍になることもあるが、ここでは文字幅程度を閾値とする
-                        float threshold = current.FontSize * 2.0f; 
+                        // 回転角度を考慮したベクトル計算
+                        double angleRad = current.Rotation * Math.PI / 180.0;
+                        double dirX = Math.Cos(angleRad);
+                        double dirY = Math.Sin(angleRad);
 
-                        if (dist < threshold)
+                        double dx = current.X - target.X;
+                        double dy = current.Y - target.Y;
+
+                        // 進行方向の距離（内積）
+                        double distX = dx * dirX + dy * dirY;
+                        // 垂直方向の距離（外積的なベースラインのずれ）
+                        double distY = -dx * dirY + dy * dirX;
+
+                        // 許容値の定義
+                        double verticalThreshold = current.FontSize * 0.5;
+                        double horizontalThreshold = current.FontSize * 2.0;
+
+                        if (Math.Abs(distY) < verticalThreshold && Math.Abs(distX) < horizontalThreshold)
                         {
-                            // 前後の判定（X座標で判断）
-                            if (current.X > target.X)
+                            if (distX > 0)
+                            {
+                                // currentがtargetの進行方向にある（後ろ）
                                 target.Text += current.Text;
+                            }
                             else
                             {
+                                // currentがtargetの逆方向にある（前）
                                 target.Text = current.Text + target.Text;
                                 target.X = current.X;
                                 target.Y = current.Y;
@@ -320,13 +332,12 @@ namespace FigCrafterApp.Helpers
                 Rotation = rotation
             };
 
-            // 行列適用後の座標計算
-            var p = matrix.MapPoint(x, y);
+            // 行列変換前でY座標をベースラインから上端へシフトする
+            float localY = y - (fontSize * 0.8f);
+            var p = matrix.MapPoint(x, localY);
+
             textObj.X = p.X;
-            // SVGはベースライン基準、FigCrafterは上端基準。
-            // また、回転がある場合は X, Y を起点に TransformCanvas が回転されるため、
-            // 完全に一致させるのは難しいが、まずは位置を合わせる。
-            textObj.Y = p.Y - (textObj.FontSize * 0.8f); 
+            textObj.Y = p.Y;
 
             targetGroup.Children.Add(textObj);
         }
@@ -498,7 +509,7 @@ namespace FigCrafterApp.Helpers
             {
                 if (i + 1 < pts.Length) d += $" L {pts[i]} {pts[i+1]}";
             }
-            if (el.Name == "polygon") d += " Z";
+            if (el.Name.LocalName == "polygon") d += " Z";
             return d;
         }
 
