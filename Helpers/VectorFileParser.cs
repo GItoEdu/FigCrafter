@@ -159,23 +159,39 @@ namespace FigCrafterApp.Helpers
 
                         // 許容値の定義
                         double verticalThreshold = current.FontSize * 0.5;
-                        double horizontalThreshold = current.FontSize * 2.0;
+                        double horizontalThreshold = current.FontSize * 5.0;
 
                         if (Math.Abs(distY) < verticalThreshold && Math.Abs(distX) < horizontalThreshold)
                         {
+                            using SKTypeface typeface = SKTypeface.FromFamilyName(target.FontFamily);
+                            using SKFont font = new SKFont(typeface, target.FontSize);
+
+                            double spaceThreshold = current.FontSize * 0.25;
+
                             if (distX > 0)
                             {
-                                // currentがtargetの進行方向にある（後ろ）
+                                float targetWidth = font.MeasureText(target.Text);
+                                double gap = distX - targetWidth;
+
+                                if (gap > spaceThreshold && !target.Text.EndsWith(" ") && !current.Text.StartsWith(" "))
+                                {
+                                    target.Text += " ";
+                                }
                                 target.Text += current.Text;
-                                lastCoords[target] = (current.X, current.Y);
                             }
                             else
                             {
-                                // currentがtargetの逆方向にある（前）
-                                target.Text = current.Text + target.Text;
+                                float currentWidth = font.MeasureText(current.Text);
+                                double gap = Math.Abs(distX) - currentWidth;
+
+                                string prefix = "";
+                                if (gap > spaceThreshold && !current.Text.EndsWith(" ") && !target.Text.StartsWith(" "))
+                                {
+                                    prefix = " ";
+                                }
+                                target.Text = current.Text + prefix + target.Text;
                                 target.X = current.X;
                                 target.Y = current.Y;
-                                lastCoords[target] = (current.X, current.Y);
                             }
                             merged = true;
                             break;
