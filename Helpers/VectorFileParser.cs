@@ -62,7 +62,7 @@ namespace FigCrafterApp.Helpers
 
                 if (!File.Exists(tempSvg)) return null;
 
-                var doc = XDocument.Load(tempSvg);
+                var doc = XDocument.Load(tempSvg, LoadOptions.PreserveWhiteSpace);
                 XNamespace ns = "http://www.w3.org/2000/svg";
                 var root = doc.Root;
                 if (root == null) return null;
@@ -123,6 +123,8 @@ namespace FigCrafterApp.Helpers
             // 垂直方向の近接度は FontSize の 0.5倍程度を許容
             var remainingTexts = new List<TextObject>(texts);
             var mergedList = new List<TextObject>();
+            // 単語の途中で結合が途切れるのを防ぐため、直前に結合した文字の座標を保持
+            var lastCoords = new Dictionary<TextObject, (double X, double Y)>();
 
             while (remainingTexts.Count > 0)
             {
@@ -165,6 +167,7 @@ namespace FigCrafterApp.Helpers
                             {
                                 // currentがtargetの進行方向にある（後ろ）
                                 target.Text += current.Text;
+                                lastCoords[target] = (current.X, current.Y);
                             }
                             else
                             {
@@ -172,6 +175,7 @@ namespace FigCrafterApp.Helpers
                                 target.Text = current.Text + target.Text;
                                 target.X = current.X;
                                 target.Y = current.Y;
+                                lastCoords[target] = (current.X, current.Y);
                             }
                             merged = true;
                             break;
@@ -303,7 +307,7 @@ namespace FigCrafterApp.Helpers
             }
 
             string text = el.Value; 
-            if (string.IsNullOrWhiteSpace(text)) return;
+            if (string.IsNullOrEmpty(text)) return;
 
             // 座標 (x, y)
             float x = ParseFloat(el.Attribute("x")?.Value) ?? 0;
