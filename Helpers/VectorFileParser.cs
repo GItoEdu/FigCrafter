@@ -479,8 +479,15 @@ namespace FigCrafterApp.Helpers
             string? style = element.Attribute("style")?.Value;
             if (style != null)
             {
-                var match = Regex.Match(style, $@"{name}:\s*([^;]+)");
-                if (match.Success) return match.Groups[1].Value.Trim();
+                var properties = style.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var prop in properties)
+                {
+                    var kv = prop.Split(new[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
+                    if (kv.Length == 2 && kv[0].Trim().Equals(name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return kv[1].Trim();
+                    }
+                }
             }
 
             string? cls = element.Attribute("class")?.Value;
@@ -491,8 +498,16 @@ namespace FigCrafterApp.Helpers
                 {
                     if (styleDict.TryGetValue(c, out var classStyle))
                     {
-                        var match = Regex.Match(classStyle, $@"{name}:\s*([^;]+)");
-                        if (match.Success) return match.Groups[1].Value.Trim();
+                        // プロパティ群をセミコロンで分割
+                        var properties = classStyle.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var prop in properties)
+                        {
+                            var kv = prop.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
+                            if (kv.Length == 2 && kv[0].Trim().Equals(name, StringComparison.OrdinalIgnoreCase))
+                            {
+                                return kv[1].Trim();
+                            }
+                        }
                     }
                 }
             }
