@@ -62,7 +62,7 @@ namespace FigCrafterApp.Helpers
 
                 if (!File.Exists(tempSvg)) return null;
 
-                var doc = XDocument.Load(tempSvg, LoadOptions.PreserveWhiteSpace);
+                var doc = XDocument.Load(tempSvg, LoadOptions.PreserveWhitespace);
                 XNamespace ns = "http://www.w3.org/2000/svg";
                 var root = doc.Root;
                 if (root == null) return null;
