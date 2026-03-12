@@ -1664,7 +1664,11 @@ namespace FigCrafterApp.Views
             double offsetY = textObj.Y * mmToPx * vm.ZoomLevel - 1;
             InlineEditingTextBox.Margin = new Thickness(offsetX, offsetY, 0, 0);
             
-            InlineEditingTextBox.Width = maxWidth * mmToPx * vm.ZoomLevel + 4; // 少し余裕を持たせる
+            InlineEditingTextBox.TextWrapping = TextWrapping.NoWrap;
+            InlineEditingTextBox.AcceptsReturn = true; // 明示的に改行した場合には改行する
+
+            InlineEditingTextBox.MinWidth = maxWidth * mmToPx * vm.ZoomLevel + 8;
+            InlineEditingTextBox.Width = double.NaN; // Width="Auto"に相当
             InlineEditingTextBox.MinHeight = (textObj.FontSize * mmToPx * vm.ZoomLevel) + 4;
             
             // 回転の適用
