@@ -1674,8 +1674,12 @@ namespace FigCrafterApp.Views
             // 回転の適用
             if (Math.Abs(textObj.Rotation) > 0.01)
             {
+                // SkiaSharpのアンカーポイントとTextBoxの左端との差分をスケール変換
+                double anchorLocalX = (textObj.X - visualLeft) * mmToPx * vm.ZoomLevel;
+                double anchorLocalY = 0;
+
                 InlineEditingTextBox.RenderTransformOrigin = new Point(0, 0);
-                InlineEditingTextBox.RenderTransform = new System.Windows.Media.RotateTransform(textObj.Rotation);
+                InlineEditingTextBox.RenderTransform = new System.Windows.Media.RotateTransform(textObj.Rotation, anchorLocalX, anchorLocalY);
             }
             else
             {
