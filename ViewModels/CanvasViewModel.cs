@@ -236,15 +236,22 @@ namespace FigCrafterApp.ViewModels
                 {
                     _layers.CollectionChanged -= OnLayersCollectionChanged;
                     foreach (var layer in _layers)
-                        layer.PropertyChanged -= OnLayerPropertyChanged;
+                    {
+                        if (layer != null)
+                            layer.PropertyChanged -= OnLayerPropertyChanged;
+                    }
                 }
 
-                if (SetProperty(ref _layers, value))
+                if (SetProperty(ref _layers!, value))
                 {
-                    if (_layers.Count > 0)
+                    if (_layers != null && _layers.Count > 0)
+                    {
                         ActiveLayer = _layers[0];
+                    }
                     else
-                        ActiveLayer = null;
+                    {
+                        ActiveLayer = null!;
+                    }
                 }
 
                 // 新コレクションのイベント登録
@@ -252,7 +259,10 @@ namespace FigCrafterApp.ViewModels
                 {
                     _layers.CollectionChanged += OnLayersCollectionChanged;
                     foreach (var layer in _layers)
+                    {
+                        if (layer != null)
                         layer.PropertyChanged += OnLayerPropertyChanged;
+                    }
                 }
             }
         }

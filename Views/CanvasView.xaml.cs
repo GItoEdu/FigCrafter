@@ -884,7 +884,7 @@ namespace FigCrafterApp.Views
                 float snapOffsetY = 0;
 
                 // 他のオブジェクトに対するスナップ判定（スナップ有効かつShiftキーが押されていない場合のみ）
-                if (vm.IsSnapEnabled && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && vm.ActiveLayer != null)
+                if (vm != null && vm.IsSnapEnabled && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && vm.ActiveLayer != null)
                 {
                     float[] targetXLines = draggedXSet.ToArray();
                     float[] targetYLines = draggedYSet.ToArray();
