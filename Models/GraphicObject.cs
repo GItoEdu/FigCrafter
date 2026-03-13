@@ -21,7 +21,7 @@ namespace FigCrafterApp.Models
         private float _rotation; // 回転角 (度)
         private SKColor _fillColor = SKColors.Blue;
         private SKColor _strokeColor = SKColors.Black;
-        private float _strokeWidth = 0.2f; // デフォルトを 0.2mm (約0.8px) に変更
+        private float _strokeWidth = 1.0f; // デフォルトを1.0ptに変更
         private float _opacity = 1.0f; // 1.0 = 不透明, 0.0 = 透明
         private bool _isSelected = false;
 
@@ -260,7 +260,8 @@ namespace FigCrafterApp.Models
 
             paint.Color = strokeWithOpacity;
             paint.Style = SKPaintStyle.Stroke;
-            paint.StrokeWidth = StrokeWidth; // ズーム補正を削除（物理サイズ維持）
+            // StrokeWidth(pt)をmmに変換してから渡す
+            paint.StrokeWidth = StrokeWidth * (25.4f / 72.0f);
             canvas.DrawRect(X, Y, Width, Height, paint);
             
             if (IsSelected)
@@ -306,7 +307,8 @@ namespace FigCrafterApp.Models
 
             paint.Color = strokeWithOpacity;
             paint.Style = SKPaintStyle.Stroke;
-            paint.StrokeWidth = StrokeWidth; // ズーム補正を削除
+            // StrokeWidth(pt)をmmに変換してから渡す
+            paint.StrokeWidth = StrokeWidth * (25.4f / 72.0f);
             canvas.DrawOval(new SKRect(X, Y, X + Width, Y + Height), paint);
 
             if (IsSelected)
@@ -364,7 +366,8 @@ namespace FigCrafterApp.Models
             {
                 Color = strokeWithOpacity,
                 Style = SKPaintStyle.Stroke,
-                StrokeWidth = StrokeWidth, // ズーム補正を削除
+                // StrokeWidth(pt)をmmに変換してから渡す
+                StrokeWidth = StrokeWidth * (25.4f / 72.0f),
                 IsAntialias = true
             };
             canvas.DrawLine(X, Y, EndX, EndY, paint);
@@ -375,7 +378,8 @@ namespace FigCrafterApp.Models
                 float dx = EndX - X;
                 float dy = EndY - Y;
                 float angle = (float)Math.Atan2(dy, dx);
-                float arrowLength = (15f / CurrentZoomLevel) + StrokeWidth; // 15px相当を維持しつつ線幅を加味
+                float strokeWidthMm = StrokeWidth * (25.4f / 72.0f);
+                float arrowLength = (15f / CurrentZoomLevel) + strokeWidthMm;
                 float arrowAngle = (float)(Math.PI / 6); // 30度
 
                 using var arrowPaint = new SKPaint
@@ -1256,7 +1260,8 @@ namespace FigCrafterApp.Models
 
             paint.Color = strokeWithOpacity;
             paint.Style = SKPaintStyle.Stroke;
-            paint.StrokeWidth = StrokeWidth; // ズーム補正を削除
+            // StrokeWidth(pt)をmmに変換してから渡す
+            paint.StrokeWidth = StrokeWidth * (25.4f / 72.0f);
             canvas.DrawPath(path, paint);
 
             if (IsSelected)
