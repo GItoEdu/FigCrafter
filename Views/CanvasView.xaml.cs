@@ -962,19 +962,22 @@ namespace FigCrafterApp.Views
                 float actualDy = (targetRect.Top + totalDy) - currentBoundingRect.Top;
 
                 // 全選択オブジェクトに差分を適用
-                foreach (var obj in vm.SelectedObjects)
+                if (vm != null && vm.SelectedObjects != null)
                 {
-                    obj.X += actualDx;
-                    obj.Y += actualDy;
+                    foreach (var obj in vm.SelectedObjects)
+                    {
+                        obj.X += actualDx;
+                        obj.Y += actualDy;
 
-                    if (obj is LineObject lineObj)
-                    {
-                        lineObj.EndX += actualDx;
-                        lineObj.EndY += actualDy;
-                    }
-                    else if (obj is GroupObject groupObj)
-                    {
-                        MoveChildrenRecursive(groupObj, actualDx, actualDy);
+                        if (obj is LineObject lineObj)
+                        {
+                            lineObj.EndX += actualDx;
+                            lineObj.EndY += actualDy;
+                        }
+                        else if (obj is GroupObject groupObj)
+                        {
+                            MoveChildrenRecursive(groupObj, actualDx, actualDy);
+                        }
                     }
                 }
 
