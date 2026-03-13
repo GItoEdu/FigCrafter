@@ -489,7 +489,6 @@ namespace FigCrafterApp.Models
             {
                 Color = fillWithOpacity,
                 IsAntialias = true,
-                TextAlign = HorizontalAlignment
             };
 
             using var typeface = SKTypeface.FromFamilyName(FontFamily, 
@@ -515,7 +514,7 @@ namespace FigCrafterApp.Models
                 var line = lines[i];
                 // X をアンカーとして直接使用 (TextAlign が実際のシフトを担当)
                 float lineY = Y - metrics.Ascent + (i * spacing);
-                canvas.DrawText(line, X, lineY, font, paint);
+                canvas.DrawText(line, X, lineY, HorizontalAlignment, font, paint);
             }
 
             if (IsSelected)
@@ -1142,8 +1141,10 @@ namespace FigCrafterApp.Models
                 }
                 catch (Exception ex)
                 {
-                    using var errPaint = new SKPaint { Color = SKColors.Red, TextSize = 16 };
-                    canvas.DrawText("Eraser Err: " + ex.Message, X, Y - 10, errPaint);
+                    using var errFont = new SKFont { Size = 16 };
+                    using var errPaint = new SKPaint { Color = SKColors.Red };
+                    canvas.DrawText("Eraser Err: " + ex.Message, X, Y - 10, SKTextAlign.Left, errFont, errPaint);
+                    
                     canvas.DrawBitmap(_imageData, srcRect, destRect, _cachedPaint);
                 }
             }

@@ -211,7 +211,11 @@ namespace FigCrafterApp.Views
                 _tempObject.Draw(canvas);
             }
 
-            var currentZoom = (float)(DataContext as CanvasViewModel)?.ZoomLevel;
+            float currentZoom = 1.0f;
+            if (DataContext is CanvasViewModel vmZoom)
+            {
+                currentZoom = (float)vmZoom.ZoomLevel;
+            }
             if (currentZoom == 0) currentZoom = 1.0f;
 
             // 消しゴム矩形の描画
@@ -872,7 +876,7 @@ namespace FigCrafterApp.Views
                 draggedXSet.Add((float)Math.Round(draggedCenterX, 1));
                 draggedYSet.Add((float)Math.Round(draggedCenterY, 1));
 
-                float snapThreshold = 10.0f / (float)vm.ZoomLevel;
+                float snapThreshold = (vm != null && vm.ZoomLevel != 0) ? 10.0f / (float)vm.ZoomLevel : 10.0f;
 
                 float closestDistX = float.MaxValue;
                 float closestDistY = float.MaxValue;
