@@ -567,6 +567,16 @@ namespace FigCrafterApp.Views
                 return;
             }
 
+            float strokeWidthToApply = 0.5f;
+            if (System.Windows.Application.Current?.MainWindow?.DataContext is MainViewModel mainVM)
+            {
+                strokeWidthToApply = mainVM.CurrentStrokeWidth;
+            }
+            else if (this.DataContext is MainViewModel thisVM)
+            {
+                strokeWidthToApply = thisVM.CurrentStrokeWidth;
+            }
+            
             switch (vm.CurrentTool)
             {
                 case DrawingTool.Rectangle:
@@ -576,7 +586,7 @@ namespace FigCrafterApp.Views
                     _tempObject = new EllipseObject { X = _startPoint.X, Y = _startPoint.Y, FillColor = SKColors.Salmon.WithAlpha(128) };
                     break;
                 case DrawingTool.Line:
-                    _tempObject = new LineObject { X = _startPoint.X, Y = _startPoint.Y, EndX = _startPoint.X, EndY = _startPoint.Y, StrokeColor = SKColors.Black.WithAlpha(128), StrokeWidth = 0.5f };
+                    _tempObject = new LineObject { X = _startPoint.X, Y = _startPoint.Y, EndX = _startPoint.X, EndY = _startPoint.Y, StrokeColor = SKColors.Black.WithAlpha(128), StrokeWidth = strokeWidthToApply };
                     break;
             }
 

@@ -13,6 +13,7 @@ namespace FigCrafterApp.ViewModels
     {
         private ObservableCollection<CanvasViewModel> _documents = new();
         private CanvasViewModel? _activeDocument;
+        private float _currentStrokeWidth = 0.5f;
 
         public ObservableCollection<CanvasViewModel> Documents
         {
@@ -24,6 +25,13 @@ namespace FigCrafterApp.ViewModels
         {
             get => _activeDocument;
             set => SetProperty(ref _activeDocument, value);
+        }
+
+        // 線幅
+        public float CurrentStrokeWidth
+        {
+            get => _currentStrokeWidth;
+            set => SetProperty(ref _currentStrokeWidth, value);
         }
 
         public ICommand NewDocumentCommand { get; }
