@@ -276,7 +276,8 @@ namespace FigCrafterApp.Helpers
                 {
                     StrokeColor = currentStyle.Stroke ?? SKColors.Transparent,
                     FillColor = currentStyle.Fill ?? SKColors.Transparent,
-                    StrokeWidth = (currentStyle.StrokeWidth ?? 1.0f) * GetMatrixScale(currentMatrix),
+                    // mmからptに変換する
+                    StrokeWidth = (currentStyle.StrokeWidth ?? 1.0f) * GetMatrixScale(currentMatrix) * (72.0f / 25.4f),
                     Opacity = currentStyle.Opacity ?? 1.0f
                 };
 

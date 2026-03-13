@@ -10,7 +10,7 @@ namespace FigCrafterApp.Helpers
     public static class ImportHelper
     {
         /// <summary>
-        /// 画像、AI(PDF互換)、PDF、EMFファイルを読み込み、SKBitmapとして返す
+        /// 画像、Adobe Illustrator（*.ai; PDF互換）、PDF、EMFファイルを読み込み、SKBitmapとして返す
         /// </summary>
         public static async Task<SKBitmap?> ImportFileAsync(string filePath)
         {
@@ -31,7 +31,7 @@ namespace FigCrafterApp.Helpers
                 }
                 else
                 {
-                    // 標準の画像読込 (SKData を使用してより堅牢に)
+                    // 標準の画像読込
                     using var data = SKData.Create(filePath);
                     if (data == null) return null;
                     return SKBitmap.Decode(data);
