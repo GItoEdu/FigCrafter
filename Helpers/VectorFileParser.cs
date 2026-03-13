@@ -62,6 +62,13 @@ namespace FigCrafterApp.Helpers
 
                 if (!File.Exists(tempSvg)) return null;
 
+                // DEBUG
+                Debug.WriteLine($"Temp SVG: {tempSvg}");
+                string svgContent = File.ReadAllText(tempSvg);
+                Debug.WriteLine("=== SVG CONTENT START ===");
+                Debug.WriteLine(svgContent);
+                Debug.WriteLine("=== SVG CONTENT END ===");
+
                 var doc = XDocument.Load(tempSvg, LoadOptions.PreserveWhitespace);
                 XNamespace ns = "http://www.w3.org/2000/svg";
                 var root = doc.Root;
@@ -105,7 +112,7 @@ namespace FigCrafterApp.Helpers
             }
             finally
             {
-                if (File.Exists(tempSvg)) File.Delete(tempSvg);
+                // if (File.Exists(tempSvg)) File.Delete(tempSvg);
             }
 
             return null;
