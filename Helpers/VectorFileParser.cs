@@ -63,11 +63,11 @@ namespace FigCrafterApp.Helpers
                 if (!File.Exists(tempSvg)) return null;
 
                 // DEBUG
-                Debug.WriteLine($"Temp SVG: {tempSvg}");
-                string svgContent = File.ReadAllText(tempSvg);
-                Debug.WriteLine("=== SVG CONTENT START ===");
-                Debug.WriteLine(svgContent);
-                Debug.WriteLine("=== SVG CONTENT END ===");
+                // Debug.WriteLine($"Temp SVG: {tempSvg}");
+                // string svgContent = File.ReadAllText(tempSvg);
+                // Debug.WriteLine("=== SVG CONTENT START ===");
+                // Debug.WriteLine(svgContent);
+                // Debug.WriteLine("=== SVG CONTENT END ===");
 
                 var doc = XDocument.Load(tempSvg, LoadOptions.PreserveWhitespace);
                 XNamespace ns = "http://www.w3.org/2000/svg";
@@ -112,7 +112,7 @@ namespace FigCrafterApp.Helpers
             }
             finally
             {
-                // if (File.Exists(tempSvg)) File.Delete(tempSvg);
+                if (File.Exists(tempSvg)) File.Delete(tempSvg);
             }
 
             return null;
@@ -283,8 +283,8 @@ namespace FigCrafterApp.Helpers
                 {
                     StrokeColor = currentStyle.Stroke ?? SKColors.Transparent,
                     FillColor = currentStyle.Fill ?? SKColors.Transparent,
-                    // mmからptに変換する
-                    StrokeWidth = (currentStyle.StrokeWidth ?? 1.0f) * GetMatrixScale(currentMatrix) * (72.0f / 25.4f),
+                    // インポートしたパスの線幅は0.5ptに統一する
+                    StrokeWidth = 0.5f,
                     Opacity = currentStyle.Opacity ?? 1.0f
                 };
 
