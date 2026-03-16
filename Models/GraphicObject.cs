@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using System.Windows.Shapes;
 using SkiaSharp;
 
 namespace FigCrafterApp.Models
@@ -462,9 +463,9 @@ namespace FigCrafterApp.Models
 
     public class TextObject : GraphicObject
     {
-        private string _text = "Text";
-        private string _fontFamily = "Arial";
-        private float _fontSize = 8.0f * (25.4f / 72.0f); // 8pt
+        private string _text = ""; // デフォルトのテキスト
+        private string _fontFamily = "Arial"; // デフォルトのフォント
+        private float _fontSize = 8.0f * (25.4f / 72.0f); // デフォルトのフォントサイズ（8pt）
         private bool _isBold = false;
         private bool _isItalic = false;
         private SKTextAlign _horizontalAlignment = SKTextAlign.Left;
@@ -478,17 +479,31 @@ namespace FigCrafterApp.Models
 
         public override void Draw(SKCanvas canvas)
         {
-            if (string.IsNullOrEmpty(Text)) return;
+            string safeText = Text ?? "";
+            bool isEmpty = string.IsNullOrEmpty(safeText);
 
             canvas.Save();
             TransformCanvas(canvas);
 
             var fillWithOpacity = FillColor.WithAlpha((byte)(FillColor.Alpha * Opacity));
+            var strokeWithOpacity = StrokeColor.WithAlpha((byte)(StrokeColor.Alpha * Opacity));
 
-            using var paint = new SKPaint
+            // 文字の塗り
+            using var fillPaint = new SKPaint
             {
+                Style = SKPaintStyle.Fill,
                 Color = fillWithOpacity,
                 IsAntialias = true,
+            };
+
+            // 文字の縁取り
+            using var strokePaint = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = strokeWithOpacity,
+                StrokeWidth = StrokeWidth,
+                StrokeJoin = SKStrokeJoin.Round,
+                IsAntialias = true,   
             };
 
             using var typeface = SKTypeface.FromFamilyName(FontFamily, 
@@ -497,29 +512,41 @@ namespace FigCrafterApp.Models
                 IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
             using var font = new SKFont(typeface, FontSize);
 
-            var lines = Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            float maxWidth = isEmpty ? FontSize　*2.0f : 0;
             float spacing = font.Spacing;
-            
-            // 全体の幅を計算
-            float maxWidth = 0;
-            foreach (var line in lines)
-            {
-                maxWidth = Math.Max(maxWidth, font.MeasureText(line));
-            }
+            string[] lines = isEmpty ? new string[] { "" } : safeText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
-            font.GetFontMetrics(out var metrics);
-
-            for (int i = 0; i < lines.Length; i++)
+            if (!isEmpty)
             {
-                var line = lines[i];
-                // X をアンカーとして直接使用 (TextAlign が実際のシフトを担当)
-                float lineY = Y - metrics.Ascent + (i * spacing);
-                canvas.DrawText(line, X, lineY, HorizontalAlignment, font, paint);
+                foreach (var line in lines)
+                {
+                    maxWidth = Math.Max(maxWidth, font.MeasureText(line));
+                }
+
+                font.GetFontMetrics(out var metrics);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    var line = lines[i];
+                    // X をアンカーとして直接使用 (TextAlign が実際のシフトを担当)
+                    float lineY = Y - metrics.Ascent + (i * spacing);
+
+                    // 縁取り
+                    if (StrokeWidth > 0 && strokeWithOpacity.Alpha > 0)
+                    {
+                        canvas.DrawText(line, X, lineY, HorizontalAlignment, font, strokePaint);
+                    }
+
+                    // 塗り
+                    if (fillWithOpacity.Alpha > 0)
+                    {
+                        canvas.DrawText(line, X, lineY, HorizontalAlignment, font, fillPaint);
+                    }
+                }
             }
 
             if (IsSelected)
             {
-                float totalHeight = (lines.Length - 1) * spacing + FontSize;
+                float totalHeight = isEmpty ? FontSize * 1.2f : (lines.Length - 1) * spacing + FontSize;
                 float left = X;
                 if (HorizontalAlignment == SKTextAlign.Center) left -= maxWidth / 2;
                 else if (HorizontalAlignment == SKTextAlign.Right) left -= maxWidth;
@@ -533,9 +560,9 @@ namespace FigCrafterApp.Models
 
         public override bool HitTest(SKPoint point)
         {
-            if (string.IsNullOrEmpty(Text)) return false;
-
             var p = UntransformPoint(point);
+            string safeText = Text ?? "";
+            bool isEmpty = string.IsNullOrEmpty(safeText);
 
             using var typeface = SKTypeface.FromFamilyName(FontFamily, 
                 IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal, 
@@ -543,16 +570,20 @@ namespace FigCrafterApp.Models
                 IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
             using var font = new SKFont(typeface, FontSize);
 
-            var lines = Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-            float spacing = font.Spacing;
-            float maxWidth = 0;
-            
-            foreach (var line in lines)
+            float maxWidth = isEmpty ? FontSize * 2.0f : 0;
+            float totalHeight = isEmpty ? FontSize * 1.2f : FontSize;
+
+            if (!isEmpty)
             {
-                maxWidth = Math.Max(maxWidth, font.MeasureText(line));
+                var lines = safeText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                float spacing = font.Spacing;
+                foreach (var line in lines)
+                {
+                    maxWidth = Math.Max(maxWidth, font.MeasureText(line));
+                }
+                totalHeight = (lines.Length - 1) * spacing + FontSize;
             }
 
-            float totalHeight = (lines.Length - 1) * spacing + FontSize;
             float left = X;
             if (HorizontalAlignment == SKTextAlign.Center) left -= maxWidth / 2;
             else if (HorizontalAlignment == SKTextAlign.Right) left -= maxWidth;
@@ -568,7 +599,8 @@ namespace FigCrafterApp.Models
 
         public override SKPoint[] GetTransformedCorners()
         {
-            if (string.IsNullOrEmpty(Text)) return new[] { new SKPoint(X, Y), new SKPoint(X, Y), new SKPoint(X, Y), new SKPoint(X, Y) };
+            string safeText = Text ?? "";
+            bool isEmpty = string.IsNullOrEmpty(safeText);
 
             using var typeface = SKTypeface.FromFamilyName(FontFamily, 
                 IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal, 
@@ -576,12 +608,17 @@ namespace FigCrafterApp.Models
                 IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
             using var font = new SKFont(typeface, FontSize);
 
-            var lines = Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-            float spacing = font.Spacing;
-            float maxWidth = 0;
-            foreach (var line in lines) maxWidth = Math.Max(maxWidth, font.MeasureText(line));
+            float maxWidth = isEmpty ? FontSize * 2.0f : 0;
+            float totalHeight = isEmpty ? FontSize * 1.2f : FontSize;
 
-            float totalHeight = (lines.Length - 1) * spacing + FontSize;
+            if (!isEmpty)
+            {
+                var lines = safeText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                float spacing = font.Spacing;
+                foreach (var line in lines) maxWidth = Math.Max(maxWidth, font.MeasureText(line));
+                totalHeight = (lines.Length - 1) * spacing + FontSize;
+            }
+        
             float left = X;
             if (HorizontalAlignment == SKTextAlign.Center) left -= maxWidth / 2;
             else if (HorizontalAlignment == SKTextAlign.Right) left -= maxWidth;
