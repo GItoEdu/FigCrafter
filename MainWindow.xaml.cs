@@ -8,6 +8,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using FigCrafterApp.Models;
+using Windows.System.Profile;
 
 namespace FigCrafterApp;
 
@@ -60,6 +62,45 @@ public partial class MainWindow : Window
                 }
                 (parent as FrameworkElement)?.Focus();
                 e.Handled = true;
+            }
+        }
+    }
+
+    private void StrokeWidthUp_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        ChangeStrokeWidth(sender, 0.1);
+    }
+
+    private void StrokeWidthDown_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        ChangeStrokeWidth(sender, -0.1);
+    }
+
+    // 上下ボタン共通の処理（どんな型や場所にあっても確実に値を変更する）
+    private void ChangeStrokeWidth(object sender, double amount)
+    {
+        // 1. 押されたボタンとその裏側のデータ (DataContext) を取得
+        if (sender is System.Windows.FrameworkElement button && button.DataContext != null)
+        {
+            var context = button.DataContext;
+            
+            // 2. データの中から "StrokeWidth" か "CurrentStrokeWidth" というプロパティを探す
+            var property = context.GetType().GetProperty("StrokeWidth") 
+                        ?? context.GetType().GetProperty("CurrentStrokeWidth");
+
+            if (property != null)
+            {
+                // 3. 現在の値を読み取って増減させる
+                double currentValue = Convert.ToDouble(property.GetValue(context));
+                double newValue = Math.Round(currentValue + amount, 1);
+
+                // 線幅が0以下にならないように制限
+                if (newValue > 0)
+                {
+                    // 4. 元の型 (float, double等) に変換して安全にデータを上書きする
+                    object convertedValue = Convert.ChangeType(newValue, property.PropertyType);
+                    property.SetValue(context, convertedValue);
+                }
             }
         }
     }
