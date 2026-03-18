@@ -560,7 +560,9 @@ namespace FigCrafterApp.Views
                 { 
                     X = _startPoint.X, 
                     Y = _startPoint.Y, 
-                    FillColor = SKColors.Black 
+                    FillColor = SKColors.Black,
+                    StrokeWidth = 0,
+                    StrokeColor = SKColors.Transparent
                 };
                 
                 if (vm.ActiveLayer != null)
