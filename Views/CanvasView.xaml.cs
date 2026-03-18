@@ -1735,6 +1735,8 @@ namespace FigCrafterApp.Views
                 InlineEditingTextBox.RenderTransform = System.Windows.Media.Transform.Identity;
             }
 
+            vm.ClearSelection();
+            _selectedObject = null;
             InlineEditingTextBox.Visibility = Visibility.Visible;
 
             System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
@@ -1776,6 +1778,9 @@ namespace FigCrafterApp.Views
                 vm.Invalidate();
             }
             
+            vm.SelectObject(_editingTextObject);
+            _selectedObject = vm.SelectedObject;
+
             // UI終了処理
             InlineEditingTextBox.Visibility = Visibility.Hidden;
             _editingTextObject = null;
