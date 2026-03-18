@@ -110,7 +110,13 @@ namespace FigCrafterApp.Views
         {
             InitializeComponent();
             // マウスクリック時にキーボードフォーカスを取得
-            this.MouseDown += (s, e) => Keyboard.Focus(this);
+            this.MouseDown += (s, e) =>
+            {
+                if (_editingTextObject == null)
+                {
+                    Keyboard.Focus(this);
+                }
+            };    
             // SkiaElement上のダブルクリックでテキスト編集を開始
             // SKElementはFrameworkElement派生のためMouseDoubleClickイベントがない
             // PreviewMouseLeftButtonDownでClickCount==2を検出する
@@ -568,6 +574,7 @@ namespace FigCrafterApp.Views
                 SkiaElement.InvalidateVisual();
                 
                 StartInlineEditing(textObj, vm);
+                e.Handled = true;
                 return;
             }
 
@@ -583,6 +590,7 @@ namespace FigCrafterApp.Views
             
             switch (vm.CurrentTool)
             {
+               
                 case DrawingTool.Rectangle:
                     _tempObject = new RectangleObject
                     {
@@ -1728,8 +1736,12 @@ namespace FigCrafterApp.Views
             }
 
             InlineEditingTextBox.Visibility = Visibility.Visible;
-            InlineEditingTextBox.Focus();
-            InlineEditingTextBox.SelectAll();
+
+            System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                InlineEditingTextBox.Focus();
+                InlineEditingTextBox.SelectAll();
+            }), System.Windows.Threading.DispatcherPriority.Input);
         }
 
         private void EndInlineEditing(bool isCancel = false)
