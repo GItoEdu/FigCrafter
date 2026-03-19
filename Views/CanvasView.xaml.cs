@@ -34,7 +34,7 @@ namespace FigCrafterApp.Views
         private float _startRotationMouseAngle; // 回転開始時のマウス角度を保持
         
         // Undo用の一時保存
-        private List<(GraphicObject Obj, float OldX, float OldY)> _preDragPositions = new();
+        private List<(GraphicObject Obj, float OldX, float OldY, float? OldEndX, float? OldEndY)> _preDragPositions = new();
         private (float X, float Y, float EndX, float EndY) _preDragLineEnd;
 
         // スナップ機能用
@@ -540,11 +540,13 @@ namespace FigCrafterApp.Views
                     _preDragPositions.Clear();
                     foreach (var obj in vm.SelectedObjects)
                     {
-                        _preDragPositions.Add((obj, obj.X, obj.Y));
                         if (obj is LineObject lineObj)
                         {
-                            // Lineの場合は始点も終点も動くので、ここでは始点をY/Xとして記録しているがLine全体の移動の際に工夫が必要
-                            // 移動処理(_isDragging)自体はX,Y等の変異だけを記録すればMoveObjectsCommandで対応可能
+                            _preDragPositions.Add((obj, obj.X, obj.Y, lineObj.EndX, lineObj.EndY));
+                        }
+                        else
+                        {
+                            _preDragPositions.Add((obj, obj.X, obj.Y, null, null));   
                         }
                     }
                     SkiaElement.CaptureMouse();
@@ -988,29 +990,22 @@ namespace FigCrafterApp.Views
                 totalDx += snapOffsetX;
                 totalDy += snapOffsetY;
 
-                // 前回フレームからの差分を計算（このフレームでの実際の移動量）
-                // _selectedObject の現在位置と、あるべき位置 (元の初期位置 + 総移動量) の差分を取る
-                // 注: _selectedObject はグループ等で構成される場合もあるため、バウンディングボックスの左上などを基準に差分計算する
-                var currentBoundingRect = GetBoundingRect(_selectedObject);
-                float actualDx = (targetRect.Left + totalDx) - currentBoundingRect.Left;
-                float actualDy = (targetRect.Top + totalDy) - currentBoundingRect.Top;
-
-                // 全選択オブジェクトに差分を適用
-                if (vm != null && vm.SelectedObjects != null)
+                if (vm != null && _preDragPositions.Count > 0)
                 {
-                    foreach (var obj in vm.SelectedObjects)
+                    foreach (var (obj, oldX, oldY, oldEndX, oldEndY) in _preDragPositions)
                     {
-                        obj.X += actualDx;
-                        obj.Y += actualDy;
+                        // GroupObjectなどの再帰移動用に、今回のフレームでの「実際の差分」を計算しておく
+                        float actualDx = (oldX + totalDx) - obj.X;
+                        float actualDy = (oldY + totalDy) - obj.Y;
 
-                        if (obj is LineObject lineObj)
-                        {
-                            lineObj.EndX += actualDx;
-                            lineObj.EndY += actualDy;
-                        }
-                        else if (obj is GroupObject groupObj)
-                        {
-                            MoveChildrenRecursive(groupObj, actualDx, actualDy);
+                        // 記憶している初期座標に総移動量を足して直接設定する
+                        obj.X = oldX + totalDx;
+                        obj.Y = oldX + totalDy;
+                    
+                        if (obj is LineObject lineObj && oldEndX.HasValue && oldEndY.HasValue)
+                        {                           
+                            lineObj.EndX = oldEndX.Value + totalDx;
+                            lineObj.EndY = oldEndY.Value + totalDy;
                         }
                     }
                 }
@@ -1207,7 +1202,7 @@ namespace FigCrafterApp.Views
                     if (hasMoved)
                     {
                         var moves = new List<(GraphicObject Obj, float OldX, float OldY, float NewX, float NewY)>();
-                        foreach (var (obj, oldX, oldY) in _preDragPositions)
+                        foreach (var (obj, oldX, oldY, oldEndX, oldEndY) in _preDragPositions)
                         {
                             moves.Add((obj, oldX, oldY, obj.X, obj.Y));
                         }
