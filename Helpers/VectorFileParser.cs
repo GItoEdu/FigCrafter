@@ -356,7 +356,9 @@ namespace FigCrafterApp.Helpers
                 IsItalic = fontStyleStr.Contains("italic"),
                 FillColor = style.Fill ?? SKColors.Black,
                 Opacity = style.Opacity ?? 1.0f,
-                Rotation = rotation
+                Rotation = rotation,
+                StrokeWidth = 0,
+                StrokeColor = SKColors.Transparent
             };
 
             // 行列変換前でY座標をベースラインから上端へシフトする
