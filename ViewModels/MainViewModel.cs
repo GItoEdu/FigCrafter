@@ -6,6 +6,7 @@ using FigCrafterApp.Models;
 using FigCrafterApp.Serialization;
 using System.Text.Json;
 using System.IO;
+using System.Linq;
 
 namespace FigCrafterApp.ViewModels
 {
@@ -26,6 +27,9 @@ namespace FigCrafterApp.ViewModels
             get => _activeDocument;
             set => SetProperty(ref _activeDocument, value);
         }
+
+        // 全ドキュメントの未保存状態を判定
+        public bool IsDirty => _documents.Any(doc => doc.IsDirty);
 
         // 線幅
         public float CurrentStrokeWidth
