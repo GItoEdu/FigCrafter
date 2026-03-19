@@ -43,6 +43,22 @@ namespace FigCrafterApp.ViewModels
         // Undo / Redo 用の履歴スタック
         private readonly Stack<IUndoableCommand> _undoStack = new();
         private readonly Stack<IUndoableCommand> _redoStack = new();
+        // 保存状態の追跡用フィールドとプロパティ
+        private IUndoableCommand? _savedCommand = null;
+
+        ///<summary>
+        ///未保存の変更があるかどうか（Undoスタックの最上位と保存時の状態を比較）
+        ///</summary>
+        public bool IsDirty => (_undoStack.Count > 0 ? _undoStack.Peek() : null) != _savedCommand;
+
+        /// <summary>
+        /// 現在の状態を「保存済み」としてマーキングする
+        /// </summary>
+        public void MarkAsSaved()
+        {
+            _savedCommand = _undoStack.Count > 0 ? _undoStack.Peek() : null;
+            OnPropertyChanged(nameof(IsDirty));
+        }
 
         // プロパティ変更検知用の直前値保持ディクショナリ
         private readonly Dictionary<string, object?> _propertyChangeOldValues = new();
@@ -102,6 +118,9 @@ namespace FigCrafterApp.ViewModels
             (UndoCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (RedoCommand as RelayCommand)?.RaiseCanExecuteChanged();
             Invalidate();
+
+            // 状態変更を通知
+            OnPropertyChanged(nameof(IsDirty));
         }
 
         private void Undo()
@@ -124,6 +143,9 @@ namespace FigCrafterApp.ViewModels
                 (UndoCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 (RedoCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 Invalidate();
+
+                // 状態変更を通知
+                OnPropertyChanged(nameof(IsDirty));
             }
         }
 
@@ -147,6 +169,9 @@ namespace FigCrafterApp.ViewModels
                 (UndoCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 (RedoCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 Invalidate();
+
+                // 状態変更を通知
+                OnPropertyChanged(nameof(IsDirty));
             }
         }
 
@@ -369,6 +394,9 @@ namespace FigCrafterApp.ViewModels
         {
             // 選択オブジェクトのプロパティ変更時は再描画を要求する
             Invalidate();
+
+            // Undo/Redo実行中（プログラム側からのプロパティ変更）は履歴に積まない
+            if (_isExecutingCommand) return;
 
             if (IsUndoSuppressed) return; // Undo抑制中は記録しない
 
@@ -1423,6 +1451,9 @@ namespace FigCrafterApp.ViewModels
             (UndoCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (RedoCommand as RelayCommand)?.RaiseCanExecuteChanged();
             Invalidate();
+
+            // ロード直後は保存済み状態とする
+            MarkAsSaved();
         }
     }
 }

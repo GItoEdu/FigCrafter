@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -10,6 +11,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using FigCrafterApp.Models;
 using Windows.System.Profile;
+using System.Linq;
 
 namespace FigCrafterApp;
 
@@ -21,6 +23,40 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+    }
+
+    private void Window_Closing(object sender, CancelEventArgs e)
+    {
+        // DataContextからViewModelを取得
+        if (DataContext is ViewModels.MainViewModel vm)
+        {
+            // 未保存のドキュメントをリストアップ
+            var dirtyDocs = vm.Documents.Where(d => d.IsDirty).ToList();
+
+            foreach (var doc in dirtyDocs)
+            {
+                vm.ActiveDocument = doc;
+
+                var result = MessageBox.Show(
+                    $"ドキュメント '{doc.Title}' に未保存の変更があります。保存して終了しますか？",
+                        "終了の確認",
+                        MessageBoxButton.YesNoCancel,
+                        MessageBoxImage.Warning);
+                
+                if (result == MessageBoxResult.Cancel)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+                else if (result == MessageBoxResult.Yes)
+                {
+                    if (vm.SaveProjectCommand != null && vm.SaveProjectCommand.CanExecute(null))
+                    {
+                        vm.SaveProjectCommand.Execute(null);
+                    }
+                }
+            }
+        }
     }
 
     private void Window_DragOver(object sender, DragEventArgs e)

@@ -346,6 +346,9 @@ namespace FigCrafterApp.ViewModels
                     var projectData = ActiveDocument.CreateProjectData();
                     string json = JsonSerializer.Serialize(projectData, ProjectData.GetSerializerOptions());
                     File.WriteAllText(ActiveDocument.FilePath, json);
+
+                    // 保存成功時にフラグをリセット
+                    ActiveDocument.MarkAsSaved();
                 }
                 catch (Exception ex)
                 {
@@ -381,6 +384,9 @@ namespace FigCrafterApp.ViewModels
                     // タイトルとファイルパスを更新
                     ActiveDocument.Title = Path.GetFileNameWithoutExtension(dialog.FileName);
                     ActiveDocument.FilePath = dialog.FileName;
+
+                    // 保存成功時にフラグをリセット
+                    ActiveDocument.MarkAsSaved();
                 }
                 catch (Exception ex)
                 {
