@@ -34,7 +34,7 @@ namespace FigCrafterApp.Views
         private float _startRotationMouseAngle; // 回転開始時のマウス角度を保持
         
         // Undo用の一時保存
-        private List<(GraphicObject Obj, float OldX, float OldY, float? OldEndX, float? OldEndY)> _preDragPositions = new();
+        private List<(GraphicObject Obj, float OldX, float OldY)> _preDragPositions = new();
         private (float X, float Y, float EndX, float EndY) _preDragLineEnd;
 
         // スナップ機能用
@@ -510,9 +510,11 @@ namespace FigCrafterApp.Views
                         }
                         else
                         {
-                            // 通常クリック: 単一選択
-                            vm.SelectObject(hitObject);
-                            _selectedObject = vm.SelectedObject;
+                            if (!vm.SelectedObjects.Contains(hitObject))
+                            {
+                                vm.SelectObject(hitObject);
+                            }
+                            _selectedObject = hitObject;
                         }
                     }
                 }
@@ -540,14 +542,7 @@ namespace FigCrafterApp.Views
                     _preDragPositions.Clear();
                     foreach (var obj in vm.SelectedObjects)
                     {
-                        if (obj is LineObject lineObj)
-                        {
-                            _preDragPositions.Add((obj, obj.X, obj.Y, lineObj.EndX, lineObj.EndY));
-                        }
-                        else
-                        {
-                            _preDragPositions.Add((obj, obj.X, obj.Y, null, null));   
-                        }
+                        _preDragPositions.Add((obj, obj.X, obj.Y));
                     }
                     SkiaElement.CaptureMouse();
                 }
@@ -990,22 +985,27 @@ namespace FigCrafterApp.Views
                 totalDx += snapOffsetX;
                 totalDy += snapOffsetY;
 
-                if (vm != null && _preDragPositions.Count > 0)
-                {
-                    foreach (var (obj, oldX, oldY, oldEndX, oldEndY) in _preDragPositions)
-                    {
-                        // GroupObjectなどの再帰移動用に、今回のフレームでの「実際の差分」を計算しておく
-                        float actualDx = (oldX + totalDx) - obj.X;
-                        float actualDy = (oldY + totalDy) - obj.Y;
+                // 前回フレームからの差分を計算（このフレームでの実際の移動量）
+                var currentBoundingRect = GetBoundingRect(_selectedObject);
+                float actualDx = (targetRect.Left + totalDx) - currentBoundingRect.Left;
+                float actualDy = (targetRect.Top + totalDy) - currentBoundingRect.Top;
 
-                        // 記憶している初期座標に総移動量を足して直接設定する
-                        obj.X = oldX + totalDx;
-                        obj.Y = oldX + totalDy;
-                    
-                        if (obj is LineObject lineObj && oldEndX.HasValue && oldEndY.HasValue)
-                        {                           
-                            lineObj.EndX = oldEndX.Value + totalDx;
-                            lineObj.EndY = oldEndY.Value + totalDy;
+                // 全選択オブジェクトに差分を適用
+                if (vm != null && vm.SelectedObjects != null)
+                {
+                    foreach (var obj in vm.SelectedObjects)
+                    {
+                        obj.X += actualDx;
+                        obj.Y += actualDy;
+
+                        if (obj is LineObject lineObj)
+                        {
+                            lineObj.EndX += actualDx;
+                            lineObj.EndY += actualDy;
+                        }
+                        else if (obj is GroupObject groupObj)
+                        {
+                            MoveChildrenRecursive(groupObj, actualDx, actualDy);
                         }
                     }
                 }
@@ -1202,7 +1202,7 @@ namespace FigCrafterApp.Views
                     if (hasMoved)
                     {
                         var moves = new List<(GraphicObject Obj, float OldX, float OldY, float NewX, float NewY)>();
-                        foreach (var (obj, oldX, oldY, oldEndX, oldEndY) in _preDragPositions)
+                        foreach (var (obj, oldX, oldY) in _preDragPositions)
                         {
                             moves.Add((obj, oldX, oldY, obj.X, obj.Y));
                         }
