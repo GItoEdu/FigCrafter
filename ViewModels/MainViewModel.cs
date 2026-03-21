@@ -7,6 +7,7 @@ using FigCrafterApp.Serialization;
 using System.Text.Json;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 
 namespace FigCrafterApp.ViewModels
 {
@@ -430,9 +431,44 @@ namespace FigCrafterApp.ViewModels
                             AddNewDocument();
                         }
 
-                        if (extension == ".emf" || extension == ".wmf" || extension == ".pdf")
+                        if (extension == ".emf" || extension == ".wmf" || extension == ".pdf" || extension == ".ai")
                         {
-                            var vectorGroup = FigCrafterApp.Helpers.VectorFileParser.ParseVectorFile(path);
+                            FigCrafterApp.Models.GroupObject? vectorGroup = null;
+
+                            if (extension == ".pdf" || extension == ".ai")
+                            {
+                                var parsedObjects = await System.Threading.Tasks.Task.Run(() =>
+                                FigCrafterApp.Helpers.VectorFileParser.ParsePdfFile(path));
+
+                                if (parsedObjects != null && parsedObjects.Count > 0)
+                                {
+                                    vectorGroup = new FigCrafterApp.Models.GroupObject();
+                                    foreach (var obj in parsedObjects)
+                                    {
+                                        vectorGroup.Children.Add(obj);
+                                    }
+
+                                    // グループ全体のバウンディングボックスを計算
+                                    float minX = float.MaxValue, minY = float.MaxValue;
+                                    float maxX = float.MinValue, maxY = float.MinValue;
+                                    foreach (var child in vectorGroup.Children)
+                                    {
+                                        if (child.X < minX) minX = child.X;
+                                        if (child.Y < minY) minY = child.Y;
+                                        if (child.X + child.Width > maxX) maxX = child.X + child.Width;
+                                        if (child.Y + child.Height > maxY) maxY = child.Y + child.Height;
+                                    }
+                                    vectorGroup.X = minX;
+                                    vectorGroup.Y = minY;
+                                    vectorGroup.Width = Math.Max(0.1f, maxX - minX);
+                                    vectorGroup.Height = Math.Max(0.1f, maxY - minY);
+                                }
+                            }
+                            else
+                            {
+                                vectorGroup = FigCrafterApp.Helpers.VectorFileParser.ParseVectorFile(path);   
+                            }
+
                             if (vectorGroup != null && ActiveDocument != null)
                             {
                                 // 初期配置位置を調整
@@ -443,6 +479,9 @@ namespace FigCrafterApp.ViewModels
                                     child.X += offsetX;
                                     child.Y += offsetY;
                                 }
+                                vectorGroup.X += offsetX;
+                                vectorGroup.Y += offsetY;
+                                
                                 vectorGroup.RecalculateBounds();
                                 ActiveDocument.ImportGraphicObject(vectorGroup);
                                 continue;
