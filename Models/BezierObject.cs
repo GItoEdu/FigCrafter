@@ -14,6 +14,7 @@ namespace FigCrafterApp.Models
 
         // パスの始点と終点を閉じるかどうか
         public bool IsClosed { get; set; } = false;
+        public SKPathFillType FillType { get; set; } = SKPathFillType.Winding;
 
         public override void Draw(SKCanvas canvas)
         {
@@ -137,6 +138,7 @@ namespace FigCrafterApp.Models
         private SKPath GetSKPath()
         {
             var path = new SKPath();
+            path.FillType = this.FillType;
             if (Nodes == null || Nodes.Count == 0) return path;
 
             bool isFirst = true;
@@ -174,6 +176,7 @@ namespace FigCrafterApp.Models
             CopyPropertiesTo(clone);
 
             clone.IsClosed = this.IsClosed;
+            clone.FillType = this.FillType;
             
             // ノードのディープコピー
             clone.Nodes = new ObservableCollection<PathNode>(this.Nodes.Select(n => n.Clone()));

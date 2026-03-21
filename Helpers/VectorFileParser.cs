@@ -1,13 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
-using FigCrafterApp.Models;
 using SkiaSharp;
 using System.Text.RegularExpressions;
 using System.Globalization;
+using UglyToad.PdfPig;
+using UglyToad.PdfPig.Graphics.Operations;
+using UglyToad.PdfPig.Graphics.Operations.PathConstruction;
+using UglyToad.PdfPig.Graphics.Operations.PathPainting;
+using UglyToad.PdfPig.Graphics.Colors;
+using FigCrafterApp.Models;
 
 namespace FigCrafterApp.Helpers
 {
@@ -116,6 +122,163 @@ namespace FigCrafterApp.Helpers
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// PDF互換の.aiファイルまたは.pdfファイルを読み込み、GraphicObjectのリストに変換する
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        public static List<GraphicObject> ParsePdfFile(string filePath)
+        {
+            var parsedObjects = new List<GraphicObject>();
+
+            try
+            {
+                // PdfPigでドキュメントを開く
+                using var document = PdfDocument.Open(filePath);
+                if (document.NumberOfPages == 0) return parsedObjects;
+
+                // 1ページ目のみを対象とする
+                var page = document.GetPage(1);
+                decimal pageHeight = (decimal)page.Height;
+
+                // 現在構築中のパスデータ
+                var currentNodes = new List<PathNode>();
+
+                // 現在のグラフィックス状態
+                SKColor currentFillColor = SKColors.Black;
+                SKColor currentStrokeColor = SKColors.Black;
+                float currentStrokeWidth = 0.5f;
+
+                // ページ内の全描画オペレーションを順番に処理
+                foreach (var operation in page.Operations)
+                {
+                    // パス構築オペレーション
+                    if (operation is BeginNewSubpath move)
+                    {
+                        currentNodes.Add(new PathNode
+                        {
+                            NodeType = PathNodeType.Move,
+                            X = (float)move.X,
+                            Y = (float)(pageHeight - move.Y)
+                        });
+                    }
+                    else if (operation is AppendStraightLineSegment line)
+                    {
+                        currentNodes.Add(new PathNode
+                        {
+                           NodeType = PathNodeType.Line,
+                           X = (float)line.X,
+                           Y = (float)(pageHeight - line.Y)
+                        });
+                    }
+                    else if (operation is AppendDualControlPointBezierCurve cubic)
+                    {
+                        currentNodes.Add(new PathNode
+                        {
+                            NodeType = PathNodeType.Bezier,
+                            Control1X = (float)cubic.X1,
+                            Control1Y = (float)(pageHeight - cubic.Y1),
+                            Control2X = (float)cubic.X2,
+                            Control2Y = (float)(pageHeight - cubic.Y2),
+                            X = (float)cubic.X3,
+                            Y = (float)(pageHeight - cubic.Y3)
+                        });
+                    }
+                    else if (operation is UglyToad.PdfPig.Graphics.Operations.PathConstruction.CloseSubpath)
+                    {
+                        // パスを閉じる命令（h）が来たら、後でIsClosedをtrueにするフラグとして扱う
+                        // ここでは特別にノードとしては追加せず、描画コマンド実行時に判定します
+                    }
+                    // 色と線の設定オペレーション
+                    else if (operation is UglyToad.PdfPig.Graphics.Operations.General.SetLineWidth setLineWidth)
+                    {
+                        currentStrokeWidth = (float)setLineWidth.Width;
+                    }
+                    // ※ ここにRGBやCMYKの色設定オペレーションの解析を追加していきますが、
+                    //    長くなるため最初は固定色や簡易取得に留めます（後で拡張します）
+
+                    // 描画オペレーション
+                    else
+                    {
+                        string opName = operation.GetType().Name;
+
+                        bool isStroke = opName.Contains("Stroke");
+                        bool isFill = opName.Contains("Fill");
+                        bool isClose = opName.Contains("Close");
+                        bool isEvenOdd = opName.Contains("EvenOdd");
+
+                        if (isStroke || isFill)
+                        {
+                            if (currentNodes.Count > 0)
+                            {
+                                var bezierObj = new BezierObject
+                                {
+                                    Nodes = new ObservableCollection<PathNode>(currentNodes),
+                                    StrokeWidth = currentStrokeWidth,
+                                    FillColor = isFill ? currentFillColor : SKColors.Transparent,
+                                    StrokeColor = isStroke ? currentStrokeColor : SKColors.Transparent,
+                                    IsClosed = isClose,
+                                    FillType = isEvenOdd ? SKPathFillType.EvenOdd : SKPathFillType.Winding
+                                };
+                                
+                                FinalizeBezierObject(bezierObj);
+
+                                parsedObjects.Add(bezierObj);
+                                currentNodes.Clear();
+                            }
+                        }
+                        else if (opName == "EndPath")
+                        {
+                            currentNodes.Clear();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PDF Parser Error: {ex.Message}");
+            }
+
+            return parsedObjects;
+        }
+
+        private static void FinalizeBezierObject(BezierObject obj)
+        {
+            if (obj.Nodes.Count == 0) return;
+
+            float minX = float.MaxValue, minY = float.MaxValue;
+            float maxX = float.MinValue, maxY = float.MinValue;
+
+            // バウンディングボックスの計算
+            foreach (var node in obj.Nodes)
+            {
+                if (node.X < minX) minX = node.X;
+                if (node.Y < minY) minY = node.Y;
+                if (node.X > maxX) maxX = node.X;
+                if (node.Y > maxY) maxY = node.Y;
+            }
+
+            obj.X = minX;
+            obj.Y = minY;
+            obj.Width = maxX - minX;
+            obj.Height = maxY - minY;
+
+            // 各ノードを相対座標に変換
+            foreach (var node in obj.Nodes)
+            {
+                node.X -= minX;
+                node.Y -= minY;
+
+                if (node.NodeType == PathNodeType.Bezier)
+                {
+                    node.Control1X -= minX;
+                    node.Control1Y -= minY;
+                    node.Control2X -= minX;
+                    node.Control2Y -= minY;
+                }
+            }
         }
 
         private static void MergeTextObjects(GroupObject group)
