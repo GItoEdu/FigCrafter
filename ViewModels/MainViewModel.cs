@@ -435,8 +435,12 @@ namespace FigCrafterApp.ViewModels
                         {
                             FigCrafterApp.Models.GroupObject? vectorGroup = null;
 
-                            if (extension == ".pdf" || extension == ".ai")
+                            if (extension == ".ai")
                             {
+                                // DEBUG：aiファイルのoperationを全てtxtファイルにダンプする
+                                // FigCrafterApp.Helpers.VectorFileParser.DumpPdfOperations(path);
+                                // return;
+
                                 var parsedObjects = await System.Threading.Tasks.Task.Run(() =>
                                 FigCrafterApp.Helpers.VectorFileParser.ParsePdfFile(path));
 
