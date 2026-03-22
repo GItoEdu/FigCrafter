@@ -14,6 +14,8 @@ using UglyToad.PdfPig.Graphics.Operations.PathConstruction;
 using UglyToad.PdfPig.Graphics.Operations.PathPainting;
 using UglyToad.PdfPig.Graphics.Colors;
 using FigCrafterApp.Models;
+using System.Drawing.Drawing2D;
+using OpenTK.Graphics.GL;
 
 namespace FigCrafterApp.Helpers
 {
@@ -143,107 +145,303 @@ namespace FigCrafterApp.Helpers
                 var page = document.GetPage(1);
                 decimal pageHeight = (decimal)page.Height;
 
+                // PDFのPoint（72dpi）をミリメートルに変換する係数
+                float ptToMm = 25.4f / 72.0f;
+
                 // 現在構築中のパスデータ
                 var currentNodes = new List<PathNode>();
 
                 // 現在のグラフィックス状態
                 SKColor currentFillColor = SKColors.Black;
                 SKColor currentStrokeColor = SKColors.Black;
-                float currentStrokeWidth = 0.5f;
+                float currentStrokeWidth = 1.0f; // 線幅の初期値はPDF標準の1.0ptとする
+
+                var matrixStack = new Stack<SKMatrix>();
+                var currentMatrix = SKMatrix.CreateIdentity();
 
                 // ページ内の全描画オペレーションを順番に処理
                 foreach (var operation in page.Operations)
                 {
-                    // パス構築オペレーション
-                    if (operation is BeginNewSubpath move)
+                    try
                     {
-                        currentNodes.Add(new PathNode
-                        {
-                            NodeType = PathNodeType.Move,
-                            X = (float)move.X,
-                            Y = (float)(pageHeight - move.Y)
-                        });
-                    }
-                    else if (operation is AppendStraightLineSegment line)
-                    {
-                        currentNodes.Add(new PathNode
-                        {
-                           NodeType = PathNodeType.Line,
-                           X = (float)line.X,
-                           Y = (float)(pageHeight - line.Y)
-                        });
-                    }
-                    else if (operation is AppendDualControlPointBezierCurve cubic)
-                    {
-                        currentNodes.Add(new PathNode
-                        {
-                            NodeType = PathNodeType.Bezier,
-                            Control1X = (float)cubic.X1,
-                            Control1Y = (float)(pageHeight - cubic.Y1),
-                            Control2X = (float)cubic.X2,
-                            Control2Y = (float)(pageHeight - cubic.Y2),
-                            X = (float)cubic.X3,
-                            Y = (float)(pageHeight - cubic.Y3)
-                        });
-                    }
-                    else if (operation is UglyToad.PdfPig.Graphics.Operations.PathConstruction.CloseSubpath)
-                    {
-                        // パスを閉じる命令（h）が来たら、後でIsClosedをtrueにするフラグとして扱う
-                        // ここでは特別にノードとしては追加せず、描画コマンド実行時に判定します
-                    }
-                    // 色と線の設定オペレーション
-                    else if (operation is UglyToad.PdfPig.Graphics.Operations.General.SetLineWidth setLineWidth)
-                    {
-                        currentStrokeWidth = (float)setLineWidth.Width;
-                    }
-                    // ※ ここにRGBやCMYKの色設定オペレーションの解析を追加していきますが、
-                    //    長くなるため最初は固定色や簡易取得に留めます（後で拡張します）
+                        string opName = operation.GetType().Name; 
+                        string opCode = operation.Operator; // 生コマンド
+                        string opString = operation.ToString() ?? "";
 
-                    // 描画オペレーション
-                    else
-                    {
-                        string opName = operation.GetType().Name;
-
-                        bool isStroke = opName.Contains("Stroke");
-                        bool isFill = opName.Contains("Fill");
-                        bool isClose = opName.Contains("Close");
-                        bool isEvenOdd = opName.Contains("EvenOdd");
-
-                        if (isStroke || isFill)
+                        // グラフィックスステートの管理
+                        if (opName == "Push")
                         {
-                            if (currentNodes.Count > 0)
+                            matrixStack.Push(currentMatrix);
+                        }
+                        else if (opName == "Pop")
+                        {
+                            if (matrixStack.Count > 0)
+                            currentMatrix = matrixStack.Pop();
+                        }
+                        else if (opName == "ModifyCurrentTransformationMatrix")
+                        {
+                            dynamic cm = operation;
+                            float a = Convert.ToSingle(cm.Value[0]);
+                            float b = Convert.ToSingle(cm.Value[1]);
+                            float c = Convert.ToSingle(cm.Value[2]);
+                            float d = Convert.ToSingle(cm.Value[3]);
+                            float tx = Convert.ToSingle(cm.Value[4]);
+                            float ty = Convert.ToSingle(cm.Value[5]);
+
+                            var newMat = new SKMatrix(a, c, tx, b, d, ty, 0, 0, 1);
+                            currentMatrix = SKMatrix.Concat(currentMatrix, newMat);
+                        }
+
+                        // パス構築オペレーション
+                        // 四角形
+                        else if (opName == "AppendRectangle")
+                        {
+                            var matches = Regex.Matches(opString, @"[-+]?[0-9]*\.?[0-9]+");
+                            if (matches.Count >= 4)
                             {
-                                var bezierObj = new BezierObject
-                                {
-                                    Nodes = new ObservableCollection<PathNode>(currentNodes),
-                                    StrokeWidth = currentStrokeWidth,
-                                    FillColor = isFill ? currentFillColor : SKColors.Transparent,
-                                    StrokeColor = isStroke ? currentStrokeColor : SKColors.Transparent,
-                                    IsClosed = isClose,
-                                    FillType = isEvenOdd ? SKPathFillType.EvenOdd : SKPathFillType.Winding
-                                };
-                                
-                                FinalizeBezierObject(bezierObj);
+                                float x = float.Parse(matches[0].Value, CultureInfo.InvariantCulture);
+                                float y = float.Parse(matches[1].Value, CultureInfo.InvariantCulture);
+                                float w = float.Parse(matches[2].Value, CultureInfo.InvariantCulture);
+                                float h = float.Parse(matches[3].Value, CultureInfo.InvariantCulture);
 
-                                parsedObjects.Add(bezierObj);
+                                var p1 = currentMatrix.MapPoint(new SKPoint(x, y));
+                                var p2 = currentMatrix.MapPoint(new SKPoint(x + w, y));
+                                var p3 = currentMatrix.MapPoint(new SKPoint(x + w, y + h));
+                                var p4 = currentMatrix.MapPoint(new SKPoint(x, y + h));
+
+                                currentNodes.Add(new PathNode
+                                {
+                                    NodeType = PathNodeType.Move,
+                                    X = p1.X * ptToMm,
+                                    Y = ((float)pageHeight - p1.Y) * ptToMm
+                                });
+                                currentNodes.Add(new PathNode
+                                {
+                                    NodeType = PathNodeType.Line,
+                                    X = p2.X * ptToMm,
+                                    Y = ((float)pageHeight - p2.Y) * ptToMm    
+                                });
+                                currentNodes.Add(new PathNode
+                                {
+                                    NodeType = PathNodeType.Line,
+                                    X = p3.X * ptToMm,
+                                    Y = ((float)pageHeight - p3.Y) * ptToMm    
+                                });
+                                currentNodes.Add(new PathNode
+                                {
+                                    NodeType = PathNodeType.Line,
+                                    X = p4.X * ptToMm,
+                                    Y = ((float)pageHeight - p4.Y) * ptToMm    
+                                });
+                                currentNodes.Add(new PathNode
+                                {
+                                    NodeType = PathNodeType.Line,
+                                    X = p1.X * ptToMm,
+                                    Y = ((float)pageHeight - p1.Y) * ptToMm    
+                                });
+                            }
+                        }
+                        // 移動
+                        else if (operation is BeginNewSubpath move)
+                        {
+                            var p = currentMatrix.MapPoint(new SKPoint((float)move.X, (float)move.Y));
+                            currentNodes.Add(new PathNode
+                            {
+                                NodeType = PathNodeType.Move,
+                                X = p.X * ptToMm,
+                                Y = ((float)pageHeight - p.Y) * ptToMm
+                            });
+                        }
+                        // 直線
+                        else if (operation is AppendStraightLineSegment line)
+                        {
+                            var p = currentMatrix.MapPoint(new SKPoint((float)line.X, (float)line.Y));
+                            currentNodes.Add(new PathNode
+                            {
+                            NodeType = PathNodeType.Line,
+                            X = p.X * ptToMm,
+                            Y = ((float)pageHeight - p.Y) * ptToMm
+                            });
+                        }
+                        // ベジェ曲線
+                        else if (operation is AppendDualControlPointBezierCurve cubic)
+                        {
+                            var cp1 = currentMatrix.MapPoint(new SKPoint((float)cubic.X1, (float)cubic.Y1));
+                            var cp2 = currentMatrix.MapPoint(new SKPoint((float)cubic.X2, (float)cubic.Y2));
+                            var p3 = currentMatrix.MapPoint(new SKPoint((float)cubic.X3, (float)cubic.Y3));
+
+                            currentNodes.Add(new PathNode
+                            {
+                                NodeType = PathNodeType.Bezier,
+                                Control1X = cp1.X * ptToMm,
+                                Control1Y = ((float)pageHeight - cp1.Y) * ptToMm,
+                                Control2X = cp2.X * ptToMm,
+                                Control2Y = ((float)pageHeight - cp2.Y) * ptToMm,
+                                X = p3.X * ptToMm,
+                                Y = ((float)pageHeight - p3.Y) * ptToMm
+                            });
+                        }
+                        else if (operation is UglyToad.PdfPig.Graphics.Operations.PathConstruction.CloseSubpath)
+                        {
+                            // パスを閉じる命令（h）が来たら、後でIsClosedをtrueにするフラグとして扱う
+                            // ここでは特別にノードとしては追加せず、描画コマンド実行時に判定します
+                        }
+                        // 色と線の設定オペレーション
+                        else if (opName == "SetLineWidth")
+                        {
+                            var matches = Regex.Matches(opString, @"[-+]?[0-9]*\.?[0-9]+");
+                            if (matches.Count >= 1)
+                            {
+                                currentStrokeWidth = float.Parse(matches[0].Value, CultureInfo.InvariantCulture);
+                            }
+                        }
+                        else if (opCode == "rg" || opCode == "RG" || opCode == "k" || opCode == "K" || opCode == "g" || opCode == "G" || opCode == "scn" || opCode == "SCN")
+                        {
+                            var matches = Regex.Matches(opString, @"[-+]?[0-9]*\.?[0-9]+");
+                            if (matches.Count >= 1)
+                            {
+                                float r = 0, g = 0, b = 0;
+                                if (matches.Count == 1) // グレースケール (g, G)
+                                {
+                                    r = g = b = float.Parse(matches[0].Value, CultureInfo.InvariantCulture);
+                                }
+                                else if (matches.Count >= 4) // CMYK (k, K) をRGBに簡易変換
+                                {
+                                    float c = float.Parse(matches[0].Value, CultureInfo.InvariantCulture);
+                                    float m = float.Parse(matches[1].Value, CultureInfo.InvariantCulture);
+                                    float y = float.Parse(matches[2].Value, CultureInfo.InvariantCulture);
+                                    float k = float.Parse(matches[3].Value, CultureInfo.InvariantCulture);
+                                    r = 1f - Math.Min(1f, c * (1f - k) + k);
+                                    g = 1f - Math.Min(1f, m * (1f - k) + k);
+                                    b = 1f - Math.Min(1f, y * (1f - k) + k);
+                                }
+                                else if (matches.Count >= 3) // RGB (rg, RG, scn, SCN)
+                                {
+                                    r = float.Parse(matches[0].Value, CultureInfo.InvariantCulture);
+                                    g = float.Parse(matches[1].Value, CultureInfo.InvariantCulture);
+                                    b = float.Parse(matches[2].Value, CultureInfo.InvariantCulture);
+                                }
+
+                                byte rB = (byte)Math.Clamp(r * 255f, 0, 255);
+                                byte gB = (byte)Math.Clamp(g * 255f, 0, 255);
+                                byte bB = (byte)Math.Clamp(b * 255f, 0, 255);
+                                var color = new SKColor(rB, gB, bB);
+
+                                // 最初の文字が小文字なら塗り(Fill)、大文字なら線(Stroke)
+                                if (char.IsLower(opCode[0])) currentFillColor = color;
+                                else currentStrokeColor = color;
+                            }
+                        }
+
+                        // 描画オペレーション
+                        else
+                        {
+                            bool isStroke = opName.Contains("Stroke");
+                            bool isFill = opName.Contains("Fill");
+                            bool isClose = opName.Contains("Close");
+                            bool isEvenOdd = opName.Contains("EvenOdd");
+
+                            if (isStroke || isFill)
+                            {
+                                if (currentNodes.Count > 0)
+                                {
+                                    var bezierObj = new BezierObject
+                                    {
+                                        Nodes = new ObservableCollection<PathNode>(currentNodes),
+                                        StrokeWidth = currentStrokeWidth,
+                                        FillColor = isFill ? currentFillColor : SKColors.Transparent,
+                                        StrokeColor = isStroke ? currentStrokeColor : SKColors.Transparent,
+                                        IsClosed = isClose,
+                                        FillType = isEvenOdd ? SKPathFillType.EvenOdd : SKPathFillType.Winding
+                                    };
+                                    
+                                    FinalizeBezierObject(bezierObj);
+                                    parsedObjects.Add(bezierObj);                             
+                                    currentNodes.Clear();
+                                }
+                            }
+                            else if (opName == "EndPath" || opCode == "n")
+                            {
                                 currentNodes.Clear();
                             }
                         }
-                        else if (opName == "EndPath")
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Operation Parse Error ({operation.GetType().Name}): {ex.Message}");
+                    }
+                }
+                // ラスタ画像の抽出
+                try
+                {
+                    foreach (var image in page.GetImages())
+                    {
+                        // 1. デコード済みの生バイト列を直接取得
+                        var rawBytes = image.RawBytes.ToArray();
+
+                        // 2. 画像のピクセルサイズ（サンプル数）を取得
+                        int width = image.WidthInSamples;
+                        int height = image.HeightInSamples;
+
+                        if (width > 0 && height > 0 && rawBytes.Length > 0)
                         {
-                            currentNodes.Clear();
+                            // 3. デコーダー(Decode)を使わず、RGBA形式でメモリを確保
+                            // PDFの画像データ（RawBytes）をそのままピクセルとして扱います
+                            var skBitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
+                            
+                            try
+                            {
+                                // 4. バイト配列をピクセルバッファへ直接コピー
+                                IntPtr pixelsAddr = skBitmap.GetPixels();
+                                
+                                // コピーする長さは、取得したデータと確保したメモリの小さい方に合わせる（安全策）
+                                int lengthToCopy = Math.Min(rawBytes.Length, skBitmap.ByteCount);
+                                System.Runtime.InteropServices.Marshal.Copy(rawBytes, 0, pixelsAddr, lengthToCopy);
+
+                                if (skBitmap != null)
+                                {
+                                    var bounds = image.Bounds; 
+                                    var imgObj = new ImageObject
+                                    {
+                                        ImageData = skBitmap,
+                                        // 座標とサイズ（ポイントからmmへ）
+                                        X = (float)bounds.Left * ptToMm,
+                                        Y = ((float)pageHeight - (float)bounds.Top) * ptToMm,
+                                        Width = (float)bounds.Width * ptToMm,
+                                        Height = (float)bounds.Height * ptToMm,
+                                        CropX = 0,
+                                        CropY = 0,
+                                        CropWidth = width,
+                                        CropHeight = height
+                                    };
+
+                                    parsedObjects.Add(imgObj);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                skBitmap?.Dispose();
+                                System.Diagnostics.Debug.WriteLine($"Pixel Copy Error: {ex.Message}");
+                            }
                         }
                     }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Image Extraction Error: {ex.Message}");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"PDF Parser Error: {ex.Message}");
+                System.Windows.Application.Current.Dispatcher.Invoke(() => 
+                {
+                    System.Windows.MessageBox.Show($"PDF全体解析エラー: {ex.Message}", "エラー");
+                });
             }
 
             return parsedObjects;
         }
-
+       
         private static void FinalizeBezierObject(BezierObject obj)
         {
             if (obj.Nodes.Count == 0) return;
@@ -828,6 +1026,132 @@ namespace FigCrafterApp.Helpers
                 }
             }
             return dict;
+        }
+
+        /// <summary>
+        /// PDF/AIファイルのオペレーションを解析し、テキストファイルにダンプ出力するデバッグ用メソッド
+        /// </summary>
+        public static void DumpPdfOperations(string filePath)
+        {
+            try
+            {
+                using var document = PdfDocument.Open(filePath);
+                if (document.NumberOfPages == 0) return;
+
+                var page = document.GetPage(1);
+
+                // 出力先のテキストファイル（元のファイル名の末尾に _dump.txt を付ける）
+                string dumpFilePath = filePath + "_dump.txt";
+                using var writer = new System.IO.StreamWriter(dumpFilePath);
+
+                writer.WriteLine($"=== Operations Dump for {System.IO.Path.GetFileName(filePath)} ===");
+                writer.WriteLine($"Page Size: {page.Width} x {page.Height}");
+                writer.WriteLine("====================================================================\n");
+
+                foreach (var operation in page.Operations)
+                {
+                    // PDFの生コマンド(Operator)、PdfPigのクラス名、内容(ToString)を書き出す
+                    string opCode = operation.Operator;
+                    string className = operation.GetType().Name;
+                    string? rawData = operation.ToString();
+
+                    writer.WriteLine($"[{opCode}] {className}");
+                    writer.WriteLine($"    Data: {rawData}");
+                    
+                    // 値の構造をより深く知るため、dynamicでプロパティや配列の型を調べる（オプション）
+                    try
+                    {
+                        dynamic dynOp = operation;
+                        if (opCode == "cm" || opCode == "w" || opCode.Contains("rg") || opCode.Contains("k"))
+                        {
+                            writer.WriteLine($"    Value Type: {dynOp.Value?.GetType().Name}");
+                        }
+                    }
+                    catch { /* 読み取れないプロパティは無視 */ }
+
+                    writer.WriteLine("--------------------------------------------------");
+                }
+
+                System.Diagnostics.Debug.WriteLine($"ダンプ出力完了: {dumpFilePath}");
+                System.Windows.Application.Current.Dispatcher.Invoke(() => 
+                {
+                    System.Windows.MessageBox.Show($"解析完了！\n{dumpFilePath}\nに出力しました。", "ダンプ成功");
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Dump Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// AI/PDFファイル内のすべてのラスター画像を抽出し、指定したフォルダに保存します。
+        /// </summary>
+        public static void ExportImagesFromPdf(string filePath, string outputFolder)
+        {
+            try
+            {
+                if (!Directory.Exists(outputFolder))
+                {
+                    Directory.CreateDirectory(outputFolder);
+                }
+
+                using var document = PdfDocument.Open(filePath);
+                string fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
+                int imageCount = 0;
+
+                foreach (var page in document.GetPages())
+                {
+                    var images = page.GetImages().ToList();
+                    
+                    for (int i = 0; i < images.Count; i++)
+                    {
+                        var image = images[i];
+
+                        // 1. デコード済みの生バイト列とピクセルサイズを取得
+                        var rawBytes = image.RawBytes.ToArray();
+                        int width = image.WidthInSamples;
+                        int height = image.HeightInSamples;
+
+                        if (rawBytes.Length > 0 && width > 0 && height > 0)
+                        {
+                            imageCount++;
+                            string outPath = Path.Combine(outputFolder, $"{fileNameWithoutExt}_p{page.Number}_img{i}.png");
+
+                            // 2. データの長さから「カラー(RGBA)」か「白黒(Gray8)」かを判定
+                            // 1ピクセルあたり3バイト(RGB)以上のデータがあればカラーとみなす
+                            SKColorType colorType = (rawBytes.Length >= width * height * 3) 
+                                                    ? SKColorType.Rgba8888 
+                                                    : SKColorType.Gray8;
+
+                            // 3. 判定した形式でSKBitmapを作成
+                            using var skBitmap = new SKBitmap(width, height, colorType, SKAlphaType.Premul);
+                            
+                            // 4. メモリに直接流し込む
+                            IntPtr pixelsAddr = skBitmap.GetPixels();
+                            int lengthToCopy = Math.Min(rawBytes.Length, skBitmap.ByteCount);
+                            System.Runtime.InteropServices.Marshal.Copy(rawBytes, 0, pixelsAddr, lengthToCopy);
+
+                            // 5. PNGとして保存
+                            using var data = skBitmap.Encode(SKEncodedImageFormat.Png, 100);
+                            if (data != null)
+                            {
+                                using var stream = File.OpenWrite(outPath);
+                                data.SaveTo(stream);
+                                System.Diagnostics.Debug.WriteLine($"画像書き出し成功: {outPath} (Type: {colorType})");
+                            }
+                        }
+                    }
+                }
+
+                System.Windows.MessageBox.Show(
+                    $"解析完了！\n{imageCount} 個の画像を以下のフォルダに保存しました：\n{outputFolder}", 
+                    "画像エクスポート成功");
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"エクスポート中にエラーが発生しました: {ex.Message}");
+            }
         }
     }
 }

@@ -74,12 +74,16 @@ namespace FigCrafterApp.Models
             // 線の描画
             if (StrokeWidth > 0 && StrokeColor != SKColors.Transparent)
             {
+                float ptToMm = 25.4f / 72.0f;
+
                 using var strokePaint = new SKPaint
                 {
                     Color = StrokeColor,
-                    StrokeWidth = StrokeWidth / CurrentZoomLevel,
+                    StrokeWidth = StrokeWidth * ptToMm,
                     Style = SKPaintStyle.Stroke,
-                    IsAntialias = true
+                    IsAntialias = true,
+                    StrokeJoin = SKStrokeJoin.Round,
+                    StrokeCap = SKStrokeCap.Round
                 };
                 canvas.DrawPath(path, strokePaint);
             }
@@ -101,34 +105,53 @@ namespace FigCrafterApp.Models
             // 回転を考慮したローカル座標への変換
             var localPoint = UntransformPoint(point);
 
-            // バウンディングボックスで大まかに判定
-            var rect = new SKRect (X, Y, X + Width, Y + Height);
-            if (!rect.Contains(localPoint)) return false;
+            using var path = new SKPath();
+            bool isFirst = true;
 
-            // バウンディングボックス内なら、パスの内側・線の上か厳密に判定
-            using var path = GetSKPath();
-
-            // 塗りが透明でなければ、パスの内側を判定
-            if (FillColor != SKColors.Transparent && path.Contains(localPoint.X, localPoint.Y))
+            foreach (var node in Nodes)
             {
-                return true;
-            }
+                float absX = X + node.X;
+                float absY = Y + node.Y;
 
-            // 塗りが透明でも線の上をクリックしたか判定
-            if (StrokeWidth > 0 && StrokeColor != SKColors.Transparent)
-            {
-                float margin = System.Math.Max(StrokeWidth / 2f, 2.0f / CurrentZoomLevel);
-                using var outlinePath = new SKPath();
-                using var paint = new SKPaint
+                if (isFirst || node.NodeType == PathNodeType.Move)
                 {
-                    Style = SKPaintStyle.Stroke,
-                    StrokeWidth = margin * 2
-                };
-                paint.GetFillPath(path, outlinePath);
-                return outlinePath.Contains(localPoint.X, localPoint.Y);
+                    path.MoveTo(absX, absY);
+                    isFirst = false;
+                }
+                else if (node.NodeType == PathNodeType.Line)
+                {
+                    path.LineTo(absX, absY);
+                }
+                else if (node.NodeType == PathNodeType.Bezier)
+                {
+                    path.CubicTo(
+                        X + node.Control1X, Y + node.Control1Y,
+                        X + node.Control2X, Y + node.Control2Y,
+                        absX, absY
+                    );
+                }
             }
 
-            return false;
+            if (IsClosed) path.Close();
+
+            if (FillColor != SKColors.Transparent)
+            {
+                if (path.Contains(point.X, point.Y)) return true;
+            }
+
+            float ptToMm = 25.4f / 72.0f;
+            float clickMargin = 2.0f;
+            float effectiveWidth = (StrokeWidth * ptToMm) + clickMargin;
+
+            using var paint = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                StrokeWidth = effectiveWidth
+            };
+
+            using var selectionPath = new SKPath();
+            paint.GetFillPath(path, selectionPath);
+            return selectionPath.Contains(localPoint.X, localPoint.Y);
         }
 
         /// <summary>
