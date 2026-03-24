@@ -441,8 +441,9 @@ namespace FigCrafterApp.ViewModels
                                 // FigCrafterApp.Helpers.VectorFileParser.DumpPdfOperations(path);
                                 // return;
 
-                                FigCrafterApp.Helpers.VectorFileParser.DumpPdfImageMetadata(path);
-                                return;
+                                // DEBUG：aiファイルに格納されているラスタ画像のメタ情報をダンプする
+                                // FigCrafterApp.Helpers.VectorFileParser.DumpPdfImageMetadata(path);
+                                // return;
 
                                 var parsedObjects = await System.Threading.Tasks.Task.Run(() =>
                                 FigCrafterApp.Helpers.VectorFileParser.ParsePdfFile(path));
