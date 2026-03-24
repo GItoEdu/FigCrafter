@@ -159,14 +159,13 @@ namespace FigCrafterApp.Helpers
                             Y = ((float)pageHeight - (float)image.Bounds.Top) * PtToMm,
                             Width = (float)image.Bounds.Width * PtToMm,
                             Height = (float)image.Bounds.Height * PtToMm,
-                            Opacity = 1.0f
+                            Opacity = 1.0f,
+                            StrokeWidth = 0f,
+                            StrokeColor = SKColors.Transparent
                         };
                         parsedObjects.Add(imgObj);
                     }
                 }
-
-                // PDFのPoint（72dpi）をミリメートルに変換する係数
-                float ptToMm = 25.4f / 72.0f;
 
                 // 現在構築中のパスデータ
                 var currentNodes = new List<PathNode>();
@@ -174,7 +173,7 @@ namespace FigCrafterApp.Helpers
                 // 現在のグラフィックス状態
                 SKColor currentFillColor = SKColors.Black;
                 SKColor currentStrokeColor = SKColors.Black;
-                float currentStrokeWidth = 1.0f; // 線幅の初期値はPDF標準の1.0ptとする
+                float currentStrokeWidth = 0.5f * PtToMm; // 線幅の初期値はPDF標準の1.0ptとする
 
                 var matrixStack = new Stack<SKMatrix>();
                 var currentMatrix = SKMatrix.CreateIdentity();
@@ -232,32 +231,32 @@ namespace FigCrafterApp.Helpers
                                 currentNodes.Add(new PathNode
                                 {
                                     NodeType = PathNodeType.Move,
-                                    X = p1.X * ptToMm,
-                                    Y = ((float)pageHeight - p1.Y) * ptToMm
+                                    X = p1.X * PtToMm,
+                                    Y = ((float)pageHeight - p1.Y) * PtToMm
                                 });
                                 currentNodes.Add(new PathNode
                                 {
                                     NodeType = PathNodeType.Line,
-                                    X = p2.X * ptToMm,
-                                    Y = ((float)pageHeight - p2.Y) * ptToMm    
+                                    X = p2.X * PtToMm,
+                                    Y = ((float)pageHeight - p2.Y) * PtToMm    
                                 });
                                 currentNodes.Add(new PathNode
                                 {
                                     NodeType = PathNodeType.Line,
-                                    X = p3.X * ptToMm,
-                                    Y = ((float)pageHeight - p3.Y) * ptToMm    
+                                    X = p3.X * PtToMm,
+                                    Y = ((float)pageHeight - p3.Y) * PtToMm    
                                 });
                                 currentNodes.Add(new PathNode
                                 {
                                     NodeType = PathNodeType.Line,
-                                    X = p4.X * ptToMm,
-                                    Y = ((float)pageHeight - p4.Y) * ptToMm    
+                                    X = p4.X * PtToMm,
+                                    Y = ((float)pageHeight - p4.Y) * PtToMm    
                                 });
                                 currentNodes.Add(new PathNode
                                 {
                                     NodeType = PathNodeType.Line,
-                                    X = p1.X * ptToMm,
-                                    Y = ((float)pageHeight - p1.Y) * ptToMm    
+                                    X = p1.X * PtToMm,
+                                    Y = ((float)pageHeight - p1.Y) * PtToMm    
                                 });
                             }
                         }
@@ -268,8 +267,8 @@ namespace FigCrafterApp.Helpers
                             currentNodes.Add(new PathNode
                             {
                                 NodeType = PathNodeType.Move,
-                                X = p.X * ptToMm,
-                                Y = ((float)pageHeight - p.Y) * ptToMm
+                                X = p.X * PtToMm,
+                                Y = ((float)pageHeight - p.Y) * PtToMm
                             });
                         }
                         // 直線
@@ -279,8 +278,8 @@ namespace FigCrafterApp.Helpers
                             currentNodes.Add(new PathNode
                             {
                             NodeType = PathNodeType.Line,
-                            X = p.X * ptToMm,
-                            Y = ((float)pageHeight - p.Y) * ptToMm
+                            X = p.X * PtToMm,
+                            Y = ((float)pageHeight - p.Y) * PtToMm
                             });
                         }
                         // ベジェ曲線
@@ -293,12 +292,12 @@ namespace FigCrafterApp.Helpers
                             currentNodes.Add(new PathNode
                             {
                                 NodeType = PathNodeType.Bezier,
-                                Control1X = cp1.X * ptToMm,
-                                Control1Y = ((float)pageHeight - cp1.Y) * ptToMm,
-                                Control2X = cp2.X * ptToMm,
-                                Control2Y = ((float)pageHeight - cp2.Y) * ptToMm,
-                                X = p3.X * ptToMm,
-                                Y = ((float)pageHeight - p3.Y) * ptToMm
+                                Control1X = cp1.X * PtToMm,
+                                Control1Y = ((float)pageHeight - cp1.Y) * PtToMm,
+                                Control2X = cp2.X * PtToMm,
+                                Control2Y = ((float)pageHeight - cp2.Y) * PtToMm,
+                                X = p3.X * PtToMm,
+                                Y = ((float)pageHeight - p3.Y) * PtToMm
                             });
                         }
                         else if (operation is UglyToad.PdfPig.Graphics.Operations.PathConstruction.CloseSubpath)
