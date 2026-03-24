@@ -145,6 +145,25 @@ namespace FigCrafterApp.Helpers
                 var page = document.GetPage(1);
                 decimal pageHeight = (decimal)page.Height;
 
+                // ラスタ画像読み込み
+                foreach (var image in page.GetImages())
+                {
+                    var bitmap = ConvertPdfImageToSKBitmap(image);
+                    if (bitmap != null)
+                    {
+                        var imgObj = new ImageObject
+                        {
+                            ImageData = bitmap,
+                            X = (float)image.Bounds.Left,
+                            Y = (float)(pageHeight - image.Bounds.Top),
+                            Width = (float)image.Bounds.Width,
+                            Height = (float)image.Bounds.Height,
+                            Opacity = 1.0f
+                        };
+                        parsedObjects.Add(imgObj);
+                    }
+                }
+
                 // PDFのPoint（72dpi）をミリメートルに変換する係数
                 float ptToMm = 25.4f / 72.0f;
 
