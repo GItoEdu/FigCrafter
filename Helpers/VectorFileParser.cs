@@ -1085,6 +1085,87 @@ namespace FigCrafterApp.Helpers
         }
 
         /// <summary>
+        /// PDFファイル内の画像メタデータをダンプ出力するデバッグ用メソッド
+        /// </summary>
+        /// <param name="filePath">対象のPDFファイルパス</param>
+        public static void DumpPdfImageMetadata(string filePath)
+        {
+            try
+            {
+                using var document = PdfDocument.Open(filePath);
+                System.Diagnostics.Debug.WriteLine($"=== 画像メタデータダンプ開始: {System.IO.Path.GetFileName(filePath)} ===");
+
+                foreach (var page in document.GetPages())
+                {
+                    System.Diagnostics.Debug.WriteLine($"--- Page {page.Number} ---");
+                    
+                    // ページ内の画像リソースを取得
+                    var images = page.GetImages();
+                    int imgIndex = 0;
+
+                    foreach (var image in images)
+                    {
+                        imgIndex++;
+                        System.Diagnostics.Debug.WriteLine($"  [Image {imgIndex}]");
+
+                        // 画像の辞書（メタデータ）を取得
+                        var dict = image.ImageDictionary;
+
+                        // 幅と高さ
+                        System.Diagnostics.Debug.WriteLine($"    Width: {image.WidthInSamples}, Height: {image.HeightInSamples}");
+
+                        // カラースペース
+                        if (dict.TryGetName(UglyToad.PdfPig.Tokens.NameToken.ColorSpace, out var colorSpaceName))
+                        {
+                            System.Diagnostics.Debug.WriteLine($"    ColorSpace: {colorSpaceName.Data}");
+                        }
+                        else if (dict.TryGet(UglyToad.PdfPig.Tokens.NameToken.ColorSpace, out var colorSpaceObj))
+                        {
+                            // 配列形式などで定義されている場合
+                            System.Diagnostics.Debug.WriteLine($"    ColorSpace: {colorSpaceObj}");
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"    ColorSpace: (Not specified / Inherited)");
+                        }
+
+                        // ビット深度
+                        if (dict.TryGet<UglyToad.PdfPig.Tokens.NumericToken>(UglyToad.PdfPig.Tokens.NameToken.BitsPerComponent, out var bpc))
+                        {
+                            System.Diagnostics.Debug.WriteLine($"    BitsPerComponent: {bpc.Int}");
+                        }
+
+                        // 圧縮フィルタ
+                        if (dict.TryGetName(UglyToad.PdfPig.Tokens.NameToken.Filter, out var filterName))
+                        {
+                            System.Diagnostics.Debug.WriteLine($"    Filter: {filterName.Data}");
+                        }
+                        else if (dict.TryGet(UglyToad.PdfPig.Tokens.NameToken.Filter, out var filterArray))
+                        {
+                            System.Diagnostics.Debug.WriteLine($"    Filter: {filterArray}");
+                        }
+
+                        // マスク（透過情報）の有無
+                        // SMask = Soft Mask (アルファチャンネル), Mask = Color Key Mask など
+                        bool hasSMask = dict.ContainsKey(UglyToad.PdfPig.Tokens.NameToken.Smask);
+                        bool hasMask = dict.ContainsKey(UglyToad.PdfPig.Tokens.NameToken.Mask);
+                        System.Diagnostics.Debug.WriteLine($"    Has SMask (Alpha): {hasSMask}");
+                        System.Diagnostics.Debug.WriteLine($"    Has Mask: {hasMask}");
+
+                        // 生データのバイト数
+                        System.Diagnostics.Debug.WriteLine($"    RawBytes Length: {image.RawBytes.Count} bytes");
+                    }
+                }
+                System.Diagnostics.Debug.WriteLine($"=== 画像メタデータダンプ終了 ===");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DumpPdfImageMetadata Error: {ex.Message}");
+            }
+        }
+
+        /*
+        /// <summary>
         /// AI/PDFファイル内のすべてのラスター画像を抽出し、指定したフォルダに保存します。
         /// </summary>
         public static void ExportImagesFromPdf(string filePath, string outputFolder)
@@ -1153,6 +1234,7 @@ namespace FigCrafterApp.Helpers
                 System.Windows.MessageBox.Show($"エクスポート中にエラーが発生しました: {ex.Message}");
             }
         }
+        */
     }
 }
 

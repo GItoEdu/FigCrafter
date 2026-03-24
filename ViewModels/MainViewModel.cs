@@ -441,8 +441,7 @@ namespace FigCrafterApp.ViewModels
                                 // FigCrafterApp.Helpers.VectorFileParser.DumpPdfOperations(path);
                                 // return;
 
-                                string outputDir = Path.Combine(Path.GetDirectoryName(path), "ExtractedImages");
-                                FigCrafterApp.Helpers.VectorFileParser.ExportImagesFromPdf(path, outputDir);
+                                FigCrafterApp.Helpers.VectorFileParser.DumpPdfImageMetadata(path);
                                 return;
 
                                 var parsedObjects = await System.Threading.Tasks.Task.Run(() =>
