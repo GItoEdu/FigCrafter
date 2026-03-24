@@ -1115,7 +1115,7 @@ namespace FigCrafterApp.Helpers
                         System.Diagnostics.Debug.WriteLine($"    Width: {image.WidthInSamples}, Height: {image.HeightInSamples}");
 
                         // カラースペース
-                        if (dict.TryGetName(UglyToad.PdfPig.Tokens.NameToken.ColorSpace, out var colorSpaceName))
+                        if (dict.TryGet<UglyToad.PdfPig.Tokens.NameToken>(UglyToad.PdfPig.Tokens.NameToken.ColorSpace, out var colorSpaceName))
                         {
                             System.Diagnostics.Debug.WriteLine($"    ColorSpace: {colorSpaceName.Data}");
                         }
@@ -1136,7 +1136,7 @@ namespace FigCrafterApp.Helpers
                         }
 
                         // 圧縮フィルタ
-                        if (dict.TryGetName(UglyToad.PdfPig.Tokens.NameToken.Filter, out var filterName))
+                        if (dict.TryGet<UglyToad.PdfPig.Tokens.NameToken>(UglyToad.PdfPig.Tokens.NameToken.Filter, out var filterName))
                         {
                             System.Diagnostics.Debug.WriteLine($"    Filter: {filterName.Data}");
                         }
