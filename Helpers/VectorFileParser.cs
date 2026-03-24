@@ -390,66 +390,7 @@ namespace FigCrafterApp.Helpers
                     {
                         System.Diagnostics.Debug.WriteLine($"Operation Parse Error ({operation.GetType().Name}): {ex.Message}");
                     }
-                }
-                // ラスタ画像の抽出
-                try
-                {
-                    foreach (var image in page.GetImages())
-                    {
-                        // 1. デコード済みの生バイト列を直接取得
-                        var rawBytes = image.RawBytes.ToArray();
-
-                        // 2. 画像のピクセルサイズ（サンプル数）を取得
-                        int width = image.WidthInSamples;
-                        int height = image.HeightInSamples;
-
-                        if (width > 0 && height > 0 && rawBytes.Length > 0)
-                        {
-                            // 3. デコーダー(Decode)を使わず、RGBA形式でメモリを確保
-                            // PDFの画像データ（RawBytes）をそのままピクセルとして扱います
-                            var skBitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
-                            
-                            try
-                            {
-                                // 4. バイト配列をピクセルバッファへ直接コピー
-                                IntPtr pixelsAddr = skBitmap.GetPixels();
-                                
-                                // コピーする長さは、取得したデータと確保したメモリの小さい方に合わせる（安全策）
-                                int lengthToCopy = Math.Min(rawBytes.Length, skBitmap.ByteCount);
-                                System.Runtime.InteropServices.Marshal.Copy(rawBytes, 0, pixelsAddr, lengthToCopy);
-
-                                if (skBitmap != null)
-                                {
-                                    var bounds = image.Bounds; 
-                                    var imgObj = new ImageObject
-                                    {
-                                        ImageData = skBitmap,
-                                        // 座標とサイズ（ポイントからmmへ）
-                                        X = (float)bounds.Left * ptToMm,
-                                        Y = ((float)pageHeight - (float)bounds.Top) * ptToMm,
-                                        Width = (float)bounds.Width * ptToMm,
-                                        Height = (float)bounds.Height * ptToMm,
-                                        CropX = 0,
-                                        CropY = 0,
-                                        CropWidth = width,
-                                        CropHeight = height
-                                    };
-
-                                    parsedObjects.Add(imgObj);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                skBitmap?.Dispose();
-                                System.Diagnostics.Debug.WriteLine($"Pixel Copy Error: {ex.Message}");
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Image Extraction Error: {ex.Message}");
-                }
+                }                
             }
             catch (Exception ex)
             {
