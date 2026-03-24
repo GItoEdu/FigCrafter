@@ -1164,77 +1164,136 @@ namespace FigCrafterApp.Helpers
             }
         }
 
-        /*
         /// <summary>
         /// AI/PDFファイル内のすべてのラスター画像を抽出し、指定したフォルダに保存します。
         /// </summary>
-        public static void ExportImagesFromPdf(string filePath, string outputFolder)
+        public static void ExportImagesFromPdf(string filePath, string outputDirectory)
         {
             try
             {
-                if (!Directory.Exists(outputFolder))
+                if (!Directory.Exists(outputDirectory))
                 {
-                    Directory.CreateDirectory(outputFolder);
+                    Directory.CreateDirectory(outputDirectory);
                 }
 
                 using var document = PdfDocument.Open(filePath);
-                string fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
-                int imageCount = 0;
+                var page = document.GetPage(1);
+                int imgIndex = 0;
 
-                foreach (var page in document.GetPages())
+                foreach (var image in page.GetImages())
                 {
-                    var images = page.GetImages().ToList();
-                    
-                    for (int i = 0; i < images.Count; i++)
+                    imgIndex++;
+                    using var bitmap = ConvertPdfImageToSKBitmap(image);
+
+                    if (bitmap != null)
                     {
-                        var image = images[i];
-
-                        // 1. デコード済みの生バイト列とピクセルサイズを取得
-                        var rawBytes = image.RawBytes.ToArray();
-                        int width = image.WidthInSamples;
-                        int height = image.HeightInSamples;
-
-                        if (rawBytes.Length > 0 && width > 0 && height > 0)
-                        {
-                            imageCount++;
-                            string outPath = Path.Combine(outputFolder, $"{fileNameWithoutExt}_p{page.Number}_img{i}.png");
-
-                            // 2. データの長さから「カラー(RGBA)」か「白黒(Gray8)」かを判定
-                            // 1ピクセルあたり3バイト(RGB)以上のデータがあればカラーとみなす
-                            SKColorType colorType = (rawBytes.Length >= width * height * 3) 
-                                                    ? SKColorType.Rgba8888 
-                                                    : SKColorType.Gray8;
-
-                            // 3. 判定した形式でSKBitmapを作成
-                            using var skBitmap = new SKBitmap(width, height, colorType, SKAlphaType.Premul);
-                            
-                            // 4. メモリに直接流し込む
-                            IntPtr pixelsAddr = skBitmap.GetPixels();
-                            int lengthToCopy = Math.Min(rawBytes.Length, skBitmap.ByteCount);
-                            System.Runtime.InteropServices.Marshal.Copy(rawBytes, 0, pixelsAddr, lengthToCopy);
-
-                            // 5. PNGとして保存
-                            using var data = skBitmap.Encode(SKEncodedImageFormat.Png, 100);
-                            if (data != null)
-                            {
-                                using var stream = File.OpenWrite(outPath);
-                                data.SaveTo(stream);
-                                System.Diagnostics.Debug.WriteLine($"画像書き出し成功: {outPath} (Type: {colorType})");
-                            }
-                        }
+                        string outPath = Path.Combine(outputDirectory, $"extracted_image_{imgIndex}.png");
+                        using var imageStream = File.OpenWrite(outPath);
+                        // PNG形式で保存
+                        bitmap.Encode(imageStream, SKEncodedImageFormat.Png, 100);
+                        System.Diagnostics.Debug.WriteLine($"画像を書き出しました：{outPath}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"画像 {imgIndex} のデコードに失敗しました。");
                     }
                 }
-
-                System.Windows.MessageBox.Show(
-                    $"解析完了！\n{imageCount} 個の画像を以下のフォルダに保存しました：\n{outputFolder}", 
-                    "画像エクスポート成功");
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"エクスポート中にエラーが発生しました: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"ExportImages Error：{ex.Message}");
             }
         }
-        */
+
+        /// <summary>
+        /// IPdfImageの生データをカラースペースに合わせてSKBitmapに変換するヘルパー
+        /// </summary>
+        /// <param name="image"></param>
+        /// <returns></returns>
+        public static SKBitmap? ConvertPdfImageToSKBitmap(UglyToad.PdfPig.Content.IPdfImage image)
+        {
+            // 圧縮解除済みの生ピクセルデータを取得
+            if (!image.TryGetBytes(out var decodedBytes)) return null;
+
+            int width = image.WidthInSamples;
+            int height = image.HeightInSamples;
+
+            // カラースペースの取得
+            string colorSpace = "DeviceRBG"; // デフォルト
+            if (image.ImageDictionary.TryGet<UglyToad.PdfPig.Tokens.NameToken>(UglyToad.PdfPig.Tokens.NameToken.ColorSpace, out var cs))
+            {
+                colorSpace = cs.Data;
+            }
+
+            var bitmap = new SKBitmap(width, height);
+            var pixels = new SKColor[width * height];
+            int byteIndex = 0;
+
+            // ピクセルデータのマッピング
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                if (colorSpace == "DeviceGray" && byteIndex < decodedBytes.Count)
+                {
+                    // グレースケール：1バイト = 1ピクセル
+                    byte g = decodedBytes[byteIndex++];
+                    pixels[i] = new SKColor(g, g, g, 255);
+                }
+                else if (colorSpace == "DeviceCMYK" && byteIndex + 3 < decodedBytes.Count)
+                {
+                    // CMYK：4バイト = 1ピクセル -> 簡易的にRGBに変換
+                    byte c = decodedBytes[byteIndex++];
+                    byte m = decodedBytes[byteIndex++];
+                    byte y = decodedBytes[byteIndex++];
+                    byte k = decodedBytes[byteIndex++];
+
+                    float cF = c / 255f;
+                    float mF = m / 255f;
+                    float yF = y / 255f;
+                    float kF = k / 255f;
+
+                    byte r = (byte)(255 * (1 - cF) * (1 - kF));
+                    byte g = (byte)(255 * (1 - mF) * (1 - kF));
+                    byte b = (byte)(255 * (1 - yF) * (1 - kF));
+
+                    pixels[i] = new SKColor(r, g, b, 255);
+                }
+                else if (byteIndex + 2 < decodedBytes.Count)
+                {
+                    // RGB：3バイト = 1ピクセル
+                    byte r = decodedBytes[byteIndex++];
+                    byte g = decodedBytes[byteIndex++];
+                    byte b = decodedBytes[byteIndex++];
+                    pixels[i] = new SKColor(r, g, b, 255);
+                }
+                else
+                {
+                    // データ不足時は透明で埋める
+                    pixels[i] = SKColors.Transparent;
+                }
+            }
+
+            bitmap.Pixels = pixels;
+
+            // 反転処理
+            return FlipBitmapVertical(bitmap);
+        }
+
+        /// <summary>
+        /// 画像を上下反転させる処理
+        /// </summary>
+        /// <param name="original"></param>
+        /// <returns></returns>
+        private static SKBitmap FlipBitmapVertical(SKBitmap original)
+        {
+            var flipped = new SKBitmap(original.Width, original.Height);
+            using (var canvas = new SKCanvas(flipped))
+            {
+                canvas.Clear(SKColors.Transparent);
+                canvas.Scale(1, -1, 0, original.Height / 2.0f);
+                canvas.DrawBitmap(original, 0, 0);
+            }
+            return flipped;
+        }
     }
 }
 
