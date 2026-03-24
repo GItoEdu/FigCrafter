@@ -22,6 +22,7 @@ namespace FigCrafterApp.Helpers
     public static class VectorFileParser
     {
         private const float PxToMm = 25.4f / 96f; // Inkscape (96DPI) -> FigCrafter (mm)
+        private const float PtToMm = 25.4f / 72f; // PDF (72DPI/pt) -> FigCrafter (mm)
         private static readonly string[] InkscapePaths = new[]
         {
             @"D:\Inkscape\bin\inkscape.exe",
@@ -154,10 +155,10 @@ namespace FigCrafterApp.Helpers
                         var imgObj = new ImageObject
                         {
                             ImageData = bitmap,
-                            X = (float)image.Bounds.Left,
-                            Y = (float)pageHeight - (float)image.Bounds.Top,
-                            Width = (float)image.Bounds.Width,
-                            Height = (float)image.Bounds.Height,
+                            X = (float)image.Bounds.Left * PtToMm,
+                            Y = ((float)pageHeight - (float)image.Bounds.Top) * PtToMm,
+                            Width = (float)image.Bounds.Width * PtToMm,
+                            Height = (float)image.Bounds.Height * PtToMm,
                             Opacity = 1.0f
                         };
                         parsedObjects.Add(imgObj);
