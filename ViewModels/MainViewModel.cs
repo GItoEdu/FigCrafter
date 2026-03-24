@@ -445,6 +445,10 @@ namespace FigCrafterApp.ViewModels
                                 // FigCrafterApp.Helpers.VectorFileParser.DumpPdfImageMetadata(path);
                                 // return;
 
+                                // DEBUG：aiファイルに格納されているラスタ画像をPNG形式で出力する
+                                // FigCrafterApp.Helpers.VectorFileParser.ExportImagesFromPdf(path, @"C:\temp");
+                                // return;
+
                                 var parsedObjects = await System.Threading.Tasks.Task.Run(() =>
                                 FigCrafterApp.Helpers.VectorFileParser.ParsePdfFile(path));
 

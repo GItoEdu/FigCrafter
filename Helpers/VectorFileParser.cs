@@ -1274,8 +1274,7 @@ namespace FigCrafterApp.Helpers
 
             bitmap.Pixels = pixels;
 
-            // 反転処理
-            return FlipBitmapVertical(bitmap);
+            return bitmap;
         }
 
         /// <summary>
