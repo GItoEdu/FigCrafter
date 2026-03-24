@@ -155,7 +155,7 @@ namespace FigCrafterApp.Helpers
                         {
                             ImageData = bitmap,
                             X = (float)image.Bounds.Left,
-                            Y = (float)(pageHeight - image.Bounds.Top),
+                            Y = (float)pageHeight - (float)image.Bounds.Top,
                             Width = (float)image.Bounds.Width,
                             Height = (float)image.Bounds.Height,
                             Opacity = 1.0f
