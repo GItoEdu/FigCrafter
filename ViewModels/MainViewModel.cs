@@ -281,9 +281,43 @@ namespace FigCrafterApp.ViewModels
                         }
                         
                         string ext = System.IO.Path.GetExtension(dialog.FileName).ToLower();
-                        if (ext == ".emf" || ext == ".wmf" || ext == ".pdf")
+                        if (ext == ".emf" || ext == ".wmf" || ext == ".pdf" || ext == ".ai")
                         {
-                            var vectorGroup = FigCrafterApp.Helpers.VectorFileParser.ParseVectorFile(dialog.FileName);
+                            FigCrafterApp.Models.GroupObject? vectorGroup = null;
+
+                            if (ext == ".pdf" || ext == ".ai")
+                            {
+                                var parsedObjects = await System.Threading.Tasks.Task.Run(() =>
+                                FigCrafterApp.Helpers.VectorFileParser.ParsePdfFile(dialog.FileName));
+
+                                if (parsedObjects != null && parsedObjects.Count > 0)
+                                {
+                                    vectorGroup = new FigCrafterApp.Models.GroupObject();
+                                    foreach(var obj in parsedObjects)
+                                    {
+                                        vectorGroup.Children.Add(obj);
+                                    }
+
+                                    float minX = float.MaxValue, minY = float.MaxValue;
+                                    float maxX = float.MinValue, maxY = float.MinValue;
+                                    foreach(var child in vectorGroup.Children)
+                                    {
+                                        if (child.X < minX) minX = child.X;
+                                        if (child.Y < minY) minY = child.Y;
+                                        if (child.X + child.Width > maxX) maxX = child.X + child.Width;
+                                        if (child.Y + child.Height > maxY) maxY = child.Y + child.Height;
+                                    }
+                                    vectorGroup.X = minX;
+                                    vectorGroup.Y = minY;
+                                    vectorGroup.Width = Math.Max(0.1f, maxX - minX);
+                                    vectorGroup.Height = Math.Max(0.1f, maxY - minY);
+                                }
+                            }
+                            else
+                            {
+                                vectorGroup = FigCrafterApp.Helpers.VectorFileParser.ParseVectorFile(dialog.FileName);
+                            }
+
                             if (vectorGroup != null)
                             {
                                 if (ActiveDocument != null)
@@ -435,7 +469,7 @@ namespace FigCrafterApp.ViewModels
                         {
                             FigCrafterApp.Models.GroupObject? vectorGroup = null;
 
-                            if (extension == ".ai")
+                            if (extension == ".ai" || extension == ".pdf")
                             {
                                 // DEBUG：aiファイルのoperationを全てtxtファイルにダンプする
                                 // FigCrafterApp.Helpers.VectorFileParser.DumpPdfOperations(path);
