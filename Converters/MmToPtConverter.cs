@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Windows.Data;
 
-namespace FigCrafterApp.Converters
+namespace FigCrafterApp
 {
     /// <summary>
     /// ミリメートル（mm）とポイント（pt）を相互変換するコンバーター
