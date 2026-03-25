@@ -208,10 +208,13 @@ namespace FigCrafterApp.ViewModels
 
         private void ChangeStrokeWidthBy(float deltaPt)
         {
-            // 図形選択中ならその図形の太さを基準に、未選択ならデフォルトの太さを基準にする
-            float baseWidthMm = (ActiveDocument?.SelectedObject != null) 
-                                ? ActiveDocument.SelectedObject.StrokeWidth 
-                                : _currentStrokeWidth;
+            float baseWidthMm = _currentStrokeWidth;
+
+            // 基準となる線幅を取得（グループの場合は最初に見つかった有効な子要素から取得）
+            if (ActiveDocument?.SelectedObject != null)
+            {
+                baseWidthMm = GetBaseStrokeWidth(ActiveDocument.SelectedObject, _currentStrokeWidth);
+            }
 
             // 現在の内部データ（mm）をUI表示用（pt）に変換
             float currentPt = baseWidthMm / (25.4f / 72.0f);
@@ -230,13 +233,97 @@ namespace FigCrafterApp.ViewModels
             // もしキャンバス上で図形が選択されていれば、その図形の線幅も即座に変更する
             if (ActiveDocument?.SelectedObject != null)
             {
-                var cmd = new FigCrafterApp.Commands.PropertyChangeCommand(
-                    ActiveDocument.SelectedObject, 
-                    nameof(FigCrafterApp.Models.GraphicObject.StrokeWidth), 
-                    ActiveDocument.SelectedObject.StrokeWidth, 
-                    newMm);
-                ActiveDocument.ExecuteCommand(cmd);
-                ActiveDocument.Invalidate();
+                var targets = new List<FigCrafterApp.Models.GraphicObject>();
+                CollectStrokeTargets(ActiveDocument.SelectedObject, targets);
+
+                if (!targets.Contains(ActiveDocument.SelectedObject))
+                {
+                    targets.Add(ActiveDocument.SelectedObject);
+                }
+
+                var commands = new List<FigCrafterApp.Commands.IUndoableCommand>();
+                foreach (var target in targets)
+                {
+                    if (Math.Abs(target.StrokeWidth - newMm) > 0.0001f)
+                    {
+                        commands.Add(new FigCrafterApp.Commands.PropertyChangeCommand(
+                            target,
+                            nameof(FigCrafterApp.Models.GraphicObject.StrokeWidth),
+                            target.StrokeWidth,
+                            newMm
+                        ));
+                    }
+
+                    if (commands.Count > 0)
+                    {
+                        if (commands.Count == 1)
+                            ActiveDocument.ExecuteCommand(commands[0]);
+                        else
+                            ActiveDocument.ExecuteCommand(new FigCrafterApp.Commands.CompositeCommand(commands));
+                        
+                        ActiveDocument.Invalidate();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 選択オブジェクト（またはグループ内）から、増減の基準となる有効な線幅を探し出します
+        /// </summary>
+        private float GetBaseStrokeWidth(FigCrafterApp.Models.GraphicObject obj, float fallback)
+        {
+            if (obj is FigCrafterApp.Models.GroupObject group)
+            {
+                foreach (var child in group.Children)
+                {
+                    float w = GetBaseStrokeWidth(child, fallback);
+                    if (Math.Abs(w - fallback) > 0.0001f) return w; // 有効な線幅が見つかったら即返す
+                }
+            }
+            else
+            {
+                // テキスト・画像は縁取りがONの場合のみ基準値として採用
+                if (obj is FigCrafterApp.Models.TextObject || obj is FigCrafterApp.Models.ImageObject)
+                {
+                    if (obj.StrokeWidth > 0 && obj.StrokeColor != SKColors.Transparent)
+                        return obj.StrokeWidth;
+                }
+                else
+                {
+                    return obj.StrokeWidth; // パスなどはそのまま採用
+                }
+            }
+            return fallback;
+        }
+
+        /// <summary>
+        /// グループ構造を再帰的に辿り、線幅変更を適用すべきオブジェクトのリストを作成します
+        /// </summary>
+        private void CollectStrokeTargets(FigCrafterApp.Models.GraphicObject obj, List<FigCrafterApp.Models.GraphicObject> targets)
+        {
+            if (obj is FigCrafterApp.Models.GroupObject group)
+            {
+                // グループの場合は子要素をさらに掘り下げる
+                foreach (var child in group.Children)
+                {
+                    CollectStrokeTargets(child, targets);
+                }
+            }
+            else
+            {
+                if (obj is FigCrafterApp.Models.TextObject || obj is FigCrafterApp.Models.ImageObject)
+                {
+                    // テキストや画像は、既に縁取りが有効な場合のみ変更対象にする
+                    if (obj.StrokeWidth > 0 && obj.StrokeColor != SKColors.Transparent)
+                    {
+                        targets.Add(obj);
+                    }
+                }
+                else
+                {
+                    // パス、直線、図形などは無条件で対象
+                    targets.Add(obj);
+                }
             }
         }
 
