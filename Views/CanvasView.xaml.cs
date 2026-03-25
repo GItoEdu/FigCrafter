@@ -577,14 +577,14 @@ namespace FigCrafterApp.Views
                 return;
             }
 
-            float strokeWidthToApply = 0.5f;
+            float strokeWidthToApply = 0.5f * (25.4f / 72.0f);
             if (System.Windows.Application.Current?.MainWindow?.DataContext is MainViewModel mainVM)
             {
-                strokeWidthToApply = mainVM.CurrentStrokeWidth;
+                strokeWidthToApply = mainVM.CurrentStrokeWidth * (25.4f / 72.0f);
             }
             else if (this.DataContext is MainViewModel thisVM)
             {
-                strokeWidthToApply = thisVM.CurrentStrokeWidth;
+                strokeWidthToApply = thisVM.CurrentStrokeWidth * (25.4f / 72.0f);
             }
             
             switch (vm.CurrentTool)
