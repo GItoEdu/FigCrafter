@@ -176,57 +176,40 @@ namespace FigCrafterApp.Helpers
                     var lastLetter = word.Letters.LastOrDefault();
                     if (firstLetter == null || lastLetter == null) continue;
 
-                    // 回転角度と正確なサイズの計算
+                    // --- 回転角度と正確なサイズの計算 ---
                     double angleDx = firstLetter.EndBaseLine.X - firstLetter.StartBaseLine.X;
                     double angleDy = firstLetter.EndBaseLine.Y - firstLetter.StartBaseLine.Y;
                     double angleRad = Math.Atan2(angleDy, angleDx);
-
-                    // 時計回りが正となるようにする
+                    
                     float rotation = (float)(-angleRad * 180.0 / Math.PI);
 
-                    // 単語全体の幅を計算
+                    // 単語全体の幅と高さを計算
                     double wordDx = lastLetter.EndBaseLine.X - firstLetter.StartBaseLine.X;
                     double wordDy = lastLetter.EndBaseLine.Y - firstLetter.StartBaseLine.Y;
                     float widthPt = (float)Math.Sqrt(wordDx * wordDx + wordDy * wordDy);
                     float heightPt = (float)firstLetter.PointSize;
 
-                    // 回転を考慮した本来の左上座標の計算
-                    // PDFではY軸が上方向。ベースラインの始点からテキストの上方向にheightPt分移動する
+                    // 回転を考慮した本来の左上座標(TopLeft)の計算
                     double upDx = -Math.Sin(angleRad) * heightPt;
                     double upDy = Math.Cos(angleRad) * heightPt;
                     double topLeftPdfX = firstLetter.StartBaseLine.X + upDx;
                     double topLeftPdfY = firstLetter.StartBaseLine.Y + upDy;
 
                     string rawFontName = firstLetter.FontName ?? "Arial";
-
-                    // フォント名から太字・斜体を判定
-                    bool isBold = rawFontName.Contains("Bold", StringComparison.OrdinalIgnoreCase)
-                    || rawFontName.Contains("Black", StringComparison.OrdinalIgnoreCase);
-                    bool isItalic = rawFontName.Contains("Italic", StringComparison.OrdinalIgnoreCase)
-                    || rawFontName.Contains("Oblique", StringComparison.OrdinalIgnoreCase);
+                    
+                    bool isBold = rawFontName.Contains("Bold", StringComparison.OrdinalIgnoreCase) 
+                               || rawFontName.Contains("Black", StringComparison.OrdinalIgnoreCase);
+                    bool isItalic = rawFontName.Contains("Italic", StringComparison.OrdinalIgnoreCase) 
+                                 || rawFontName.Contains("Oblique", StringComparison.OrdinalIgnoreCase);
 
                     string cleanFontName = rawFontName;
                     int plusIndex = cleanFontName.IndexOf('+');
-                    if (plusIndex >= 0 && plusIndex < cleanFontName.Length - 1)
-                    {
-                        cleanFontName = cleanFontName.Substring(plusIndex + 1);
-                    }
+                    if (plusIndex >= 0 && plusIndex < cleanFontName.Length - 1) cleanFontName = cleanFontName.Substring(plusIndex + 1);
                     int hyphenIndex = cleanFontName.IndexOf('-');
-                    if (hyphenIndex >= 0)
-                    {
-                        cleanFontName = cleanFontName.Substring(0, hyphenIndex);
-                    }
-
-                    // フォント名のPostScript名特有のサフィックスを除去
-                    if (cleanFontName.EndsWith("PSMT", StringComparison.OrdinalIgnoreCase))
-                    {
-                        cleanFontName = cleanFontName.Substring(0, cleanFontName.Length - 4);
-                    }
-                    else if (cleanFontName.EndsWith("MT", StringComparison.OrdinalIgnoreCase) || 
-                             cleanFontName.EndsWith("PS", StringComparison.OrdinalIgnoreCase))
-                    {
-                        cleanFontName = cleanFontName.Substring(0, cleanFontName.Length - 2);
-                    }
+                    if (hyphenIndex >= 0) cleanFontName = cleanFontName.Substring(0, hyphenIndex);
+                    
+                    if (cleanFontName.EndsWith("PSMT", StringComparison.OrdinalIgnoreCase)) cleanFontName = cleanFontName.Substring(0, cleanFontName.Length - 4);
+                    else if (cleanFontName.EndsWith("MT", StringComparison.OrdinalIgnoreCase) || cleanFontName.EndsWith("PS", StringComparison.OrdinalIgnoreCase)) cleanFontName = cleanFontName.Substring(0, cleanFontName.Length - 2);
 
                     var textObj = new TextObject
                     {
@@ -236,12 +219,11 @@ namespace FigCrafterApp.Helpers
                         Width = widthPt * PtToMm,
                         Height = heightPt * PtToMm,
                         Rotation = rotation,
-
+                        
                         FontSize = heightPt * PtToMm,
                         FontFamily = cleanFontName,
                         IsBold = isBold,
                         IsItalic = isItalic,
-                        // 初期実装（色は黒、縁取りなし、透過度なし）
                         FillColor = SKColors.Black,
                         StrokeColor = SKColors.Transparent,
                         StrokeWidth = 0f,
