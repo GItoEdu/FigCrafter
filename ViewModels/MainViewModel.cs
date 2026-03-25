@@ -52,6 +52,8 @@ namespace FigCrafterApp.ViewModels
         public ICommand SaveAsProjectCommand { get; }
         public ICommand ExportMixedCommand { get; }
         public ICommand ShowContrastDialogCommand { get; }
+        public ICommand IncreaseStrokeWidthCommand { get; }
+        public ICommand DecreaseStrokeWidthCommand { get; }
 
         public MainViewModel()
         {
@@ -68,6 +70,8 @@ namespace FigCrafterApp.ViewModels
             ImportFileCommand = new RelayCommand(async p => await OpenFileAsync());
             ExportMixedCommand = new RelayCommand(p => ExportMixed());
             ShowContrastDialogCommand = new RelayCommand(p => ShowContrastDialog());
+            IncreaseStrokeWidthCommand = new RelayCommand(p => ChangeStrokeWidthBy(0.1f));
+            DecreaseStrokeWidthCommand = new RelayCommand(p => ChangeStrokeWidthBy(-0.1f));
 
             // 起動時は何も初期化しない (空の状態から開始)
             // AddNewDocument();
@@ -200,6 +204,40 @@ namespace FigCrafterApp.ViewModels
                 ActiveDocument.ExecuteCommand(cmd);
             }
             ActiveDocument.Invalidate();
+        }
+
+        private void ChangeStrokeWidthBy(float deltaPt)
+        {
+            // 図形選択中ならその図形の太さを基準に、未選択ならデフォルトの太さを基準にする
+            float baseWidthMm = (ActiveDocument?.SelectedObject != null) 
+                                ? ActiveDocument.SelectedObject.StrokeWidth 
+                                : _currentStrokeWidth;
+
+            // 現在の内部データ（mm）をUI表示用（pt）に変換
+            float currentPt = baseWidthMm / (25.4f / 72.0f);
+
+            // 指定された値（0.1ptまたは-0.1pt）を加算し、四捨五入して誤差を消す
+            float newPt = (float)Math.Round(currentPt + deltaPt, 1);
+
+            // 0未満にならないように制限をかける
+            if (newPt < 0.1f) newPt = 0.1f;
+
+            // 再度mmに変換してプロパティにセット
+            float newMm = newPt * (25.4f / 72.0f);
+
+            CurrentStrokeWidth = newMm;
+
+            // もしキャンバス上で図形が選択されていれば、その図形の線幅も即座に変更する
+            if (ActiveDocument?.SelectedObject != null)
+            {
+                var cmd = new FigCrafterApp.Commands.PropertyChangeCommand(
+                    ActiveDocument.SelectedObject, 
+                    nameof(FigCrafterApp.Models.GraphicObject.StrokeWidth), 
+                    ActiveDocument.SelectedObject.StrokeWidth, 
+                    newMm);
+                ActiveDocument.ExecuteCommand(cmd);
+                ActiveDocument.Invalidate();
+            }
         }
 
         private void ExportMixed()
@@ -472,16 +510,13 @@ namespace FigCrafterApp.ViewModels
                             if (extension == ".ai" || extension == ".pdf")
                             {
                                 // DEBUG：aiファイルのoperationを全てtxtファイルにダンプする
-                                // FigCrafterApp.Helpers.VectorFileParser.DumpPdfOperations(path);
-                                // return;
-
+                                //FigCrafterApp.Helpers.VectorFileParser.DumpPdfOperations(path);
+                                
                                 // DEBUG：aiファイルに格納されているラスタ画像のメタ情報をダンプする
                                 // FigCrafterApp.Helpers.VectorFileParser.DumpPdfImageMetadata(path);
-                                // return;
 
                                 // DEBUG：aiファイルに格納されているラスタ画像をPNG形式で出力する
                                 // FigCrafterApp.Helpers.VectorFileParser.ExportImagesFromPdf(path, @"C:\temp");
-                                // return;
 
                                 var parsedObjects = await System.Threading.Tasks.Task.Run(() =>
                                 FigCrafterApp.Helpers.VectorFileParser.ParsePdfFile(path));

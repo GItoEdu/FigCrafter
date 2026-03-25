@@ -446,7 +446,7 @@ namespace FigCrafterApp.Helpers
                                     var bezierObj = new BezierObject
                                     {
                                         Nodes = new ObservableCollection<PathNode>(currentNodes),
-                                        StrokeWidth = currentStrokeWidth,
+                                        StrokeWidth = currentStrokeWidth * GetMatrixScale(currentMatrix),
                                         FillColor = isFill ? currentFillColor : SKColors.Transparent,
                                         StrokeColor = isStroke ? currentStrokeColor : SKColors.Transparent,
                                         IsClosed = isClose,
@@ -1103,19 +1103,7 @@ namespace FigCrafterApp.Helpers
                     string? rawData = operation.ToString();
 
                     writer.WriteLine($"[{opCode}] {className}");
-                    writer.WriteLine($"    Data: {rawData}");
-                    
-                    // 値の構造をより深く知るため、dynamicでプロパティや配列の型を調べる（オプション）
-                    try
-                    {
-                        dynamic dynOp = operation;
-                        if (opCode == "cm" || opCode == "w" || opCode.Contains("rg") || opCode.Contains("k"))
-                        {
-                            writer.WriteLine($"    Value Type: {dynOp.Value?.GetType().Name}");
-                        }
-                    }
-                    catch { /* 読み取れないプロパティは無視 */ }
-
+                    writer.WriteLine($"    Data: {rawData}");                  
                     writer.WriteLine("--------------------------------------------------");
                 }
 

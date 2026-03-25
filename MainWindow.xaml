@@ -363,9 +363,9 @@
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
                             <RepeatButton Grid.Row="0" Content="▲" FontSize="6" Padding="0" Margin="0,0,0,1"
-                                Focusable="False" Click="StrokeWidthUp_Click" Delay="300" Interval="100"/>
+                                Focusable="False" Command="{Binding IncreaseStrokeWidthCommand}" Delay="300" Interval="100"/>
                             <RepeatButton Grid.Row="1" Content="▼" FontSize="6" Padding="0"
-                                Focusable="False" Click="StrokeWidthDown_Click" Delay="300" Interval="100"/>
+                                Focusable="False" Command="{Binding DecreaseStrokeWidthCommand}" Delay="300" Interval="100"/>
                         </Grid>
                     </Grid>
                 </StackPanel>
@@ -399,10 +399,8 @@
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <RepeatButton Grid.Row="0" Content="▲" FontSize="6" Padding="0" Margin="0,0,0,1"
-                                Focusable="False" Click="StrokeWidthUp_Click" Delay="300" Interval="100"/>
-                            <RepeatButton Grid.Row="1" Content="▼" FontSize="6" Padding="0"
-                                Focusable="False" Click="StrokeWidthDown_Click" Delay="300" Interval="100"/>
+                            <RepeatButton Grid.Row="0" Content="▲" FontSize="6" Padding="0" Margin="0,0,0,1" Focusable="False" Command="{Binding DataContext.IncreaseStrokeWidthCommand, RelativeSource={RelativeSource AncestorType=Window}}" Delay="300" Interval="100"/>
+                            <RepeatButton Grid.Row="1" Content="▼" FontSize="6" Padding="0" Focusable="False" Command="{Binding DataContext.DecreaseStrokeWidthCommand, RelativeSource={RelativeSource AncestorType=Window}}" Delay="300" Interval="100"/>
                         </Grid>
                     </Grid>
 

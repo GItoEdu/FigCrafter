@@ -102,16 +102,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void StrokeWidthUp_Click(object sender, System.Windows.RoutedEventArgs e)
-    {
-        ChangeStrokeWidth(sender, 0.1);
-    }
-
-    private void StrokeWidthDown_Click(object sender, System.Windows.RoutedEventArgs e)
-    {
-        ChangeStrokeWidth(sender, -0.1);
-    }
-
     // 上下ボタン共通の処理（どんな型や場所にあっても確実に値を変更する）
     private void ChangeStrokeWidth(object sender, double amount)
     {
