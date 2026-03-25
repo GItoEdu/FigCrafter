@@ -172,9 +172,30 @@ namespace FigCrafterApp.Helpers
                 // テキスト読み込み
                 foreach (var word in page.GetWords())
                 {
-                    // 単語を構成する最初の文字からフォントとサイズ情報を取得
                     var firstLetter = word.Letters.FirstOrDefault();
-                    if (firstLetter == null) continue;
+                    var lastLetter = word.Letters.LastOrDefault();
+                    if (firstLetter == null || lastLetter == null) continue;
+
+                    // 回転角度と正確なサイズの計算
+                    double angleDx = firstLetter.EndBaseLine.X - firstLetter.StartBaseLine.X;
+                    double angleDy = firstLetter.EndBaseLine.Y - firstLetter.StartBaseLine.Y;
+                    double angleRad = Math.Atan2(angleDy, angleDx);
+
+                    // 時計回りが正となるようにする
+                    float rotation = (float)(-angleRad * 180.0 / Math.PI);
+
+                    // 単語全体の幅を計算
+                    double wordDx = lastLetter.EndBaseLine.X - firstLetter.StartBaseLine.X;
+                    double wordDy = lastLetter.EndBaseLine.Y - firstLetter.StartBaseLine.Y;
+                    float widthPt = (float)Math.Sqrt(wordDx * wordDx + wordDy * wordDy);
+                    float heightPt = (float)firstLetter.PointSize;
+
+                    // 回転を考慮した本来の左上座標の計算
+                    // PDFではY軸が上方向。ベースラインの始点からテキストの上方向にheightPt分移動する
+                    double upDx = -Math.Sin(angleRad) * heightPt;
+                    double upDy = Math.Cos(angleRad) * heightPt;
+                    double topLeftPdfX = firstLetter.StartBaseLine.X + upDx;
+                    double topLeftPdfY = firstLetter.StartBaseLine.Y + upDy;
 
                     string rawFontName = firstLetter.FontName ?? "Arial";
 
@@ -210,11 +231,13 @@ namespace FigCrafterApp.Helpers
                     var textObj = new TextObject
                     {
                         Text = word.Text,
-                        X = (float)word.BoundingBox.Left * PtToMm,
-                        Y = ((float)pageHeight - (float)word.BoundingBox.Top) * PtToMm,
-                        Width = (float)word.BoundingBox.Width * PtToMm,
-                        Height = (float)word.BoundingBox.Height * PtToMm,
-                        FontSize = (float)firstLetter.PointSize * PtToMm,
+                        X = (float)topLeftPdfX * PtToMm,
+                        Y = ((float)pageHeight - (float)topLeftPdfY) * PtToMm,
+                        Width = widthPt * PtToMm,
+                        Height = heightPt * PtToMm,
+                        Rotation = rotation,
+
+                        FontSize = heightPt * PtToMm,
                         FontFamily = cleanFontName,
                         IsBold = isBold,
                         IsItalic = isItalic,
