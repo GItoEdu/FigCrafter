@@ -35,8 +35,9 @@ namespace FigCrafterApp.Views
         
         // Undo用の一時保存
         private List<(GraphicObject Obj, float OldX, float OldY)> _preDragPositions = new();
-        private (float X, float Y, float EndX, float EndY) _preDragLineEnd;
-
+        // private (float X, float Y, float EndX, float EndY) _preDragLineEnd;
+        private Dictionary<GraphicObject, SKRect> _preResizeBounds = new();
+        private Dictionary<LineObject, (float X, float Y, float EndX, float EndY)> _preResizeLines = new();
         // スナップ機能用
         private float? _snapGuideX = null;
         private float? _snapGuideY = null;
@@ -103,6 +104,29 @@ namespace FigCrafterApp.Views
             {
                 SkiaElement.InvalidateVisual();
                 _lastInvalidateTime = now;
+            }
+        }
+
+        /// <summary>
+        /// グループの子要素も含めて、リサイズ前の状態をすべて記憶するヘルパーメソッド
+        /// </summary>
+        private void SavePreResizeStateRecursive(GraphicObject obj)
+        {
+            if (obj is LineObject line)
+            {
+                _preResizeLines[line] = (line.X, line.Y, line.EndX, line.EndY);
+            }
+            else
+            {
+                _preResizeBounds[obj] = new SKRect(obj.X, obj.Y, obj.X + obj.Width, obj.Y + obj.Height);
+            }
+
+            if (obj is GroupObject group)
+            {
+                foreach (var child in group.Children)
+                {
+                    SavePreResizeStateRecursive(child);
+                }
             }
         }
 
@@ -468,10 +492,11 @@ namespace FigCrafterApp.Views
                         _resizeHandleIndex = handleIdx;
                         _originalResizeRect = GetBoundingRect(_selectedObject);
                         _originalAspectRatio = _originalResizeRect.Width / _originalResizeRect.Height;
-                        if (_selectedObject is LineObject line)
-                        {
-                            _preDragLineEnd = (line.X, line.Y, line.EndX, line.EndY);
-                        }
+
+                        _preResizeBounds.Clear();
+                        _preResizeLines.Clear();
+                        SavePreResizeStateRecursive(_selectedObject);
+
                         SkiaElement.CaptureMouse();
                         return;
                     }
@@ -1157,15 +1182,31 @@ namespace FigCrafterApp.Views
                 
                 if (_selectedObject != null)
                 {
-                    if (_selectedObject is LineObject lineObj)
+                    var commands = new List<IUndoableCommand>();
+                    
+                    // 記憶しておいた全オブジェクトの変更前・変更後の状態をコマンド化
+                    foreach (var kvp in _preResizeBounds)
                     {
-                        var cmd = new MoveLineEndCommand(lineObj, _preDragLineEnd.X, _preDragLineEnd.Y, _preDragLineEnd.EndX, _preDragLineEnd.EndY, lineObj.X, lineObj.Y, lineObj.EndX, lineObj.EndY);
-                        vmObj.ExecuteCommand(cmd);
+                        var obj = kvp.Key;
+                        var oldRect = kvp.Value;
+                        commands.Add(new ResizeCommand(obj, oldRect.Left, oldRect.Top, oldRect.Width, oldRect.Height, obj.X, obj.Y, obj.Width, obj.Height));
                     }
-                    else
+                    foreach (var kvp in _preResizeLines)
                     {
-                        var cmd = new ResizeCommand(_selectedObject, _originalResizeRect.Left, _originalResizeRect.Top, _originalResizeRect.Width, _originalResizeRect.Height, _selectedObject.X, _selectedObject.Y, _selectedObject.Width, _selectedObject.Height);
-                        vmObj.ExecuteCommand(cmd);
+                        var line = kvp.Key;
+                        var oldPos = kvp.Value;
+                        commands.Add(new MoveLineEndCommand(line, oldPos.X, oldPos.Y, oldPos.EndX, oldPos.EndY, line.X, line.Y, line.EndX, line.EndY));
+                    }
+
+                    // コマンドを実行して履歴に積む
+                    if (commands.Count == 1)
+                    {
+                        vmObj.ExecuteCommand(commands[0]);
+                    }
+                    else if (commands.Count > 1)
+                    {
+                        // グループなどで複数オブジェクトが変更された場合は複合コマンドとしてまとめる
+                        vmObj.ExecuteCommand(new CompositeCommand(commands));
                     }
                 }
 
