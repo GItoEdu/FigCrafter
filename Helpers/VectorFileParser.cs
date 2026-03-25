@@ -196,6 +196,17 @@ namespace FigCrafterApp.Helpers
                         cleanFontName = cleanFontName.Substring(0, hyphenIndex);
                     }
 
+                    // フォント名のPostScript名特有のサフィックスを除去
+                    if (cleanFontName.EndsWith("PSMT", StringComparison.OrdinalIgnoreCase))
+                    {
+                        cleanFontName = cleanFontName.Substring(0, cleanFontName.Length - 4);
+                    }
+                    else if (cleanFontName.EndsWith("MT", StringComparison.OrdinalIgnoreCase) || 
+                             cleanFontName.EndsWith("PS", StringComparison.OrdinalIgnoreCase))
+                    {
+                        cleanFontName = cleanFontName.Substring(0, cleanFontName.Length - 2);
+                    }
+
                     var textObj = new TextObject
                     {
                         Text = word.Text,
