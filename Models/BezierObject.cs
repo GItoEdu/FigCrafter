@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using SkiaSharp;
@@ -23,73 +24,68 @@ namespace FigCrafterApp.Models
             using var path = new SKPath();
             bool isFirst = true;
 
-            // ノードを辿って SKPath を構築する
+            float minX = float.MaxValue, minY = float.MaxValue;
+            float maxX = float.MinValue, maxY = float.MinValue;
+
+            // X, Y を起点とした相対座標でパスを構築し、同時に元のサイズを計算
             foreach (var node in Nodes)
             {
-                // Nodesの座標はPathObjectのX,Yを基準とした相対座標として扱う
-                // ドラッグ移動でGraphicObject.X,Yが変わるだけで図形全体が移動する
-                float absX = X + node.X;
-                float absY = Y + node.Y;
+                if (node.X < minX) minX = node.X;
+                if (node.Y < minY) minY = node.Y;
+                if (node.X > maxX) maxX = node.X;
+                if (node.Y > maxY) maxY = node.Y;
 
                 if (isFirst || node.NodeType == PathNodeType.Move)
                 {
-                    path.MoveTo(absX, absY);
+                    path.MoveTo(node.X, node.Y);
                     isFirst = false;
                 }
                 else if (node.NodeType == PathNodeType.Line)
                 {
-                    path.LineTo(absX, absY);
+                    path.LineTo(node.X, node.Y);
                 }
                 else if (node.NodeType == PathNodeType.Bezier)
                 {
-                    path.CubicTo(
-                        X + node.Control1X, Y + node.Control1Y,
-                        X + node.Control2X, Y + node.Control2Y,
-                        absX, absY
-                    );
+                    path.CubicTo(node.Control1X, node.Control1Y, node.Control2X, node.Control2Y, node.X, node.Y);
                 }
             }
+            if (IsClosed) path.Close();
 
-            if (IsClosed)
-            {
-                path.Close();
-            }
+            // スケール比率の計算
+            float nodeW = maxX - minX;
+            float nodeH = maxY - minY;
+            float scaleX = nodeW > 0 ? Width / nodeW : 1f;
+            float scaleY = nodeH > 0 ? Height / nodeH : 1f;
 
-            // 回転などのトランスフォームを適用
+            // スケールを適用した新しいパスを生成
+            using var scaledPath = new SKPath();
+            var matrix = SKMatrix.CreateScale(scaleX, scaleY);
+            path.Transform(matrix, scaledPath);
+            scaledPath.FillType = FillType;
+
             canvas.Save();
             TransformCanvas(canvas);
+            canvas.Translate(X, Y); // 起点座標へ移動
 
-            // 塗りつぶしの描画
-            if (FillColor != SKColors.Transparent)
+            var fillWithOpacity = FillColor.WithAlpha((byte)(FillColor.Alpha * Opacity));
+            var strokeWithOpacity = StrokeColor.WithAlpha((byte)(StrokeColor.Alpha * Opacity));
+
+            using var paint = new SKPaint
             {
-                using var fillPaint = new SKPaint
-                {
-                    Color = FillColor,
-                    Style = SKPaintStyle.Fill,
-                    IsAntialias = true
-                };
-                canvas.DrawPath(path, fillPaint);
-            }
+                Color = fillWithOpacity,
+                Style = SKPaintStyle.Fill,
+                IsAntialias = true
+            };
+            canvas.DrawPath(scaledPath, paint);
 
-            // 線の描画
-            if (StrokeWidth > 0 && StrokeColor != SKColors.Transparent)
-            {
-                using var strokePaint = new SKPaint
-                {
-                    Color = StrokeColor,
-                    StrokeWidth = StrokeWidth,
-                    Style = SKPaintStyle.Stroke,
-                    IsAntialias = true,
-                    StrokeJoin = SKStrokeJoin.Round,
-                    StrokeCap = SKStrokeCap.Round
-                };
-                canvas.DrawPath(path, strokePaint);
-            }
+            paint.Color = strokeWithOpacity;
+            paint.Style = SKPaintStyle.Stroke;
+            paint.StrokeWidth = StrokeWidth; // 線の太さは不変（そのまま）
+            canvas.DrawPath(scaledPath, paint);
 
-            // 選択時のバウンディングボックス描画
             if (IsSelected)
             {
-                var rect = path.Bounds;
+                var rect = scaledPath.Bounds;
                 DrawSelectionBox(canvas, rect);
             }
 
@@ -100,106 +96,74 @@ namespace FigCrafterApp.Models
         {
             if (Nodes == null || Nodes.Count == 0) return false;
 
-            // 回転を考慮したローカル座標への変換
-            var localPoint = UntransformPoint(point);
+            float minX = float.MaxValue, minY = float.MaxValue;
+            float maxX = float.MinValue, maxY = float.MinValue;
+            foreach (var node in Nodes)
+            {
+                if (node.X < minX) minX = node.X;
+                if (node.Y < minY) minY = node.Y;
+                if (node.X > maxX) maxX = node.X;
+                if (node.Y > maxY) maxY = node.Y;
+            }
+
+            float nodeW = maxX - minX;
+            float nodeH = maxY - minY;
+            float scaleX = nodeW > 0 ? Width / nodeW : 1f;
+            float scaleY = nodeH > 0 ? Height / nodeH : 1f;
+
+            var p = UntransformPoint(point);
+            p.X -= X;
+            p.Y -= Y;
+
+            // マウス座標をスケールの逆数で割って、元のパス空間に戻す
+            p.X = scaleX > 0 ? p.X / scaleX : p.X;
+            p.Y = scaleY > 0 ? p.Y / scaleY : p.Y;
 
             using var path = new SKPath();
             bool isFirst = true;
-
             foreach (var node in Nodes)
             {
-                float absX = X + node.X;
-                float absY = Y + node.Y;
-
                 if (isFirst || node.NodeType == PathNodeType.Move)
                 {
-                    path.MoveTo(absX, absY);
+                    path.MoveTo(node.X, node.Y);
                     isFirst = false;
                 }
                 else if (node.NodeType == PathNodeType.Line)
                 {
-                    path.LineTo(absX, absY);
+                    path.LineTo(node.X, node.Y);
                 }
                 else if (node.NodeType == PathNodeType.Bezier)
                 {
-                    path.CubicTo(
-                        X + node.Control1X, Y + node.Control1Y,
-                        X + node.Control2X, Y + node.Control2Y,
-                        absX, absY
-                    );
-                }
-            }
-
-            if (IsClosed) path.Close();
-
-            if (FillColor != SKColors.Transparent)
-            {
-                if (path.Contains(point.X, point.Y)) return true;
-            }
-
-            float ptToMm = 25.4f / 72.0f;
-            float clickMargin = 2.0f;
-            float effectiveWidth = (StrokeWidth * ptToMm) + clickMargin;
-
-            using var paint = new SKPaint
-            {
-                Style = SKPaintStyle.Stroke,
-                StrokeWidth = effectiveWidth
-            };
-
-            using var selectionPath = new SKPath();
-            paint.GetFillPath(path, selectionPath);
-            return selectionPath.Contains(localPoint.X, localPoint.Y);
-        }
-
-        /// <summary>
-        /// 現在のノードの状態から SKPath を生成するヘルパー関数
-        /// </summary>
-        /// <returns></returns>
-        private SKPath GetSKPath()
-        {
-            var path = new SKPath();
-            path.FillType = this.FillType;
-            if (Nodes == null || Nodes.Count == 0) return path;
-
-            bool isFirst = true;
-            foreach (var node in Nodes)
-            {
-                float absX = X + node.X;
-                float absY = Y + node.Y;
-
-                if (isFirst || node.NodeType == PathNodeType.Move)
-                {
-                    path.MoveTo(absX, absY);
-                    isFirst = false;
-                }
-                else if (node.NodeType == PathNodeType.Line)
-                {
-                    path.LineTo(absX, absY);
-                }
-                else if (node.NodeType == PathNodeType.Bezier)
-                {
-                    path.CubicTo(
-                        X + node.Control1X, Y + node.Control1Y,
-                        X + node.Control2X, Y + node.Control2Y,
-                        absX, absY
-                    );
+                    path.CubicTo(node.Control1X, node.Control1Y, node.Control2X, node.Control2Y, node.X, node.Y);
                 }
             }
             if (IsClosed) path.Close();
-            return path;
+            path.FillType = FillType;
+
+            if (path.Contains(p.X, p.Y)) return true;
+
+            if (StrokeWidth > 0 && StrokeColor != SKColors.Transparent)
+            {
+                // ここでのマージンは元のパススケール基準になるため、スケールの逆数を掛けて補正する
+                float avgScale = (scaleX + scaleY) / 2f;
+                float margin = Math.Max(StrokeWidth / 2f, 2.0f / CurrentZoomLevel);
+                if (avgScale > 0) margin /= avgScale;
+
+                using var outlinePath = new SKPath();
+                using var paint = new SKPaint { Style = SKPaintStyle.Stroke, StrokeWidth = margin * 2 };
+                paint.GetFillPath(path, outlinePath);
+                return outlinePath.Contains(p.X, p.Y);
+            }
+
+            return false;
         }
 
         public override GraphicObject Clone()
         {
             var clone = new BezierObject();
-            // プロパティをコピー
             CopyPropertiesTo(clone);
-
             clone.IsClosed = this.IsClosed;
             clone.FillType = this.FillType;
-            
-            // ノードのディープコピー
             clone.Nodes = new ObservableCollection<PathNode>(this.Nodes.Select(n => n.Clone()));
             return clone;
         }

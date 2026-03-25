@@ -1282,6 +1282,14 @@ namespace FigCrafterApp.Models
             TransformCanvas(canvas);
             canvas.Translate(X, Y); // 起点を相対座標へ
 
+            var bounds = path.Bounds;
+            float scaleX = bounds.Width > 0 ? Width / bounds.Width : 1f;
+            float scaleY = bounds.Height > 0 ? Height / bounds.Height : 1f;
+
+            using var scaledPath = new SKPath();
+            var matrix = SKMatrix.CreateScale(scaleX, scaleY);
+            path.Transform(matrix, scaledPath);
+
             var fillWithOpacity = FillColor.WithAlpha((byte)(FillColor.Alpha * Opacity));
             var strokeWithOpacity = StrokeColor.WithAlpha((byte)(StrokeColor.Alpha * Opacity));
 
@@ -1317,14 +1325,24 @@ namespace FigCrafterApp.Models
             p.X -= X;
             p.Y -= Y;
 
+            var bounds = path.Bounds;
+            float scaleX = bounds.Width > 0 ? Width / bounds.Width : 1f;
+            float scaleY = bounds.Height > 0 ? Height / bounds.Height : 1f;
+
+            p.X = scaleX > 0 ? p.X / scaleX : p.X;
+            p.Y = scaleY > 0 ? p.Y / scaleY : p.Y;
+
             // 塗りつぶし部分にヒットするか
             if (path.Contains(p.X, p.Y)) return true;
 
             // 線上のヒットテスト
             if (StrokeWidth > 0 && StrokeColor != SKColors.Transparent)
             {
+                float avgScale = (scaleX + scaleY) / 2f;
                 // 判定用のマージン（線の太さの半分 + 画面上の約2px相当）
                 float margin = Math.Max(StrokeWidth / 2f, 2.0f / CurrentZoomLevel);
+                if (avgScale > 0) margin /= avgScale;
+
                 using var outlinePath = new SKPath();
                 using var paint = new SKPaint { Style = SKPaintStyle.Stroke, StrokeWidth = margin * 2 };
                 paint.GetFillPath(path, outlinePath);
