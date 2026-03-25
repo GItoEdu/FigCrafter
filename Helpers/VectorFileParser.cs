@@ -212,6 +212,8 @@ namespace FigCrafterApp.Helpers
                         Text = word.Text,
                         X = (float)word.BoundingBox.Left * PtToMm,
                         Y = ((float)pageHeight - (float)word.BoundingBox.Top) * PtToMm,
+                        Width = (float)word.BoundingBox.Width * PtToMm,
+                        Height = (float)word.BoundingBox.Height * PtToMm,
                         FontSize = (float)firstLetter.PointSize * PtToMm,
                         FontFamily = cleanFontName,
                         IsBold = isBold,
