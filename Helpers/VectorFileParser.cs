@@ -325,7 +325,7 @@ namespace FigCrafterApp.Helpers
                             var matches = Regex.Matches(opString, @"[-+]?[0-9]*\.?[0-9]+");
                             if (matches.Count >= 1)
                             {
-                                currentStrokeWidth = float.Parse(matches[0].Value, CultureInfo.InvariantCulture);
+                                currentStrokeWidth = float.Parse(matches[0].Value, CultureInfo.InvariantCulture) * PtToMm;
                             }
                         }
                         else if (opCode == "rg" || opCode == "RG" || opCode == "k" || opCode == "K" || opCode == "g" || opCode == "G" || opCode == "scn" || opCode == "SCN")

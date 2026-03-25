@@ -15,7 +15,7 @@ namespace FigCrafterApp.ViewModels
     {
         private ObservableCollection<CanvasViewModel> _documents = new();
         private CanvasViewModel? _activeDocument;
-        private float _currentStrokeWidth = 0.5f;
+        private float _currentStrokeWidth = 0.5f * (25.4f / 72.0f);
 
         public ObservableCollection<CanvasViewModel> Documents
         {
