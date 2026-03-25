@@ -102,6 +102,36 @@ public partial class MainWindow : Window
         }
     }
 
+    private void StrokeWidthTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter)
+        {
+            ApplyStrokeWidthFromTextBox(sender as System.Windows.Controls.TextBox);
+            
+            // Enterを押したらフォーカスを外して入力を確定させる
+            System.Windows.Input.Keyboard.ClearFocus(); 
+        }
+    }
+
+    private void StrokeWidthTextBox_LostFocus(object sender, System.Windows.RoutedEventArgs e)
+    {
+        ApplyStrokeWidthFromTextBox(sender as System.Windows.Controls.TextBox);
+    }
+
+    private void ApplyStrokeWidthFromTextBox(System.Windows.Controls.TextBox? textBox)
+    {
+        if (textBox != null && float.TryParse(textBox.Text, out float pt))
+        {
+            if (DataContext is FigCrafterApp.ViewModels.MainViewModel vm)
+            {
+                if (vm.SetStrokeWidthCommand != null && vm.SetStrokeWidthCommand.CanExecute(pt))
+                {
+                    vm.SetStrokeWidthCommand.Execute(pt);
+                }
+            }
+        }
+    }
+
     // 上下ボタン共通の処理（どんな型や場所にあっても確実に値を変更する）
     private void ChangeStrokeWidth(object sender, double amount)
     {

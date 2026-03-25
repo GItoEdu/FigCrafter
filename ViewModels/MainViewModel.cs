@@ -54,6 +54,7 @@ namespace FigCrafterApp.ViewModels
         public ICommand ShowContrastDialogCommand { get; }
         public ICommand IncreaseStrokeWidthCommand { get; }
         public ICommand DecreaseStrokeWidthCommand { get; }
+        public ICommand SetStrokeWidthCommand { get; }
 
         public MainViewModel()
         {
@@ -72,6 +73,13 @@ namespace FigCrafterApp.ViewModels
             ShowContrastDialogCommand = new RelayCommand(p => ShowContrastDialog());
             IncreaseStrokeWidthCommand = new RelayCommand(p => ChangeStrokeWidthBy(0.1f));
             DecreaseStrokeWidthCommand = new RelayCommand(p => ChangeStrokeWidthBy(-0.1f));
+            SetStrokeWidthCommand = new RelayCommand(p =>
+            {
+                if (p != null && float.TryParse(p.ToString(), out float pt))
+                {
+                    ApplyStrokeWidth(pt);
+                }
+            });
 
             // 起動時は何も初期化しない (空の状態から開始)
             // AddNewDocument();
@@ -209,36 +217,53 @@ namespace FigCrafterApp.ViewModels
         private void ChangeStrokeWidthBy(float deltaPt)
         {
             float baseWidthMm = _currentStrokeWidth;
-
-            // 基準となる線幅を取得（グループの場合は最初に見つかった有効な子要素から取得）
-            if (ActiveDocument?.SelectedObject != null)
+            var selectedItems = ActiveDocument?.SelectedObjects?.ToList() ?? new List<FigCrafterApp.Models.GraphicObject>();
+            if (selectedItems.Count == 0 && ActiveDocument?.SelectedObject != null)
             {
-                baseWidthMm = GetBaseStrokeWidth(ActiveDocument.SelectedObject, _currentStrokeWidth);
+                selectedItems.Add(ActiveDocument.SelectedObject);
             }
 
-            // 現在の内部データ（mm）をUI表示用（pt）に変換
-            float currentPt = baseWidthMm / (25.4f / 72.0f);
+            if (selectedItems.Count > 0)
+            {
+                foreach (var item in selectedItems)
+                {
+                    float w = GetBaseStrokeWidth(item, -1f);
+                    if (w > 0)
+                    {
+                        baseWidthMm = w;
+                        break;
+                    }
+                }
+                if (baseWidthMm <= 0) baseWidthMm = _currentStrokeWidth;
+            }
 
-            // 指定された値（0.1ptまたは-0.1pt）を加算し、四捨五入して誤差を消す
+            float currentPt = baseWidthMm / (25.4f / 72.0f);
             float newPt = (float)Math.Round(currentPt + deltaPt, 1);
 
-            // 0未満にならないように制限をかける
-            if (newPt < 0.1f) newPt = 0.1f;
+            // 分離した適用メソッドを呼ぶ
+            ApplyStrokeWidth(newPt);
+        }
 
-            // 再度mmに変換してプロパティにセット
+        private void ApplyStrokeWidth(float newPt)
+        {
+            if (newPt < 0.1f) newPt = 0.1f;
             float newMm = newPt * (25.4f / 72.0f);
 
             CurrentStrokeWidth = newMm;
 
-            // もしキャンバス上で図形が選択されていれば、その図形の線幅も即座に変更する
-            if (ActiveDocument?.SelectedObject != null)
+            var selectedItems = ActiveDocument?.SelectedObjects?.ToList() ?? new List<FigCrafterApp.Models.GraphicObject>();
+            if (selectedItems.Count == 0 && ActiveDocument?.SelectedObject != null)
+            {
+                selectedItems.Add(ActiveDocument.SelectedObject);
+            }
+
+            if (selectedItems.Count > 0)
             {
                 var targets = new List<FigCrafterApp.Models.GraphicObject>();
-                CollectStrokeTargets(ActiveDocument.SelectedObject, targets);
-
-                if (!targets.Contains(ActiveDocument.SelectedObject))
+                foreach (var item in selectedItems)
                 {
-                    targets.Add(ActiveDocument.SelectedObject);
+                    CollectStrokeTargets(item, targets);
+                    if (!targets.Contains(item)) targets.Add(item);
                 }
 
                 var commands = new List<FigCrafterApp.Commands.IUndoableCommand>();
@@ -247,22 +272,21 @@ namespace FigCrafterApp.ViewModels
                     if (Math.Abs(target.StrokeWidth - newMm) > 0.0001f)
                     {
                         commands.Add(new FigCrafterApp.Commands.PropertyChangeCommand(
-                            target,
-                            nameof(FigCrafterApp.Models.GraphicObject.StrokeWidth),
-                            target.StrokeWidth,
-                            newMm
-                        ));
+                            target, 
+                            nameof(FigCrafterApp.Models.GraphicObject.StrokeWidth), 
+                            target.StrokeWidth, 
+                            newMm));
                     }
+                }
 
-                    if (commands.Count > 0)
-                    {
-                        if (commands.Count == 1)
-                            ActiveDocument.ExecuteCommand(commands[0]);
-                        else
-                            ActiveDocument.ExecuteCommand(new FigCrafterApp.Commands.CompositeCommand(commands));
-                        
-                        ActiveDocument.Invalidate();
-                    }
+                if (commands.Count > 0)
+                {
+                    if (commands.Count == 1)
+                        ActiveDocument?.ExecuteCommand(commands[0]);
+                    else
+                        ActiveDocument?.ExecuteCommand(new FigCrafterApp.Commands.CompositeCommand(commands));
+                    
+                    ActiveDocument?.Invalidate();
                 }
             }
         }
