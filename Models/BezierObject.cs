@@ -74,12 +74,10 @@ namespace FigCrafterApp.Models
             // 線の描画
             if (StrokeWidth > 0 && StrokeColor != SKColors.Transparent)
             {
-                float ptToMm = 25.4f / 72.0f;
-
                 using var strokePaint = new SKPaint
                 {
                     Color = StrokeColor,
-                    StrokeWidth = StrokeWidth * ptToMm,
+                    StrokeWidth = StrokeWidth,
                     Style = SKPaintStyle.Stroke,
                     IsAntialias = true,
                     StrokeJoin = SKStrokeJoin.Round,
