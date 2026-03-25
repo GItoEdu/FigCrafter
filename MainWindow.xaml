@@ -40,6 +40,7 @@
         <local:SKColorToSolidColorBrushConverter x:Key="SKColorToSolidColorBrushConverter"/>
         <local:LogZoomConverter x:Key="LogZoomConverter"/>
         <local:FontSizeConverter x:Key="FontSizeConverter"/>
+        <local:MmToPtConverter x:Key="MmToPtConverter" />
         <!-- タブのスタイル定義（ダークモード用） -->
         <Style TargetType="TabItem">
             <Setter Property="Background" Value="#FF2D2D30"/>
@@ -353,7 +354,7 @@
                         <TextBlock Grid.Column="0" Text="太さ:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>
                         <TextBox x:Name="DefaultStrokeWidthTextBox"
                             Grid.Column="1"
-                            Text="{Binding CurrentStrokeWidth, StringFormat=\{0:F1\}, UpdateSourceTrigger=LostFocus}"
+                            Text="{Binding CurrentStrokeWidth, Converter={StaticResource MmToPtConverter}, StringFormat=\{0:F1\}, UpdateSourceTrigger=LostFocus}"
                             Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11"
                             VerticalContentAlignment="Center" Margin="0,0,2,0"/>
                         <Grid Grid.Column="2">
@@ -390,7 +391,7 @@
                         <TextBlock Grid.Column="0" Text="太さ:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>
                         <TextBox x:Name="StrokeWidthTextBox"
                             Grid.Column="1"
-                            Text="{Binding StrokeWidth, StringFormat=\{0:F1\}, UpdateSourceTrigger=LostFocus}"
+                            Text="{Binding StrokeWidth, Converter={StaticResource MmToPtConverter}, StringFormat=\{0:F1\}, UpdateSourceTrigger=LostFocus}"
                             Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11"
                             VerticalContentAlignment="Center" Margin="0,0,2,0"/>
                         <Grid Grid.Column="2">

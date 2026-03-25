@@ -174,7 +174,7 @@ namespace FigCrafterApp.Helpers
                 // 現在のグラフィックス状態
                 SKColor currentFillColor = SKColors.Black;
                 SKColor currentStrokeColor = SKColors.Black;
-                float currentStrokeWidth = 0.5f * PtToMm; // 線幅の初期値はPDF標準の1.0ptとする
+                float currentStrokeWidth = 0.5f * PtToMm;
 
                 var stateStack = new Stack<GraphicsState>();
                 var currentMatrix = SKMatrix.CreateIdentity();
