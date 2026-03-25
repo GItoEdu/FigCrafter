@@ -17,6 +17,7 @@ using FigCrafterApp.Models;
 using System.Drawing.Drawing2D;
 using OpenTK.Graphics.GL;
 using System.Security.RightsManagement;
+using iText.Layout.Element;
 
 namespace FigCrafterApp.Helpers
 {
@@ -166,6 +167,52 @@ namespace FigCrafterApp.Helpers
                         };
                         parsedObjects.Add(imgObj);
                     }
+                }
+
+                // テキスト読み込み
+                foreach (var word in page.GetWords())
+                {
+                    // 単語を構成する最初の文字からフォントとサイズ情報を取得
+                    var firstLetter = word.Letters.FirstOrDefault();
+                    if (firstLetter == null) continue;
+
+                    string rawFontName = firstLetter.FontName ?? "Arial";
+
+                    // フォント名から太字・斜体を判定
+                    bool isBold = rawFontName.Contains("Bold", StringComparison.OrdinalIgnoreCase)
+                    || rawFontName.Contains("Black", StringComparison.OrdinalIgnoreCase);
+                    bool isItalic = rawFontName.Contains("Italic", StringComparison.OrdinalIgnoreCase)
+                    || rawFontName.Contains("Oblique", StringComparison.OrdinalIgnoreCase);
+
+                    string cleanFontName = rawFontName;
+                    int plusIndex = cleanFontName.IndexOf('+');
+                    if (plusIndex >= 0 && plusIndex < cleanFontName.Length - 1)
+                    {
+                        cleanFontName = cleanFontName.Substring(plusIndex + 1);
+                    }
+                    int hyphenIndex = cleanFontName.IndexOf('-');
+                    if (hyphenIndex >= 0)
+                    {
+                        cleanFontName = cleanFontName.Substring(0, hyphenIndex);
+                    }
+
+                    var textObj = new TextObject
+                    {
+                        Text = word.Text,
+                        X = (float)word.BoundingBox.Left * PtToMm,
+                        Y = ((float)pageHeight - (float)word.BoundingBox.Top) * PtToMm,
+                        FontSize = (float)firstLetter.PointSize * PtToMm,
+                        FontFamily = cleanFontName,
+                        IsBold = isBold,
+                        IsItalic = isItalic,
+                        // 初期実装（色は黒、縁取りなし、透過度なし）
+                        FillColor = SKColors.Black,
+                        StrokeColor = SKColors.Transparent,
+                        StrokeWidth = 0f,
+                        Opacity = 1.0f
+                    };
+
+                    parsedObjects.Add(textObj);
                 }
 
                 // 現在構築中のパスデータ
