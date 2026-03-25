@@ -16,6 +16,7 @@ using UglyToad.PdfPig.Graphics.Colors;
 using FigCrafterApp.Models;
 using System.Drawing.Drawing2D;
 using OpenTK.Graphics.GL;
+using System.Security.RightsManagement;
 
 namespace FigCrafterApp.Helpers
 {
@@ -175,7 +176,7 @@ namespace FigCrafterApp.Helpers
                 SKColor currentStrokeColor = SKColors.Black;
                 float currentStrokeWidth = 0.5f * PtToMm; // 線幅の初期値はPDF標準の1.0ptとする
 
-                var matrixStack = new Stack<SKMatrix>();
+                var stateStack = new Stack<GraphicsState>();
                 var currentMatrix = SKMatrix.CreateIdentity();
 
                 // ページ内の全描画オペレーションを順番に処理
@@ -188,14 +189,27 @@ namespace FigCrafterApp.Helpers
                         string opString = operation.ToString() ?? "";
 
                         // グラフィックスステートの管理
-                        if (opName == "Push")
+                        if (opCode == "q") // PushGraphicsState
                         {
-                            matrixStack.Push(currentMatrix);
+                            stateStack.Push(new GraphicsState
+                            {
+                               Matrix = currentMatrix,
+                               FillColor = currentFillColor,
+                               StrokeColor = currentStrokeColor,
+                               StrokeWidth = currentStrokeWidth 
+                            });
                         }
-                        else if (opName == "Pop")
+                        else if (opCode == "Q") // PopGraphicsState
                         {
-                            if (matrixStack.Count > 0)
-                            currentMatrix = matrixStack.Pop();
+                            // スタックから復元
+                            if (stateStack.Count > 0)
+                            {
+                                var state = stateStack.Pop();
+                                currentMatrix = state.Matrix;
+                                currentFillColor = state.FillColor;
+                                currentStrokeColor = state.StrokeColor;
+                                currentStrokeWidth = state.StrokeWidth;
+                            }
                         }
                         else if (opName == "ModifyCurrentTransformationMatrix")
                         {
@@ -559,6 +573,14 @@ namespace FigCrafterApp.Helpers
             };
 
             public SvgStyle Clone() => (SvgStyle)this.MemberwiseClone();
+        }
+
+        private struct GraphicsState
+        {
+            public SKMatrix Matrix;
+            public SKColor FillColor;
+            public SKColor StrokeColor;
+            public float StrokeWidth;
         }
 
         private static void ProcessElement(XElement element, SKMatrix parentMatrix, GroupObject targetGroup, XNamespace ns, float scale, SvgStyle parentStyle, Dictionary<string, string> styleDict)
