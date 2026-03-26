@@ -1074,12 +1074,12 @@ namespace FigCrafterApp.ViewModels
                 float oldY = obj.Y;
 
                 if (dx != 0) MoveObjectXWithRecord(obj, dx);
-                if (dy != 0) MoveObjectXWithRecord(obj, dy);
+                if (dy != 0) MoveObjectYWithRecord(obj, dy);
 
                 moves.Add((obj, oldX, oldY, obj.X, obj.Y));
             }
             // Undo履歴に登録して再描画
-            ExecuteCommand(new MoveObjectsCommand(moves));
+            ExecuteCommand(new FigCrafterApp.Commands.MoveObjectsCommand(moves));
         }
 
         // --- 画像インポート ---

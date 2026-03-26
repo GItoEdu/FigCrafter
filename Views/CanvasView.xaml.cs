@@ -1525,7 +1525,8 @@ namespace FigCrafterApp.Views
                 if (vm.SelectedObjects.Any())
                 {
                     float dx = 0, dy = 0;
-                    float step = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? 10f : 1f;
+                    // カーソルキーでの移動量（mm単位）
+                    float step = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? 5f : 0.5f;
 
                     switch (e.Key)
                     {
