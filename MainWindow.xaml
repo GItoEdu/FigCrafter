@@ -370,7 +370,7 @@
                         </Grid>
                     </Grid>
                 </StackPanel>
-                <StackPanel DataContext="{Binding ActiveDocument.SelectedObject}">
+<StackPanel DataContext="{Binding ActiveDocument.SelectedObject}">
                     <StackPanel.Style>
                         <Style TargetType="StackPanel">
                             <Setter Property="Visibility" Value="Visible"/>
@@ -378,40 +378,50 @@
                                 <DataTrigger Binding="{Binding}" Value="{x:Null}">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
-                                <DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=TextObject}" Value="Visible">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding DataContext.ActiveDocument.IsInlineEditing, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </StackPanel.Style>
-                    <TextBlock Text="線" FontWeight="Bold" Margin="0,0,0,6" Foreground="White" FontSize="13"/>
 
-                    <Grid Margin="0,2">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="50"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="18"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="太さ:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>
-                        <TextBox x:Name="StrokeWidthTextBox"
-                            Grid.Column="1"
-                            Text="{Binding StrokeWidth, Converter={StaticResource MmToPtConverter}, StringFormat=\{0:F1\}, Mode=OneWay}"
-                            KeyDown="StrokeWidthTextBox_KeyDown"
-                            LostFocus="StrokeWidthTextBox_LostFocus"
-                            Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11"
-                            VerticalContentAlignment="Center" Margin="0,0,2,0"/>
-                        <Grid Grid.Column="2">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <RepeatButton Grid.Row="0" Content="▲" FontSize="6" Padding="0" Margin="0,0,0,1" Focusable="False" Command="{Binding DataContext.IncreaseStrokeWidthCommand, RelativeSource={RelativeSource AncestorType=Window}}" Delay="300" Interval="100"/>
-                            <RepeatButton Grid.Row="1" Content="▼" FontSize="6" Padding="0" Focusable="False" Command="{Binding DataContext.DecreaseStrokeWidthCommand, RelativeSource={RelativeSource AncestorType=Window}}" Delay="300" Interval="100"/>
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=TextObject}" Value="Visible">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding DataContext.ActiveDocument.IsInlineEditing, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+
+                        <TextBlock Text="線" FontWeight="Bold" Margin="0,0,0,6" Foreground="White" FontSize="13"/>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="50"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="18"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="太さ:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>
+                            <TextBox x:Name="StrokeWidthTextBox"
+                                Grid.Column="1"
+                                Text="{Binding StrokeWidth, Converter={StaticResource MmToPtConverter}, StringFormat=\{0:F1\}, Mode=OneWay}"
+                                KeyDown="StrokeWidthTextBox_KeyDown"
+                                LostFocus="StrokeWidthTextBox_LostFocus"
+                                Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4,2" FontSize="11"
+                                VerticalContentAlignment="Center" Margin="0,0,2,0"/>
+                            <Grid Grid.Column="2">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <RepeatButton Grid.Row="0" Content="▲" FontSize="6" Padding="0" Margin="0,0,0,1" Focusable="False" Command="{Binding DataContext.IncreaseStrokeWidthCommand, RelativeSource={RelativeSource AncestorType=Window}}" Delay="300" Interval="100"/>
+                                <RepeatButton Grid.Row="1" Content="▼" FontSize="6" Padding="0" Focusable="False" Command="{Binding DataContext.DecreaseStrokeWidthCommand, RelativeSource={RelativeSource AncestorType=Window}}" Delay="300" Interval="100"/>
+                            </Grid>
                         </Grid>
-                    </Grid>
+                    </StackPanel>
 
                     <TextBlock Text="枠線色:" Margin="0,6,0,4" Foreground="Gray" FontSize="11"/>
                     <UniformGrid Columns="7" Margin="0,0,0,1">
