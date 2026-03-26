@@ -566,7 +566,8 @@ namespace FigCrafterApp.ViewModels
             set
             {
                 // 値を制限 (10% ~ 1000%)
-                double newZoom = Math.Max(0.1, Math.Min(10.0, value));
+                double snappedZoom = Math.Round(value * 10) / 10.0;
+                double newZoom = Math.Max(0.1, Math.Min(10.0, snappedZoom));
                 if (SetProperty(ref _zoomLevel, newZoom))
                 {
                     OnPropertyChanged(nameof(ZoomedWidthPx));
