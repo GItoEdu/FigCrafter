@@ -1737,6 +1737,9 @@ namespace FigCrafterApp.Views
             _editingTextObject = textObj;
             _editingOriginalText = textObj.Text;
 
+            _editingTextObject.PropertyChanged += OnEditingTextPropertyChanged;
+            InlineEditingTextBox.TextChanged += InlineEditingTextBox_TextChanged;
+
             // 編集中は元のテキスト描画を非表示にする
             // この変更はUndoに記録しない
             vm.IsUndoSuppressed = true;
@@ -1825,6 +1828,9 @@ namespace FigCrafterApp.Views
 
             vm.IsInlineEditing = false;
             
+            _editingTextObject.PropertyChanged -= OnEditingTextPropertyChanged;
+            InlineEditingTextBox.TextChanged -= InlineEditingTextBox_TextChanged;
+
             // 編集結果を取得（キャンセル時は元のテキストを使用）
             string newText = isCancel ? _editingOriginalText : InlineEditingTextBox.Text;
             if (string.IsNullOrEmpty(newText)) newText = _editingOriginalText;
@@ -1916,6 +1922,48 @@ namespace FigCrafterApp.Views
             }
         }
 
+        private void OnEditingTextPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (_editingTextObject == null) return;
+            var vm = DataContext as CanvasViewModel;
+            if (vm == null) return;
+
+            const double mmToPx = 96.0 / 25.4;
+
+            if (e.PropertyName == nameof(TextObject.FontFamily))
+            {
+                InlineEditingTextBox.FontFamily = new System.Windows.Media.FontFamily(_editingTextObject.FontFamily);
+            }
+            else if (e.PropertyName == nameof(TextObject.FontSize))
+            {
+                InlineEditingTextBox.FontSize = _editingTextObject.FontSize * mmToPx * vm.ZoomLevel;
+            }
+            else if (e.PropertyName == nameof(TextObject.IsBold))
+            {
+                InlineEditingTextBox.FontWeight = _editingTextObject.IsBold ? FontWeights.Bold : FontWeights.Normal;
+            }
+            else if (e.PropertyName == nameof(TextObject.IsItalic))
+            {
+                InlineEditingTextBox.FontStyle = _editingTextObject.IsItalic ? FontStyles.Italic : FontStyles.Normal;
+            }
+            else if (e.PropertyName == nameof(TextObject.HorizontalAlignment))
+            {
+                InlineEditingTextBox.TextAlignment = _editingTextObject.HorizontalAlignment switch
+                {
+                    SKTextAlign.Center => TextAlignment.Center,
+                    SKTextAlign.Right => TextAlignment.Right,
+                    _ => TextAlignment.Left
+                };
+            }
+            
+            UpdateInlineTextBoxLayout();
+        }
+
+        private void InlineEditingTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            UpdateInlineTextBoxLayout();
+        }
+
         private void SkiaElement_PreviewDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (e.ClickCount != 2) return; // ダブルクリックのみ処理
@@ -1945,6 +1993,50 @@ namespace FigCrafterApp.Views
                         return;
                     }
                 }
+            }
+        }
+        
+        private void UpdateInlineTextBoxLayout()
+        {
+            if (_editingTextObject == null) return;
+            var vm = DataContext as CanvasViewModel;
+            if (vm == null) return;
+
+            const double mmToPx = 96.0 / 25.4;
+            
+            string currentText = string.IsNullOrEmpty(InlineEditingTextBox.Text) ? " " : InlineEditingTextBox.Text;
+
+            using var typefaceForMeasure = SKTypeface.FromFamilyName(_editingTextObject.FontFamily,
+                _editingTextObject.IsBold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
+                SKFontStyleWidth.Normal,
+                _editingTextObject.IsItalic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
+            using var fontForMeasure = new SKFont(typefaceForMeasure, _editingTextObject.FontSize);
+
+            float maxWidth = 0;
+            var lines = currentText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            foreach (var line in lines) maxWidth = Math.Max(maxWidth, fontForMeasure.MeasureText(line));
+            
+            float visualLeft = _editingTextObject.X;
+            if (_editingTextObject.HorizontalAlignment == SKTextAlign.Center) visualLeft -= maxWidth / 2;
+            else if (_editingTextObject.HorizontalAlignment == SKTextAlign.Right) visualLeft -= maxWidth;
+
+            double offsetX = visualLeft * mmToPx * vm.ZoomLevel - 1;
+            double offsetY = _editingTextObject.Y * mmToPx * vm.ZoomLevel - 1;
+            InlineEditingTextBox.Margin = new Thickness(offsetX, offsetY, 0, 0);
+            
+            InlineEditingTextBox.MinWidth = maxWidth * mmToPx * vm.ZoomLevel + 8;
+            InlineEditingTextBox.MinHeight = (_editingTextObject.FontSize * mmToPx * vm.ZoomLevel) + 4;
+
+            if (Math.Abs(_editingTextObject.Rotation) > 0.01)
+            {
+                double anchorLocalX = (_editingTextObject.X - visualLeft) * mmToPx * vm.ZoomLevel;
+                double anchorLocalY = 0;
+                InlineEditingTextBox.RenderTransformOrigin = new Point(0, 0);
+                InlineEditingTextBox.RenderTransform = new System.Windows.Media.RotateTransform(_editingTextObject.Rotation, anchorLocalX, anchorLocalY);
+            }
+            else
+            {
+                InlineEditingTextBox.RenderTransform = System.Windows.Media.Transform.Identity;
             }
         }
     }
