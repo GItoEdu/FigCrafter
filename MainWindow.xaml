@@ -345,6 +345,7 @@
                         </Style>
                     </StackPanel.Style>
                     <TextBlock Text="線" FontWeight="Bold" Margin="0,0,0,6" Foreground="#FF007ACC" FontSize="13"/>
+
                     <Grid Margin="0,2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="50"/>
@@ -375,6 +376,12 @@
                             <Setter Property="Visibility" Value="Visible"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=TextObject}" Value="Visible">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding DataContext.ActiveDocument.IsInlineEditing, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
                             </Style.Triggers>
@@ -498,9 +505,23 @@
                         <CheckBox Content="終点に矢印" IsChecked="{Binding HasArrowEnd, UpdateSourceTrigger=PropertyChanged}" Foreground="White" Margin="0,2" FontSize="11"/>
                     </StackPanel>
                     <StackPanel>
-                        <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=TextObject}" Value="Visible"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=TextObject}" Value="Visible">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding DataContext.ActiveDocument.IsInlineEditing, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+
                         <TextBlock Text="テキスト:" Margin="0,0,0,4" Foreground="Gray" FontSize="11"/>
                         <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Background="#FF3E3E42" Foreground="White" BorderThickness="0" Padding="4" TextWrapping="Wrap" AcceptsReturn="True" Height="50" FontSize="11"/>
+
                         <Grid Margin="0,6,0,3"><Grid.ColumnDefinitions><ColumnDefinition Width="50"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <TextBlock Text="フォント:" Foreground="Gray" VerticalAlignment="Center" FontSize="11"/>
                             <ComboBox Grid.Column="1" IsEditable="True" ItemsSource="{Binding Source={x:Static Fonts.SystemFontFamilies}}" Text="{Binding FontFamily, UpdateSourceTrigger=PropertyChanged}" Background="White" Foreground="Black" BorderThickness="0" Padding="4" FontSize="11">

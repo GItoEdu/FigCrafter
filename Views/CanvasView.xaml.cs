@@ -1732,6 +1732,8 @@ namespace FigCrafterApp.Views
 
         private void StartInlineEditing(TextObject textObj, CanvasViewModel vm)
         {
+            vm.IsInlineEditing = true;
+
             _editingTextObject = textObj;
             _editingOriginalText = textObj.Text;
 
@@ -1820,6 +1822,8 @@ namespace FigCrafterApp.Views
             if (_editingTextObject == null) return;
             var vm = DataContext as CanvasViewModel;
             if (vm == null) return;
+
+            vm.IsInlineEditing = false;
             
             // 編集結果を取得（キャンセル時は元のテキストを使用）
             string newText = isCancel ? _editingOriginalText : InlineEditingTextBox.Text;
@@ -1892,6 +1896,12 @@ namespace FigCrafterApp.Views
             }
             else if (e.Key == Key.Escape)
             {
+                // インライン編集フラグをOFF
+                if (DataContext is CanvasViewModel vmEsc)
+                {
+                    vmEsc.IsInlineEditing = false;
+                }
+
                 // キャンセル: 元のテキストを復元
                 if (_editingTextObject != null)
                 {

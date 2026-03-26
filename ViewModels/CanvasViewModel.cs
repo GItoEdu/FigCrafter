@@ -209,6 +209,13 @@ namespace FigCrafterApp.ViewModels
             }
         }
 
+        private bool _isInlineEditing = false;
+        public bool IsInlineEditing
+        {
+            get => _isInlineEditing;
+            set => SetProperty(ref _isInlineEditing, value);
+        }
+
         public bool IsSnapEnabled
         {
             get => _isSnapEnabled;
