@@ -1410,7 +1410,7 @@ namespace FigCrafterApp.Views
             }
         }
 
-        private void CanvasView_KeyDown(object sender, KeyEventArgs e)
+        private void CanvasView_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (DataContext is not CanvasViewModel vm) return;
 
@@ -1697,7 +1697,7 @@ namespace FigCrafterApp.Views
                 e.Handled = true;
                 return;
             }
-            
+
             if (Keyboard.Modifiers == ModifierKeys.Control && DataContext is CanvasViewModel vm)
             {
                 e.Handled = true; // デフォルトのスクロール動作を無効化
