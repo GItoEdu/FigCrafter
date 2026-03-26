@@ -20,7 +20,7 @@ namespace FigCrafterApp.Models
         private float _width;
         private float _height;
         private float _rotation; // 回転角 (度)
-        private SKColor _fillColor = SKColors.Blue;
+        private SKColor _fillColor = SKColors.Transparent;
         private SKColor _strokeColor = SKColors.Black;
         private float _strokeWidth = 0.5f * (25.4f / 72.0f);
         private float _opacity = 1.0f; // 1.0 = 不透明, 0.0 = 透明
