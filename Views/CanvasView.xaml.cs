@@ -1517,6 +1517,28 @@ namespace FigCrafterApp.Views
                 SkiaElement.InvalidateVisual();
                 e.Handled = true;
             }
+            else if (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down)
+            {
+                // テキストボックス入力中は無視する
+                if (e.OriginalSource is System.Windows.Controls.TextBox) return;
+
+                if (vm.SelectedObjects.Any())
+                {
+                    float dx = 0, dy = 0;
+                    float step = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? 10f : 1f;
+
+                    switch (e.Key)
+                    {
+                        case Key.Left:  dx = -step; break;
+                        case Key.Right: dx =  step; break;
+                        case Key.Up:    dy = -step; break;
+                        case Key.Down:  dy =  step; break;
+                    }
+
+                    vm.MoveSelectedObjects(dx, dy);
+                    e.Handled = true;
+                }
+            }
         }
 
         /// <summary>
@@ -1668,6 +1690,14 @@ namespace FigCrafterApp.Views
 
         private void CanvasScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
+            if (Keyboard.Modifiers == ModifierKeys.Shift)
+            {
+                // Shift+スクロールで左右スクロール
+                CanvasScrollViewer.ScrollToHorizontalOffset(CanvasScrollViewer.HorizontalOffset - (e.Delta * 0.5));
+                e.Handled = true;
+                return;
+            }
+            
             if (Keyboard.Modifiers == ModifierKeys.Control && DataContext is CanvasViewModel vm)
             {
                 e.Handled = true; // デフォルトのスクロール動作を無効化

@@ -1058,7 +1058,30 @@ namespace FigCrafterApp.ViewModels
             }
         }
 
-        // --- 画像インポート ---
+        /// <summary>
+        /// 選択されているオブジェクトを相対移動させます（カーソルキー用）
+        /// </summary>
+        /// <param name="dx"></param>
+        /// <param name="dy"></param>
+        public void MoveSelectedObjects(float dx, float dy)
+        {
+            if (_selectedObjects.Count == 0) return;
+            var moves = new List<(GraphicObject Obj, float OldX, float OldY, float NewX, float NewY)>();
+
+            foreach (var obj in _selectedObjects)
+            {
+                float oldX = obj.X;
+                float oldY = obj.Y;
+
+                if (dx != 0) MoveObjectXWithRecord(obj, dx);
+                if (dy != 0) MoveObjectXWithRecord(obj, dy);
+
+                moves.Add((obj, oldX, oldY, obj.X, obj.Y));
+            }
+            // Undo履歴に登録して再描画
+            ExecuteCommand(new MoveObjectsCommand(moves));
+        }
+
         // --- 画像インポート ---
         public void ImportImageAsGroup(SKBitmap bitmap, float dpiX = 96f, float dpiY = 96f)
         {
