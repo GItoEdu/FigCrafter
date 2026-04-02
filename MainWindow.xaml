@@ -9,6 +9,7 @@
         xmlns:skia="clr-namespace:SkiaSharp;assembly=SkiaSharp"
         mc:Ignorable="d"
         Title="FigCrafter" Height="720" Width="1280"
+        Icon="Resources/FigCrafter.ico">
         Background="#FF1E1E1E" Foreground="White"
         AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver" Closing="Window_Closing">
     
