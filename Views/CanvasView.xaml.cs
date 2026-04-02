@@ -37,7 +37,7 @@ namespace FigCrafterApp.Views
         
         // Undo用の一時保存
         private List<(GraphicObject Obj, float OldX, float OldY)> _preDragPositions = new();
-        // private (float X, float Y, float EndX, float EndY) _preDragLineEnd;
+        private (float X, float Y, float EndX, float EndY) _preDragLineEnd;
         private Dictionary<GraphicObject, SKRect> _preResizeBounds = new();
         private Dictionary<LineObject, (float X, float Y, float EndX, float EndY)> _preResizeLines = new();
         // スナップ機能用
@@ -495,6 +495,11 @@ namespace FigCrafterApp.Views
                         _originalResizeRect = GetBoundingRect(_selectedObject);
                         _originalAspectRatio = _originalResizeRect.Width / _originalResizeRect.Height;
 
+                        if (_selectedObject is LineObject line)
+                        {
+                            _preDragLineEnd = (line.X, line.Y, line.EndX, line.EndY);
+                        }
+
                         _preResizeBounds.Clear();
                         _preResizeLines.Clear();
                         SavePreResizeStateRecursive(_selectedObject);
@@ -773,6 +778,10 @@ namespace FigCrafterApp.Views
                         2 => System.Windows.Input.Cursors.SizeNWSE, // BottomRight
                         3 => System.Windows.Input.Cursors.SizeNESW, // BottomLeft
                         4 => System.Windows.Input.Cursors.Hand,     // Rotation
+                        5 => System.Windows.Input.Cursors.SizeNS,   // TopCenter
+                        6 => System.Windows.Input.Cursors.SizeWE,   // RightCenter
+                        7 => System.Windows.Input.Cursors.SizeNS,   // BottomCenter
+                        8 => System.Windows.Input.Cursors.SizeWE,   // LeftCenter
                         _ => System.Windows.Input.Cursors.Arrow
                     };
                 }
@@ -882,67 +891,82 @@ namespace FigCrafterApp.Views
                 _snapXTarget = null;
                 _snapYTarget = null;
 
+                // ドラッグ開始時からの総移動量を計算
+                float totalDx = currentPoint.X - _startPoint.X;
+                float totalDy = currentPoint.Y - _startPoint.Y;
+
                 if (_selectedObject is LineObject lineObj)
                 {
-                    // Line のリサイズ（端点の移動）
-                    float targetX = lineObj.X;
-                    float targetY = lineObj.Y;
+                    // Line のリサイズ（元の端点座標をベースに計算）
+                    float targetX = _preDragLineEnd.X;
+                    float targetY = _preDragLineEnd.Y;
+                    float targetEndX = _preDragLineEnd.EndX;
+                    float targetEndY = _preDragLineEnd.EndY;
+
                     if (_resizeHandleIndex == 0) // Start point
                     {
-                        targetX = lineObj.X + dx;
-                        targetY = lineObj.Y + dy;
+                        targetX += totalDx;
+                        targetY += totalDy;
                     }
                     else if (_resizeHandleIndex == 1) // End point
                     {
-                        targetX = lineObj.EndX + dx;
-                        targetY = lineObj.EndY + dy;
+                        targetEndX += totalDx;
+                        targetEndY += totalDy;
                     }
 
                     float snapOffsetX = 0, snapOffsetY = 0;
                     if (vm != null && vm.IsSnapEnabled)
                     {
-                        CalculateSnapOffsets(vm, new[] { targetX }, new[] { targetY }, out snapOffsetX, out snapOffsetY);
+                        float snapTargetX = _resizeHandleIndex == 0 ? targetX : targetEndX;
+                        float snapTargetY = _resizeHandleIndex == 0 ? targetY : targetEndY;
+                        CalculateSnapOffsets(vm, new[] { snapTargetX }, new[] { snapTargetY }, out snapOffsetX, out snapOffsetY);
                     }
 
                     if (_resizeHandleIndex == 0) // Start point
                     {
-                        lineObj.X += dx + snapOffsetX;
-                        lineObj.Y += dy + snapOffsetY;
+                        lineObj.X = targetX + snapOffsetX;
+                        lineObj.Y = targetY + snapOffsetY;
                     }
                     else if (_resizeHandleIndex == 1) // End point
                     {
-                        lineObj.EndX += dx + snapOffsetX;
-                        lineObj.EndY += dy + snapOffsetY;
+                        lineObj.EndX = targetEndX + snapOffsetX;
+                        lineObj.EndY = targetEndY + snapOffsetY;
                     }
                 }
                 else
                 {
-                    // キャンバス上の増分移動量を、オブジェクトのローカル回転に応じて変換
-                    float localDx = dx;
-                    float localDy = dy;
+                    // キャンバス上の総移動量を、オブジェクトのローカル回転に応じて変換
+                    float localTotalDx = totalDx;
+                    float localTotalDy = totalDy;
                     if (_selectedObject.Rotation != 0)
                     {
                         float rad = -_selectedObject.Rotation * (float)Math.PI / 180.0f;
                         float cos = (float)Math.Cos(rad);
                         float sin = (float)Math.Sin(rad);
-                        localDx = dx * cos - dy * sin;
-                        localDy = dx * sin + dy * cos;
+                        localTotalDx = totalDx * cos - totalDy * sin;
+                        localTotalDy = totalDx * sin + totalDy * cos;
                     }
 
-                    // 矩形・楕円・テキスト・画像などのリサイズ
-                    var rect = GetBoundingRect(_selectedObject);
-                    float left = rect.Left, top = rect.Top, right = rect.Right, bottom = rect.Bottom;
+                    // オリジナルの矩形から仮の新しい座標を計算
+                    float left = _originalResizeRect.Left;
+                    float top = _originalResizeRect.Top;
+                    float right = _originalResizeRect.Right;
+                    float bottom = _originalResizeRect.Bottom;
 
                     switch (_resizeHandleIndex)
                     {
-                        case 0: left += localDx; top += localDy; break;      // TopLeft
-                        case 1: right += localDx; top += localDy; break;     // TopRight
-                        case 2: right += localDx; bottom += localDy; break;  // BottomRight
-                        case 3: left += localDx; bottom += localDy; break;   // BottomLeft
+                        case 0: left += localTotalDx; top += localTotalDy; break;       // TopLeft
+                        case 1: right += localTotalDx; top += localTotalDy; break;      // TopRight
+                        case 2: right += localTotalDx; bottom += localTotalDy; break;   // BottomRight
+                        case 3: left += localTotalDx; bottom += localTotalDy; break;    // BottomLeft
+                        case 5: top += localTotalDy; break;                             // TopCenter
+                        case 6: right += localTotalDx; break;                           // RightCenter
+                        case 7: bottom += localTotalDy; break;                          // BottomCenter
+                        case 8: left += localTotalDx; break;                            // LeftCenter
                     }
 
                     float snapOffsetX = 0, snapOffsetY = 0;
-                    // 回転している場合のリサイズスナップは未実装。回転角0の場合のみスナップを適用している。
+                    // 回転している場合のリサイズスナップは計算が複雑になるため、回転角0の場合のみスナップを適用
                     if (vm != null && vm.IsSnapEnabled && _selectedObject.Rotation == 0)
                     {
                         var targetXLines = new List<float>();
@@ -963,13 +987,14 @@ namespace FigCrafterApp.Views
                             case 3: left += snapOffsetX; bottom += snapOffsetY; break;
                         }
                     }
-                    // Shiftが押されている場合は縦横比を維持
+
+                    // Shiftが押されている場合は縦横比を維持（スナップ後の結果をもとに再計算）
                     if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && _originalAspectRatio > 0)
                     {
                         float newWidth = Math.Abs(right - left);
                         float newHeight = Math.Abs(bottom - top);
 
-                        if (Math.Abs(localDx + snapOffsetX) >= Math.Abs(localDy + snapOffsetY)) newHeight = newWidth / _originalAspectRatio;
+                        if (Math.Abs(localTotalDx + snapOffsetX) >= Math.Abs(localTotalDy + snapOffsetY)) newHeight = newWidth / _originalAspectRatio;
                         else newWidth = newHeight * _originalAspectRatio;
 
                         switch (_resizeHandleIndex)
@@ -981,6 +1006,9 @@ namespace FigCrafterApp.Views
                         }
                     }
 
+                    // 子オブジェクトの比率計算のために、更新前の現在の矩形を取得しておく
+                    var currentRect = GetBoundingRect(_selectedObject);
+
                     // 幅・高さが負にならないよう調整
                     _selectedObject.X = Math.Min(left, right);
                     _selectedObject.Y = Math.Min(top, bottom);
@@ -988,15 +1016,15 @@ namespace FigCrafterApp.Views
                     _selectedObject.Height = Math.Max(0.1f, Math.Abs(bottom - top));
 
                     // GroupObject の場合は子オブジェクトも比例的にスケーリング
-                    if (_selectedObject is GroupObject groupObj && rect.Width > 0 && rect.Height > 0)
+                    if (_selectedObject is GroupObject groupObj && currentRect.Width > 0 && currentRect.Height > 0)
                     {
-                        float scaleW = _selectedObject.Width / rect.Width;
-                        float scaleH = _selectedObject.Height / rect.Height;
+                        float scaleW = _selectedObject.Width / currentRect.Width;
+                        float scaleH = _selectedObject.Height / currentRect.Height;
 
                         foreach (var child in groupObj.Children)
                         {
-                            float relX = (child.X - rect.Left) / rect.Width;
-                            float relY = (child.Y - rect.Top) / rect.Height;
+                            float relX = (child.X - currentRect.Left) / currentRect.Width;
+                            float relY = (child.Y - currentRect.Top) / currentRect.Height;
                             child.X = _selectedObject.X + relX * _selectedObject.Width;
                             child.Y = _selectedObject.Y + relY * _selectedObject.Height;
                             child.Width *= scaleW;
@@ -1004,8 +1032,8 @@ namespace FigCrafterApp.Views
 
                             if (child is LineObject childLine)
                             {
-                                float relEndX = (childLine.EndX - rect.Left) / rect.Width;
-                                float relEndY = (childLine.EndY - rect.Top) / rect.Height;
+                                float relEndX = (childLine.EndX - currentRect.Left) / currentRect.Width;
+                                float relEndY = (childLine.EndY - currentRect.Top) / currentRect.Height;
                                 childLine.EndX = _selectedObject.X + relEndX * _selectedObject.Width;
                                 childLine.EndY = _selectedObject.Y + relEndY * _selectedObject.Height;
                             }
@@ -1368,6 +1396,21 @@ namespace FigCrafterApp.Views
             for (int i = 0; i < points.Length; i++)
             {
                 if (HitTestHandle(points[i], localHitPoint, handleRadius)) return i;
+            }
+
+            // 中間ハンドルの判定 (画面上の表示サイズが40px以上の場合のみ)
+            float pxWidth = rect.Width * zoom * (96.0f / 25.4f);
+            float pxHeight = rect.Height * zoom * (96.0f / 25.4f);
+
+            if (pxWidth >= 40f)
+            {
+                if (HitTestHandle(new SKPoint((rect.Left + rect.Right) / 2, rect.Top), localHitPoint, handleRadius)) return 5; // TopCenter
+                if (HitTestHandle(new SKPoint((rect.Left + rect.Right) / 2, rect.Bottom), localHitPoint, handleRadius)) return 7; // BottomCenter
+            }
+            if (pxHeight >= 40f)
+            {
+                if (HitTestHandle(new SKPoint(rect.Right, (rect.Top + rect.Bottom) / 2), localHitPoint, handleRadius)) return 6; // RightCenter
+                if (HitTestHandle(new SKPoint(rect.Left, (rect.Top + rect.Bottom) / 2), localHitPoint, handleRadius)) return 8; // LeftCenter
             }
 
             // 回転ハンドル (インデックス 4) の判定

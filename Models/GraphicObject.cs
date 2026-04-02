@@ -226,6 +226,33 @@ namespace FigCrafterApp.Models
                 canvas.DrawRect(handleRect, handleStrokePaint);
             }
 
+            float pxWidth = rect.Width * CurrentZoomLevel;
+            float pxHeight = rect.Height * CurrentZoomLevel;
+
+            if (pxWidth >= 40f)
+            {
+                var topCenter = new SKPoint((rect.Left + rect.Right) / 2, rect.Top);
+                var bottomCenter = new SKPoint((rect.Left + rect.Right) / 2, rect.Bottom);
+                var handleRectT = new SKRect(topCenter.X - handleSize / 2, topCenter.Y - handleSize / 2, topCenter.X + handleSize / 2, topCenter.Y + handleSize / 2);
+                var handleRectB = new SKRect(bottomCenter.X - handleSize / 2, bottomCenter.Y - handleSize / 2, bottomCenter.X + handleSize / 2, bottomCenter.Y + handleSize / 2);
+                canvas.DrawRect(handleRectT, handlePaint);
+                canvas.DrawRect(handleRectT, handleStrokePaint);
+                canvas.DrawRect(handleRectB, handlePaint);
+                canvas.DrawRect(handleRectB, handleStrokePaint);
+            }
+
+            if (pxHeight >= 40f)
+            {
+                var rightCenter = new SKPoint(rect.Right, (rect.Top + rect.Bottom) / 2);
+                var leftCenter = new SKPoint(rect.Left, (rect.Top + rect.Bottom) / 2);
+                var handleRectR = new SKRect(rightCenter.X - handleSize / 2, rightCenter.Y - handleSize / 2, rightCenter.X + handleSize / 2, rightCenter.Y + handleSize / 2);
+                var handleRectL = new SKRect(leftCenter.X - handleSize / 2, leftCenter.Y - handleSize / 2, leftCenter.X + handleSize / 2, leftCenter.Y + handleSize / 2);
+                canvas.DrawRect(handleRectR, handlePaint);
+                canvas.DrawRect(handleRectR, handleStrokePaint);
+                canvas.DrawRect(handleRectL, handlePaint);
+                canvas.DrawRect(handleRectL, handleStrokePaint);
+            }
+
             // 回転ハンドルを描画 (上部中央から上に伸ばした位置)
             float rotationHandleOffset = SelectionBoxRotationHandleOffset;
             float midX = (rect.Left + rect.Right) / 2;
