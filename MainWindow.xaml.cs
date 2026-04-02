@@ -53,6 +53,13 @@ public partial class MainWindow : Window
                     if (vm.SaveProjectCommand != null && vm.SaveProjectCommand.CanExecute(null))
                     {
                         vm.SaveProjectCommand.Execute(null);
+
+                        // 保存が未完了の場合には終了を中断
+                        if (doc.IsDirty)
+                        {
+                            e.Cancel = true;
+                            return;
+                        }
                     }
                 }
             }

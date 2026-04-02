@@ -118,10 +118,16 @@ namespace FigCrafterApp.ViewModels
                         if (SaveProjectCommand != null && SaveProjectCommand.CanExecute(null))
                         {
                             SaveAsProjectCommand.Execute(null);
+
+                            // 保存が未完了の場合には閉じる処理を中断
+                            if (doc.IsDirty)
+                            {
+                                return;
+                            }
                         }
                     }
                 }
-                
+
                 Documents.Remove(doc);
                 if (ActiveDocument == doc)
                 {
