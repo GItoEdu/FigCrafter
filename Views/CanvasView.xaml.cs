@@ -1122,7 +1122,7 @@ namespace FigCrafterApp.Views
             }
 
             // 新規図形の描画中
-            if (_tempObject == null) return;
+            if (_tempObject == null || vm == null) return;
 
             var endPoint = CalculateSnapForPoint(currentPoint, vm);
 
@@ -1542,7 +1542,7 @@ namespace FigCrafterApp.Views
         /// <param name="targetPoint"></param>
         /// <param name="vm"></param>
         /// <returns></returns>
-        private SKPoint CalculateSnapForPoint(SKPoint targetPoint, CanvasViewModel vm)
+        private SKPoint CalculateSnapForPoint(SKPoint targetPoint, CanvasViewModel? vm)
         {
             _snapGuideX = null;
             _snapGuideY = null;
