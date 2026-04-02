@@ -622,7 +622,7 @@ namespace FigCrafterApp.Views
                         Y = _startPoint.Y,
                         Width = 0,
                         Height = 0,
-                        FillColor = SKColors.SkyBlue.WithAlpha(128),
+                        FillColor = SKColors.Transparent,
                         StrokeWidth = strokeWidthToApply
                     };
                     break;
@@ -633,7 +633,7 @@ namespace FigCrafterApp.Views
                         Y = _startPoint.Y,
                         Width = 0,
                         Height = 0,
-                        FillColor = SKColors.Salmon.WithAlpha(128),
+                        FillColor = SKColors.Transparent,
                         StrokeWidth = strokeWidthToApply,
                     };
                     break;
@@ -1260,8 +1260,6 @@ namespace FigCrafterApp.Views
             if (DataContext is CanvasViewModel vmAdd && vmAdd.ActiveLayer != null)
             {
                 // 一時オブジェクトを本番の色に変更して追加
-                if (_tempObject is RectangleObject) _tempObject.FillColor = SKColors.SkyBlue;
-                if (_tempObject is EllipseObject) _tempObject.FillColor = SKColors.Salmon;
                 if (_tempObject is LineObject) _tempObject.StrokeColor = SKColors.Black;
                 
                 vmAdd.ExecuteCommand(new AddObjectCommand(vmAdd.ActiveLayer.GraphicObjects, _tempObject));

@@ -361,7 +361,7 @@
                                             <DataTrigger.Value>
                                                 <Visibility>Visible</Visibility>
                                             </DataTrigger.Value>
-                                            <Setter Property="Visibility" Value="Visible">
+                                            <Setter Property="Visibility" Value="Visible"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding DataContext.ActiveDocument.IsInlineEditing, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -606,7 +606,7 @@
                                         <DataTrigger Binding="{Binding Converter={x:Static local:TypeVisibilityConverter.Instance}, ConverterParameter=ImageObject}">
                                             <DataTrigger.Value>
                                                 <Visibility>Visible</Visibility>
-                                            </DatTrigger.Value>
+                                            </DataTrigger.Value>
                                             <Setter Property="Visibility" Value="Visible"/>
                                         </DataTrigger></Style.Triggers>
                                     </Style>
