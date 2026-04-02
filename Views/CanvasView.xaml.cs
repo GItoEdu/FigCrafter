@@ -7,6 +7,8 @@ using SkiaSharp.Views.Desktop;
 using FigCrafterApp.ViewModels;
 using FigCrafterApp.Models;
 using FigCrafterApp.Commands;
+using System.Text.RegularExpressions;
+using System.Windows.Shapes;
 
 namespace FigCrafterApp.Views
 {
@@ -335,7 +337,7 @@ namespace FigCrafterApp.Views
             }
 
             // スナップガイド線の描画
-            if (_isDragging && (_snapGuideX.HasValue || _snapGuideY.HasValue))
+            if (_isDragging || _isResizing && (_snapGuideX.HasValue || _snapGuideY.HasValue))
             {
                 using var snapGuidePaint = new SKPaint
                 {
@@ -653,6 +655,71 @@ namespace FigCrafterApp.Views
             SkiaElement.CaptureMouse();
         }
 
+        private void CalculateSnapOffsets(CanvasViewModel vm, IEnumerable<float> targetXLines, IEnumerable<float> targetYLines, out float snapOffsetX, out float snapOffsetY)
+        {
+            snapOffsetX = 0;
+            snapOffsetY = 0;
+
+            if (vm == null || !vm.IsSnapEnabled || vm.ActiveLayer == null) return;
+
+            float snapThreshold = (float)(vm.ZoomLevel != 0 ? 10.0 / vm.ZoomLevel : 10.0);
+            float closestDistX = float.MaxValue;
+            float closestDistY = float.MaxValue;
+
+            foreach (var layer in vm.Layers)
+            {
+                if (!layer.IsVisible || layer.IsLocked) continue;
+
+                foreach (var obj in layer.GraphicObjects)
+                {
+                    if (vm.SelectedObjects.Contains(obj)) continue;
+
+                    var corners = obj.GetTransformedCorners();
+                    var otherXSet = new HashSet<float>();
+                    var otherYSet = new HashSet<float>();
+                    foreach (var c in corners)
+                    {
+                        otherXSet.Add((float)Math.Round(c.X, 1));
+                        otherYSet.Add((float)Math.Round(c.Y, 1));
+                    }
+                    float centerX = corners.Average(c => c.X);
+                    float centerY = corners.Average(c => c.Y);
+                    otherXSet.Add((float)Math.Round(centerX, 1));
+                    otherYSet.Add((float)Math.Round(centerY, 1));
+
+                    foreach (var tx in targetXLines)
+                    {
+                        foreach (var ox in otherXSet)
+                        {
+                            float dist = Math.Abs(tx - ox);
+                            if (dist < snapThreshold && dist < closestDistX)
+                            {
+                                closestDistX = dist;
+                                snapOffsetX = ox - tx;
+                                _snapGuideX = ox;
+                                _snapXTarget = obj;
+                            }
+                        }
+                    }
+
+                    foreach (var ty in targetYLines)
+                    {
+                        foreach (var oy in otherYSet)
+                        {
+                            float dist = Math.Abs(ty - oy);
+                            if (dist < snapThreshold && dist < closestDistY)
+                            {
+                                closestDistY = dist;
+                                snapOffsetY = oy - ty;
+                                _snapGuideY = oy;
+                                _snapYTarget = obj;
+                            }
+                        }
+                    }
+                }
+            }   
+        }
+
         private void SkiaElement_MouseMove(object sender, MouseEventArgs e)
         {
             var vm = DataContext as CanvasViewModel;
@@ -809,18 +876,43 @@ namespace FigCrafterApp.Views
 
             if (_isResizing && _selectedObject != null)
             {
+                // スナップガイドの初期化
+                _snapGuideX = null;
+                _snapGuideY = null;
+                _snapXTarget = null;
+                _snapYTarget = null;
+
                 if (_selectedObject is LineObject lineObj)
                 {
                     // Line のリサイズ（端点の移動）
+                    float targetX = lineObj.X;
+                    float targetY = lineObj.Y;
                     if (_resizeHandleIndex == 0) // Start point
                     {
-                        lineObj.X += dx;
-                        lineObj.Y += dy;
+                        targetX = lineObj.X + dx;
+                        targetY = lineObj.Y + dy;
                     }
                     else if (_resizeHandleIndex == 1) // End point
                     {
-                        lineObj.EndX += dx;
-                        lineObj.EndY += dy;
+                        targetX = lineObj.EndX + dx;
+                        targetY = lineObj.EndY + dy;
+                    }
+
+                    float snapOffsetX = 0, snapOffsetY = 0;
+                    if (vm != null && vm.IsSnapEnabled)
+                    {
+                        CalculateSnapOffsets(vm, new[] { targetX }, new[] { targetY }, out snapOffsetX, out snapOffsetY);
+                    }
+
+                    if (_resizeHandleIndex == 0) // Start point
+                    {
+                        lineObj.X += dx + snapOffsetX;
+                        lineObj.Y += dy + snapOffsetY;
+                    }
+                    else if (_resizeHandleIndex == 1) // End point
+                    {
+                        lineObj.EndX += dx + snapOffsetX;
+                        lineObj.EndY += dy + snapOffsetY;
                     }
                 }
                 else
@@ -932,78 +1024,13 @@ namespace FigCrafterApp.Views
                 draggedXSet.Add((float)Math.Round(draggedCenterX, 1));
                 draggedYSet.Add((float)Math.Round(draggedCenterY, 1));
 
-                float snapThreshold = (vm != null && vm.ZoomLevel != 0) ? 10.0f / (float)vm.ZoomLevel : 10.0f;
-
-                float closestDistX = float.MaxValue;
-                float closestDistY = float.MaxValue;
                 float snapOffsetX = 0;
                 float snapOffsetY = 0;
 
                 // 他のオブジェクトに対するスナップ判定（スナップ有効かつShiftキーが押されていない場合のみ）
                 if (vm != null && vm.IsSnapEnabled && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && vm.ActiveLayer != null)
                 {
-                    float[] targetXLines = draggedXSet.ToArray();
-                    float[] targetYLines = draggedYSet.ToArray();
-
-                    foreach (var layer in vm.Layers)
-                    {
-                        if (!layer.IsVisible || layer.IsLocked) continue;
-
-                        foreach (var obj in layer.GraphicObjects)
-                        {
-                            if (vm.SelectedObjects.Contains(obj)) continue;
-
-                            // 回転後の頂点座標を取得
-                            var corners = obj.GetTransformedCorners();
-
-                            // 頂点から各軸座標を収集（重複を避けるためHashSetを使用）
-                            var otherXSet = new HashSet<float>();
-                            var otherYSet = new HashSet<float>();
-                            foreach (var c in corners)
-                            {
-                                otherXSet.Add((float)Math.Round(c.X, 1));
-                                otherYSet.Add((float)Math.Round(c.Y, 1));
-                            }
-
-                            // 中心座標も追加
-                            float centerX = corners.Average(c => c.X);
-                            float centerY = corners.Average(c => c.Y);
-                            otherXSet.Add((float)Math.Round(centerX, 1));
-                            otherYSet.Add((float)Math.Round(centerY, 1));
-
-                            // X軸スナップ
-                            foreach (var tx in targetXLines)
-                            {
-                                foreach (var ox in otherXSet)
-                                {
-                                    float dist = Math.Abs(tx - ox);
-                                    if (dist < snapThreshold && dist < closestDistX)
-                                    {
-                                        closestDistX = dist;
-                                        snapOffsetX = ox - tx;
-                                        _snapGuideX = ox;
-                                        _snapXTarget = obj;
-                                    }
-                                }
-                            }
-
-                            // Y軸スナップ
-                            foreach (var ty in targetYLines)
-                            {
-                                foreach (var oy in otherYSet)
-                                {
-                                    float dist = Math.Abs(ty - oy);
-                                    if (dist < snapThreshold && dist < closestDistY)
-                                    {
-                                        closestDistY = dist;
-                                        snapOffsetY = oy - ty;
-                                        _snapGuideY = oy;
-                                        _snapYTarget = obj;
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    CalculateSnapOffsets(vm, draggedXSet, draggedYSet, out snapOffsetX, out snapOffsetY);
                 }
 
                 // スナップを適用した最終的な総移動量
