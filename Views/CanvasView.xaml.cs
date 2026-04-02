@@ -950,8 +950,8 @@ namespace FigCrafterApp.Views
 
                         if (_resizeHandleIndex == 0 || _resizeHandleIndex == 3) targetXLines.Add(left);
                         if (_resizeHandleIndex == 1 || _resizeHandleIndex == 2) targetXLines.Add(right);
-                        if (_resizeHandleIndex == 0 || _resizeHandleIndex == 1) targetXLines.Add(top);
-                        if (_resizeHandleIndex == 2 || _resizeHandleIndex == 3) targetXLines.Add(bottom);
+                        if (_resizeHandleIndex == 0 || _resizeHandleIndex == 1) targetYLines.Add(top);
+                        if (_resizeHandleIndex == 2 || _resizeHandleIndex == 3) targetYLines.Add(bottom);
 
                         CalculateSnapOffsets(vm, targetXLines, targetYLines, out snapOffsetX, out snapOffsetY);
 
