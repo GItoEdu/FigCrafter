@@ -1396,7 +1396,7 @@ namespace FigCrafterApp.Views
         private int GetHandleHitIndex(GraphicObject obj, SKPoint hitPoint)
         {
             float zoom = (float)(ViewModel?.ZoomLevel ?? 1.0f);
-            float handleRadius = 6.0f / (float)zoom * (96.0f / 25.4f) / 2.0f; // 約6px程度のヒット判定
+            float handleRadius = 6.0f / (float)zoom * (25.4f / 96.0f) / 2.0f; // 約6px程度のヒット判定
             if (handleRadius < 4.0f / (float)zoom) handleRadius = 4.0f / (float)zoom; // 最小ヒット半径
             
             // 図形の回転を加味するため、マウス座標を図形のローカル座標系に逆変換する
