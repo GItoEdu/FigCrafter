@@ -941,13 +941,35 @@ namespace FigCrafterApp.Views
                         case 3: left += localDx; bottom += localDy; break;   // BottomLeft
                     }
 
+                    float snapOffsetX = 0, snapOffsetY = 0;
+                    // 回転している場合のリサイズスナップは未実装。回転角0の場合のみスナップを適用している。
+                    if (vm != null && vm.IsSnapEnabled && _selectedObject.Rotation == 0)
+                    {
+                        var targetXLines = new List<float>();
+                        var targetYLines = new List<float>();
+
+                        if (_resizeHandleIndex == 0 || _resizeHandleIndex == 3) targetXLines.Add(left);
+                        if (_resizeHandleIndex == 1 || _resizeHandleIndex == 2) targetXLines.Add(right);
+                        if (_resizeHandleIndex == 0 || _resizeHandleIndex == 1) targetXLines.Add(top);
+                        if (_resizeHandleIndex == 2 || _resizeHandleIndex == 3) targetXLines.Add(bottom);
+
+                        CalculateSnapOffsets(vm, targetXLines, targetYLines, out snapOffsetX, out snapOffsetY);
+
+                        switch (_resizeHandleIndex)
+                        {
+                            case 0: left += snapOffsetX; top += snapOffsetY; break;
+                            case 1: right += snapOffsetX; top += snapOffsetY; break;
+                            case 2: right += snapOffsetX; bottom += snapOffsetY; break;
+                            case 3: left += snapOffsetX; bottom += snapOffsetY; break;
+                        }
+                    }
                     // Shiftが押されている場合は縦横比を維持
                     if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && _originalAspectRatio > 0)
                     {
                         float newWidth = Math.Abs(right - left);
                         float newHeight = Math.Abs(bottom - top);
 
-                        if (Math.Abs(localDx) >= Math.Abs(localDy)) newHeight = newWidth / _originalAspectRatio;
+                        if (Math.Abs(localDx + snapOffsetX) >= Math.Abs(localDy + snapOffsetY)) newHeight = newWidth / _originalAspectRatio;
                         else newWidth = newHeight * _originalAspectRatio;
 
                         switch (_resizeHandleIndex)
