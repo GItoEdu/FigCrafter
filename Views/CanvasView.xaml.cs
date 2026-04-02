@@ -1123,11 +1123,39 @@ namespace FigCrafterApp.Views
 
             if (_tempObject is LineObject tempLine)
             {
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+                {
+                    float diffX = endPoint.X - _startPoint.X;
+                    float diffY = endPoint.Y - _startPoint.Y;
+                    if (Math.Abs(diffX) > Math.Abs(diffY))
+                    {
+                        endPoint.Y = _startPoint.Y;
+                    }
+                    else
+                    {
+                        endPoint.X = _startPoint.X;
+                    }
+                }
+
                 tempLine.EndX = endPoint.X;
                 tempLine.EndY = endPoint.Y;
             }
             else
             {
+                // Shiftキーが押されている場合、正方形または真円になるように制限
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+                {
+                    float diffX = endPoint.X - _startPoint.X;
+                    float diffY = endPoint.Y - _startPoint.Y;
+                    float maxDist = Math.Max(Math.Abs(diffX), Math.Abs(diffY));
+                    
+                    float signX = diffX >= 0 ? 1 : -1;
+                    float signY = diffY >= 0 ? 1 : -1;
+                    
+                    endPoint.X = _startPoint.X + signX * maxDist;
+                    endPoint.Y = _startPoint.Y + signY * maxDist;
+                }
+
                 _tempObject.X = Math.Min(_startPoint.X, endPoint.X);
                 _tempObject.Y = Math.Min(_startPoint.Y, endPoint.Y);
                 _tempObject.Width = Math.Abs(_startPoint.X - endPoint.X);
