@@ -337,7 +337,7 @@ namespace FigCrafterApp.Views
             }
 
             // スナップガイド線の描画
-            if (_isDragging || _isResizing && (_snapGuideX.HasValue || _snapGuideY.HasValue))
+            if ((_isDragging || _isResizing || _tempObject != null ) && (_snapGuideX.HasValue || _snapGuideY.HasValue))
             {
                 using var snapGuidePaint = new SKPaint
                 {
@@ -619,6 +619,11 @@ namespace FigCrafterApp.Views
                 strokeWidthToApply = thisVM.CurrentStrokeWidth;
             }
             
+            if (vm.CurrentTool == DrawingTool.Rectangle || vm.CurrentTool == DrawingTool.Ellipse || vm.CurrentTool == DrawingTool.Line)
+            {
+                _startPoint = CalculateSnapForPoint(_startPoint, vm);
+            }
+
             switch (vm.CurrentTool)
             {
                
@@ -1119,7 +1124,7 @@ namespace FigCrafterApp.Views
             // 新規図形の描画中
             if (_tempObject == null) return;
 
-            var endPoint = currentPoint;
+            var endPoint = CalculateSnapForPoint(currentPoint, vm);
 
             if (_tempObject is LineObject tempLine)
             {
@@ -1336,6 +1341,7 @@ namespace FigCrafterApp.Views
                 _isDragging = false;
 
                 // スナップガイドのクリア
+                _tempObject = null;
                 _snapGuideX = null;
                 _snapGuideY = null;
                 _snapXTarget = null;
@@ -1527,6 +1533,85 @@ namespace FigCrafterApp.Views
                     MoveChildrenRecursive(nestedGroup, dx, dy);
                 }
             }
+        }
+
+        /// <summary>
+        /// 指定された単一ポイントに対してスナップを計算し、スナップ後の座標を返します。
+        /// 同時にスナップガイドやターゲットの状態を更新します。
+        /// </summary>
+        /// <param name="targetPoint"></param>
+        /// <param name="vm"></param>
+        /// <returns></returns>
+        private SKPoint CalculateSnapForPoint(SKPoint targetPoint, CanvasViewModel vm)
+        {
+            _snapGuideX = null;
+            _snapGuideY = null;
+            _snapXTarget = null;
+            _snapYTarget = null;
+
+            if (vm == null || !vm.IsSnapEnabled || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) || vm.ActiveLayer == null)
+            {
+                return targetPoint;
+            }
+
+            float snapThreshold = vm.ZoomLevel != 0 ? 10.0f / (float)vm.ZoomLevel : 10.0f;
+            float closestDistX = float.MaxValue;
+            float closestDistY = float.MaxValue;
+            float snapOffsetX = 0;
+            float snapOffsetY = 0;
+
+            foreach (var layer in vm.Layers)
+            {
+                if (!layer.IsVisible || layer.IsLocked) continue;
+
+                foreach (var obj in layer.GraphicObjects)
+                {
+                    // 選択中のオブジェクトはスキップ
+                    if (vm.SelectedObjects.Contains(obj)) continue;
+
+                    var corners = obj.GetTransformedCorners();
+                    
+                    var otherXSet = new HashSet<float>();
+                    var otherYSet = new HashSet<float>();
+                    foreach (var c in corners)
+                    {
+                        otherXSet.Add((float)Math.Round(c.X, 1));
+                        otherYSet.Add((float)Math.Round(c.Y, 1));
+                    }
+                    float centerX = corners.Average(c => c.X);
+                    float centerY = corners.Average(c => c.Y);
+                    otherXSet.Add((float)Math.Round(centerX, 1));
+                    otherYSet.Add((float)Math.Round(centerY, 1));
+
+                    // X軸スナップ
+                    foreach (var ox in otherXSet)
+                    {
+                        float dist = Math.Abs(targetPoint.X - ox);
+                        if (dist < snapThreshold && dist < closestDistX)
+                        {
+                            closestDistX = dist;
+                            snapOffsetX = ox - targetPoint.X;
+                            _snapGuideX = ox;
+                            _snapXTarget = obj;
+                        }
+                    }
+
+                    // Y軸スナップ
+                    foreach (var oy in otherYSet)
+                    {
+                        float dist = Math.Abs(targetPoint.Y - oy);
+                        if (dist < snapThreshold && dist < closestDistY)
+                        {
+                            closestDistY = dist;
+                            snapOffsetY = oy - targetPoint.Y;
+                            _snapGuideY = oy;
+                            _snapYTarget = obj;
+                        }
+                    }
+                }
+            }
+
+            return new SKPoint(targetPoint.X + snapOffsetX, targetPoint.Y + snapOffsetY);
         }
 
         private void CanvasView_PreviewKeyDown(object sender, KeyEventArgs e)
