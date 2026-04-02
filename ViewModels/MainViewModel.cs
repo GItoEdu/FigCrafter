@@ -96,6 +96,32 @@ namespace FigCrafterApp.ViewModels
         {
             if (doc != null && Documents.Contains(doc))
             {
+                // 未保存の変更がある場合は確認ダイアログを表示
+                if (doc.IsDirty)
+                {
+                    ActiveDocument = doc;
+                    var result = System.Windows.MessageBox.Show(
+                        $"ドキュメント '{doc.Title}' に未保存の変更があります。保存して閉じますか？",
+                        "保存の確認",
+                        System.Windows.MessageBoxButton.YesNoCancel,
+                        System.Windows.MessageBoxImage.Warning
+                    );
+
+                    if (result == System.Windows.MessageBoxResult.Cancel)
+                    {
+                        // キャンセル
+                        return;
+                    }
+                    else if (result == System.Windows.MessageBoxResult.Yes)
+                    {
+                        // はい
+                        if (SaveProjectCommand != null && SaveProjectCommand.CanExecute(null))
+                        {
+                            SaveAsProjectCommand.Execute(null);
+                        }
+                    }
+                }
+                
                 Documents.Remove(doc);
                 if (ActiveDocument == doc)
                 {
