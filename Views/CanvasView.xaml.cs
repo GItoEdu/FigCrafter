@@ -1083,7 +1083,11 @@ namespace FigCrafterApp.Views
                 float snapOffsetY = 0;
 
                 // 他のオブジェクトに対するスナップ判定（スナップ有効かつShiftキーが押されていない場合のみ）
-                if (vm != null && vm.IsSnapEnabled && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && vm.ActiveLayer != null)
+                if (vm != null && vm.IsSnapEnabled &&
+                    !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) &&
+                    !Keyboard.Modifiers.HasFlag(ModifierKeys.Control) &&
+                    !Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) &&
+                    vm.ActiveLayer != null)
                 {
                     CalculateSnapOffsets(vm, draggedXSet, draggedYSet, out snapOffsetX, out snapOffsetY);
                 }
@@ -1549,7 +1553,11 @@ namespace FigCrafterApp.Views
             _snapXTarget = null;
             _snapYTarget = null;
 
-            if (vm == null || !vm.IsSnapEnabled || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) || vm.ActiveLayer == null)
+            if (vm == null || !vm.IsSnapEnabled || 
+                Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ||
+                Keyboard.Modifiers.HasFlag(ModifierKeys.Control) ||
+                Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) ||
+                vm.ActiveLayer == null)
             {
                 return targetPoint;
             }
