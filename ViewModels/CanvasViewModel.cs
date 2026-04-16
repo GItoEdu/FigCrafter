@@ -14,7 +14,8 @@ namespace FigCrafterApp.ViewModels
         Ellipse,
         Line,
         Text,
-        Eraser
+        Eraser,
+        CanvasCrop
     }
 
     public class CanvasViewModel : ViewModelBase

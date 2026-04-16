@@ -387,40 +387,59 @@ namespace FigCrafterApp.ViewModels
         {
             if (ActiveDocument == null) return;
 
-            var dialog = new SaveFileDialog
+            var settingsDialog = new FigCrafterApp.Views.ExportSettingsDialog();
+            if (System.Windows.Application.Current.MainWindow != null)
             {
-                Filter = "PNG画像 (*.png)|*.png|PDFファイル (*.pdf)|*.pdf|TIFF画像 (*.tif;*.tiff)|*.tif;*.tiff",
-                FileName = ActiveDocument.Title,
-                Title = "エクスポート"
-            };
+                settingsDialog.Owner = System.Windows.Application.Current.MainWindow;
+            }
 
-            if (dialog.ShowDialog() == true)
+            if (settingsDialog.ShowDialog() == true)
             {
-                string extension = Path.GetExtension(dialog.FileName).ToLowerInvariant();
-                try
+                string extension = settingsDialog.SelectedFormat;
+                float dpi = settingsDialog.SelectedDpi;
+                bool transparent = settingsDialog.IsTransparent;
+
+                string filter = extension switch
                 {
-                    switch (extension)
+                    ".png" => "PNG画像 (*.png)|*.png",
+                    ".pdf" => "PDFファイル (*.pdf)|*.pdf",
+                    ".tif" => "TIFF画像 (*.tif;*.tiff)|*.tif;*.tiff",
+                    _ => "すべてのファイル (*.*)|*.*"
+                };
+
+                var saveDialog = new SaveFileDialog
+                {
+                    Filter = filter,
+                    FileName = ActiveDocument.Title,
+                    Title = "エクスポート"
+                };
+
+                if (saveDialog.ShowDialog() == true)
+                {
+                    try
                     {
-                        case ".png":
-                            bool transparent = dialog.FileName.Contains("_transparent", StringComparison.OrdinalIgnoreCase);
-                            ActiveDocument.ExportPng(dialog.FileName, transparent);
-                            break;
-                        case ".pdf":
-                            ActiveDocument.ExportPdf(dialog.FileName);
-                            break;
-                        case ".tif":
-                        case ".tiff":
-                            ActiveDocument.ExportTif(dialog.FileName);
-                            break;
-                        default:
-                            System.Windows.MessageBox.Show("未対応の拡張子です。", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                            return;
+                        switch (extension)
+                        {
+                            case ".png":
+                                ActiveDocument.ExportPng(saveDialog.FileName, transparent, dpi);
+                                break;
+                            case ".pdf":
+                                ActiveDocument.ExportPdf(saveDialog.FileName, dpi);
+                                break;
+                            case ".tif":
+                            case ".tiff":
+                                ActiveDocument.ExportTif(saveDialog.FileName, dpi);
+                                break;
+                            default:
+                                System.Windows.MessageBox.Show("未対応の拡張子です。", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                                return;
+                        }
+                        System.Windows.MessageBox.Show($"正常にエクスポートしました:\n{saveDialog.FileName}", "エクスポート完了", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
                     }
-                    System.Windows.MessageBox.Show($"正常にエクスポートしました:\n{dialog.FileName}", "エクスポート完了", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    System.Windows.MessageBox.Show($"エクスポートに失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    catch (Exception ex)
+                    {
+                        System.Windows.MessageBox.Show($"エクスポートに失敗しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    }
                 }
             }
         }

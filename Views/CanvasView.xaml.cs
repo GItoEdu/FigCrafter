@@ -25,7 +25,9 @@ namespace FigCrafterApp.Views
         private bool _isRotating = false; // 回転中フラグ
         private bool _isSelecting = false; // 範囲選択中フラグ
         private bool _isCropping = false; // トリミング中フラグ
+        private bool _isCanvasCropping = false; // キャンバスクロップ中フラグ
         private SKRect _selectionRect; // 範囲選択の矩形
+        private SKRect _canvasCropRect; // キャンバスクロップ範囲選択の矩形
         private int _resizeHandleIndex = -1;
         private int _cropHandleIndex = -1;
         private SKPoint _lastMousePos;
@@ -271,6 +273,27 @@ namespace FigCrafterApp.Views
                 canvas.DrawRect(_eraserRect, strokePaint);
             }
 
+            // キャンバスクロップ矩形の描画
+            if (_isCanvasCropping)
+            {
+                using var fillPaint = new SKPaint
+                {
+                    Color = new SKColor(0, 150, 0, 40), // 半透明の緑
+                    Style = SKPaintStyle.Fill,
+                    IsAntialias = true
+                };
+                using var strokePaint = new SKPaint
+                {
+                    Color = new SKColor(0, 150, 0, 200),
+                    Style = SKPaintStyle.Stroke,
+                    StrokeWidth = 1.0f / currentZoom,
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 3.0f / currentZoom, 3.0f / currentZoom }, 0),
+                    IsAntialias = true
+                };
+                canvas.DrawRect(_canvasCropRect, fillPaint);
+                canvas.DrawRect(_canvasCropRect, strokePaint);
+            }
+
             // トリミングハンドルの描画と、元画像の半透明表示
             if (DataContext is CanvasViewModel vmCrop && vmCrop.IsCropMode && _selectedObject is ImageObject imgObj && imgObj.ImageData != null)
             {
@@ -455,6 +478,14 @@ namespace FigCrafterApp.Views
                     _preEraserMask = null;
                 }
 
+                SkiaElement.CaptureMouse();
+                return;
+            }
+
+            if (vm.CurrentTool == DrawingTool.CanvasCrop)
+            {
+                _isCanvasCropping = true;
+                _canvasCropRect = new SKRect(_startPoint.X, _startPoint.Y, _startPoint.X, _startPoint.Y);
                 SkiaElement.CaptureMouse();
                 return;
             }
@@ -757,6 +788,19 @@ namespace FigCrafterApp.Views
             if (_isSelecting)
             {
                 _selectionRect = new SKRect(
+                    Math.Min(_startPoint.X, currentPoint.X),
+                    Math.Min(_startPoint.Y, currentPoint.Y),
+                    Math.Max(_startPoint.X, currentPoint.X),
+                    Math.Max(_startPoint.Y, currentPoint.Y)
+                );
+                ThrottledInvalidateVisual();
+                return;
+            }
+
+            // キャンバスクロップドラッグ中
+            if (_isCanvasCropping)
+            {
+                _canvasCropRect = new SKRect(
                     Math.Min(_startPoint.X, currentPoint.X),
                     Math.Min(_startPoint.Y, currentPoint.Y),
                     Math.Max(_startPoint.X, currentPoint.X),
@@ -1238,6 +1282,28 @@ namespace FigCrafterApp.Views
                 _isErasing = false;
                 _eraserTarget = null;
                 _preEraserMask = null;
+                SkiaElement.ReleaseMouseCapture();
+                SkiaElement.InvalidateVisual();
+                return;
+            }
+
+            if (_isCanvasCropping)
+            {
+                _isCanvasCropping = false;
+                if (_canvasCropRect.Width > 0.1f && _canvasCropRect.Height > 0.1f)
+                {
+                    // マウス座標はすでにmm換算されているため、そのまま使用可能
+                    double newWidthMm = _canvasCropRect.Width;
+                    double newHeightMm = _canvasCropRect.Height;
+                    float offsetX = _canvasCropRect.Left;
+                    float offsetY = _canvasCropRect.Top;
+
+                    var cmd = new FigCrafterApp.Commands.CropCanvasCommand(vmObj, vmObj.WidthMm, vmObj.HeightMm, newWidthMm, newHeightMm, offsetX, offsetY);
+                    vmObj.ExecuteCommand(cmd);
+                    
+                    // クロップ後は選択ツールに戻す
+                    vmObj.CurrentTool = DrawingTool.Select;
+                }
                 SkiaElement.ReleaseMouseCapture();
                 SkiaElement.InvalidateVisual();
                 return;
