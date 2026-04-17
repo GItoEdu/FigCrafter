@@ -219,17 +219,19 @@
                 <Border Width="1" Background="#FF555555" Margin="8,4"/>
 
                 <RadioButton Content="&#xE3B3;" FontFamily="Segoe Fluent Icons" ToolTip="選択" Style="{StaticResource ToolButtonStyle}" 
-                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Select}}"/>
+                            IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Select}}"/>
                 <RadioButton Content="&#xE003;" FontFamily="Segoe Fluent Icons" ToolTip="四角形" Style="{StaticResource ToolButtonStyle}" 
-                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Rectangle}}"/>
+                            IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Rectangle}}"/>
                 <RadioButton Content="&#xECCA;" FontFamily="Segoe Fluent Icons" ToolTip="円" Style="{StaticResource ToolButtonStyle}"
-                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Ellipse}}"/>
+                            IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Ellipse}}"/>
                 <RadioButton Content="／" ToolTip="直線" Style="{StaticResource ToolButtonStyle}" 
-                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Line}}"/>
+                            IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Line}}"/>
                 <RadioButton Content="T" ToolTip="テキスト" Style="{StaticResource ToolButtonStyle}" 
-                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Text}}"/>
+                            IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Text}}"/>
                 <RadioButton Content="&#xE75C;" FontFamily="Segoe Fluent Icons" ToolTip="消しゴム" Style="{StaticResource ToolButtonStyle}" 
-                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Eraser}}"/>
+                            IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Eraser}}"/>
+                <RadioButton Content="&#xE123;" FontFamily="Segoe Fluent Icons" ToolTip="トリミング" Style="{StaticResource ToolButtonStyle}"
+                            IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.CanvasCrop}}"/>
             </StackPanel>
         </Border>
 
