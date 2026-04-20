@@ -1321,7 +1321,17 @@ namespace FigCrafterApp.Views
                 // 一時オブジェクトを本番の色に変更して追加
                 if (_tempObject is LineObject) _tempObject.StrokeColor = SKColors.Black;
                 
+                // レイヤーに追加
                 vmAdd.ExecuteCommand(new AddObjectCommand(vmAdd.ActiveLayer.GraphicObjects, _tempObject));
+
+                // 作成したオブジェクトを選択状態にする
+                vmAdd.SelectObject(_tempObject);
+                _selectedObject = _tempObject;
+
+                if (vmAdd.CurrentTool == DrawingTool.Eraser)
+                {
+                    vmAdd.CurrentTool = DrawingTool.Select;
+                }
             }
 
             _tempObject = null;
