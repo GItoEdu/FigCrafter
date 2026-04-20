@@ -15,6 +15,7 @@ namespace FigCrafterApp.ViewModels
         Line,
         Text,
         Eraser,
+        Straighten,
         CanvasCrop
     }
 

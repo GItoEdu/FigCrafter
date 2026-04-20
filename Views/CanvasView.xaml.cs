@@ -9,6 +9,7 @@ using FigCrafterApp.Models;
 using FigCrafterApp.Commands;
 using System.Text.RegularExpressions;
 using System.Windows.Shapes;
+using iText.Layout.Splitting;
 
 namespace FigCrafterApp.Views
 {
@@ -53,12 +54,6 @@ namespace FigCrafterApp.Views
         // 半透明クロップガイド用のペイントキャッシュ
         private SKPaint? _cachedCropGuidePaintNormal;
         private SKPaint? _cachedCropGuidePaintGray;
-
-        // 消しゴム用
-        private bool _isErasing = false;
-        private ImageObject? _eraserTarget = null;
-        private SKRect _eraserRect; // 消しゴムをかける矩形領域
-        private SKBitmap? _preEraserMask = null; // Undo用：消しゴム適用前のマスク
 
         // インライン編集用
         private TextObject? _editingTextObject;
@@ -252,27 +247,6 @@ namespace FigCrafterApp.Views
             }
             if (currentZoom == 0) currentZoom = 1.0f;
 
-            // 消しゴム矩形の描画
-            if (_isErasing)
-            {
-                using var fillPaint = new SKPaint
-                {
-                    Color = new SKColor(255, 0, 0, 40), // 半透明の赤
-                    Style = SKPaintStyle.Fill,
-                    IsAntialias = true
-                };
-                using var strokePaint = new SKPaint
-                {
-                    Color = new SKColor(255, 0, 0, 180),
-                    Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 0.25f / currentZoom, // 0.5 -> 0.25
-                    PathEffect = SKPathEffect.CreateDash(new float[] { 2 / currentZoom, 2 / currentZoom }, 0), // 4 -> 2
-                    IsAntialias = true
-                };
-                canvas.DrawRect(_eraserRect, fillPaint);
-                canvas.DrawRect(_eraserRect, strokePaint);
-            }
-
             // キャンバスクロップ矩形の描画
             if (_isCanvasCropping)
             {
@@ -421,67 +395,6 @@ namespace FigCrafterApp.Views
             _startPoint = new SKPoint((float)(pRaw.X / vm.ZoomLevel * (25.4 / 96.0)), (float)(pRaw.Y / vm.ZoomLevel * (25.4 / 96.0)));
             _lastMousePos = _startPoint;
 
-            if (vm.CurrentTool == DrawingTool.Eraser)
-            {
-                ImageObject? targetImg = null;
-
-                // 1. まず現在選択中のオブジェクトがImageObject（またはその中の画像）であれば、それを優先ターゲットとする
-                if (vm.SelectedObject is ImageObject selectedImg)
-                {
-                    targetImg = selectedImg;
-                }
-                else if (vm.SelectedObject is GroupObject selectedGrp)
-                {
-                    targetImg = FindImageInGroup(selectedGrp, _startPoint) ?? selectedGrp.Children.OfType<ImageObject>().FirstOrDefault();
-                }
-
-                // 2. 選択中の画像がない場合は、クリック位置でヒットテストを行う（アクティブレイヤーを優先）
-                if (targetImg == null && vm.ActiveLayer != null && vm.ActiveLayer.IsVisible && !vm.ActiveLayer.IsLocked)
-                {
-                    for (int i = vm.ActiveLayer.GraphicObjects.Count - 1; i >= 0; i--)
-                    {
-                        var obj = vm.ActiveLayer.GraphicObjects[i];
-                        if (obj is ImageObject img && img.HitTest(_startPoint))
-                        {
-                            targetImg = img;
-                            break;
-                        }
-                        // GroupObject内のImageObjectも検索
-                        if (obj is GroupObject group && obj.HitTest(_startPoint))
-                        {
-                            targetImg = FindImageInGroup(group, _startPoint);
-                            if (targetImg != null) break;
-                        }
-                    }
-                }
-
-                if (targetImg != null)
-                {
-                    System.IO.File.AppendAllText("eraser_debug.log", $"MouseDown: Eraser target selected={targetImg.GetHashCode()}, rect={GetBoundingRect(targetImg)}\n");
-                }
-                else
-                {
-                    System.IO.File.AppendAllText("eraser_debug.log", $"MouseDown: No target selected\n");
-                }
-
-                _isErasing = true;
-                _eraserTarget = targetImg; // ここでnullでも、MouseUp時のフォールバックに任せる
-                _eraserRect = new SKRect(_startPoint.X, _startPoint.Y, _startPoint.X, _startPoint.Y);
-                
-                if (_eraserTarget != null)
-                {
-                    _eraserTarget.EnsureEraserMask();
-                    _preEraserMask = _eraserTarget.EraserMask?.Copy();
-                }
-                else
-                {
-                    _preEraserMask = null;
-                }
-
-                SkiaElement.CaptureMouse();
-                return;
-            }
-
             if (vm.CurrentTool == DrawingTool.CanvasCrop)
             {
                 _isCanvasCropping = true;
@@ -490,7 +403,7 @@ namespace FigCrafterApp.Views
                 return;
             }
 
-            if (vm.CurrentTool == DrawingTool.Select || vm.CurrentTool == DrawingTool.Eraser)
+            if (vm.CurrentTool == DrawingTool.Select)
             {
                 // 既に選択されているオブジェクトがあればハンドルのヒットテストを優先
                 if (_selectedObject != null && vm.CurrentTool == DrawingTool.Select)
@@ -669,6 +582,26 @@ namespace FigCrafterApp.Views
                         StrokeWidth = strokeWidthToApply
                     };
                     break;
+                case DrawingTool.Eraser:
+                    _tempObject = new EraserRectObject
+                    {
+                        X = _startPoint.X,
+                        Y = _startPoint.Y,
+                        Width = 0,
+                        Height = 0    
+                    };
+                    break;
+                case DrawingTool.Straighten:
+                    _tempObject = new LineObject
+                    {
+                        X = _startPoint.X,
+                        Y = _startPoint.Y,
+                        EndX = _startPoint.X,
+                        EndY = _startPoint.Y,
+                        StrokeColor = SKColors.Magenta,
+                        StrokeWidth = strokeWidthToApply  
+                    };
+                    break;
                 case DrawingTool.Ellipse:
                     _tempObject = new EllipseObject
                     {
@@ -770,19 +703,6 @@ namespace FigCrafterApp.Views
             var dx = currentPoint.X - _lastMousePos.X;
             var dy = currentPoint.Y - _lastMousePos.Y;
             _lastMousePos = currentPoint;
-
-            // 消しゴムドラッグ中
-            if (_isErasing && _eraserTarget != null)
-            {
-                _eraserRect = new SKRect(
-                    Math.Min(_startPoint.X, currentPoint.X),
-                    Math.Min(_startPoint.Y, currentPoint.Y),
-                    Math.Max(_startPoint.X, currentPoint.X),
-                    Math.Max(_startPoint.Y, currentPoint.Y)
-                );
-                ThrottledInvalidateVisual();
-                return;
-            }
 
             // 範囲選択ドラッグ中
             if (_isSelecting)
@@ -1221,72 +1141,6 @@ namespace FigCrafterApp.Views
         {
             if (DataContext is not CanvasViewModel vmObj) return;
 
-            // 消しゴム操作終了
-            if (_isErasing)
-            {
-                if (_eraserRect.Width > 0 && _eraserRect.Height > 0)
-                {
-                    ImageObject? targetImg = _eraserTarget;
-
-                    if (targetImg == null)
-                    {
-                        // ドラッグ開始時に画像がなかった場合、まずは選択中の画像を優先する
-                        if (vmObj.SelectedObject is ImageObject selectedImg && _eraserRect.IntersectsWith(GetBoundingRect(selectedImg)))
-                        {
-                            targetImg = selectedImg;
-                        }
-                        else if (vmObj.SelectedObject is GroupObject selectedGrp)
-                        {
-                            targetImg = selectedGrp.Children.OfType<ImageObject>().FirstOrDefault(img => _eraserRect.IntersectsWith(GetBoundingRect(img)));
-                        }
-
-                        // それでも見つからない場合は、矩形に交差するImageObjectを探す（アクティブレイヤー内を優先）
-                        if (targetImg == null && vmObj.ActiveLayer != null)
-                        {
-                            for (int i = vmObj.ActiveLayer.GraphicObjects.Count - 1; i >= 0; i--)
-                            {
-                                var obj = vmObj.ActiveLayer.GraphicObjects[i];
-                                if (obj is ImageObject img && _eraserRect.IntersectsWith(GetBoundingRect(img)))
-                                {
-                                    targetImg = img;
-                                    break;
-                                }
-                                if (obj is GroupObject group)
-                                {
-                                    targetImg = group.Children.OfType<ImageObject>().FirstOrDefault(img => _eraserRect.IntersectsWith(GetBoundingRect(img)));
-                                    if (targetImg != null) break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (targetImg != null)
-                    {
-                        System.IO.File.AppendAllText("eraser_debug.log", $"MouseUp: Applying eraser to {targetImg.GetHashCode()}, rect={GetBoundingRect(targetImg)}\n");
-                        
-                        // Maskが未作成の場合のため
-                        targetImg.EnsureEraserMask();
-                        var oldMask = _preEraserMask; 
-                        
-                        ApplyEraserRectToImage(targetImg, _eraserRect);
-                        
-                        // 新しいMaskと古いMaskの差分をコマンドとして登録する
-                        var newMask = targetImg.EraserMask;
-                        vmObj.ExecuteCommand(new EraserCommand(targetImg, oldMask, newMask));
-                    }
-                    else
-                    {
-                        System.IO.File.AppendAllText("eraser_debug.log", $"MouseUp: No target found for eraser\n");
-                    }
-                }
-                _isErasing = false;
-                _eraserTarget = null;
-                _preEraserMask = null;
-                SkiaElement.ReleaseMouseCapture();
-                SkiaElement.InvalidateVisual();
-                return;
-            }
-
             if (_isCanvasCropping)
             {
                 _isCanvasCropping = false;
@@ -1439,6 +1293,33 @@ namespace FigCrafterApp.Views
 
             if (DataContext is CanvasViewModel vmAdd && vmAdd.ActiveLayer != null)
             {
+                if (vmAdd.CurrentTool == DrawingTool.Straighten && _tempObject is LineObject straightenLine)
+                {
+                    // 直線の角度を計算
+                    float dx = straightenLine.EndX - straightenLine.X;
+                    float dy = straightenLine.EndY - straightenLine.Y;
+
+                    if (Math.Abs(dx) > 0.1f || Math.Abs(dy) > 0.1f)
+                    {
+                        float angleRad = (float)Math.Atan2(dy, dx);
+                        float angleDeg = angleRad * 180.0f / (float)Math.PI;
+
+                        if (_selectedObject != null)
+                        {
+                            // 引いた直線が水平（0度）になるように逆回転させる
+                            float oldRotation = _selectedObject.Rotation;
+                            float newRotation = oldRotation - angleDeg;
+                            newRotation = (newRotation % 360 + 360) % 360;
+                            vmAdd.ExecuteCommand(new RotateCommand(_selectedObject, oldRotation, newRotation));
+                        }
+                    }
+                    _tempObject = null;
+                    vmAdd.CurrentTool = DrawingTool.Select;
+                    SkiaElement.ReleaseMouseCapture();
+                    SkiaElement.InvalidateVisual();
+                    return;
+                }
+
                 // 一時オブジェクトを本番の色に変更して追加
                 if (_tempObject is LineObject) _tempObject.StrokeColor = SKColors.Black;
                 
@@ -1692,6 +1573,25 @@ namespace FigCrafterApp.Views
 
             if (e.Key == Key.Delete)
             {
+                var eraserRects = vm.SelectedObjects.OfType<EraserRectObject>().ToList();
+                if (eraserRects.Count > 0)
+                {
+                    foreach (var eraser in eraserRects)
+                    {
+                        var rect = new SKRect(eraser.X, eraser.Y, eraser.X + eraser.Width, eraser.Y + eraser.Height);
+                        ImageObject? targetImg = FindEraserTarget(vm, rect);
+
+                        if (targetImg != null)
+                        {
+                            targetImg.EnsureEraserMask();
+                            var oldMask = targetImg.EraserMask?.Copy();
+                            ApplyEraserRectToImage(targetImg, rect);
+                            var newMask = targetImg.EraserMask?.Copy();
+                            vm.ExecuteCommand(new EraserCommand(targetImg, oldMask, newMask));
+                        }
+                    }    
+                }
+
                 if (vm.DeleteSelectedCommand.CanExecute(null))
                 {
                     vm.DeleteSelectedCommand.Execute(null);
@@ -2314,6 +2214,27 @@ namespace FigCrafterApp.Views
             {
                 InlineEditingTextBox.RenderTransform = System.Windows.Media.Transform.Identity;
             }
+        }
+
+        private ImageObject? FindEraserTarget(CanvasViewModel vm, SKRect rect)
+        {
+            if (vm.ActiveLayer != null)
+            {
+                for (int i = vm.ActiveLayer.GraphicObjects.Count - 1; i >= 0; i--)
+                {
+                    var obj = vm.ActiveLayer.GraphicObjects[i];
+                    if (obj is ImageObject img && rect.IntersectsWith(GetBoundingRect(img)))
+                    {
+                        return img;
+                    }
+                    if (obj is GroupObject group)
+                    {
+                        var targetImg = group.Children.OfType<ImageObject>().FirstOrDefault(img => rect.IntersectsWith(GetBoundingRect(img)));
+                        if (targetImg != null) return targetImg;
+                    }
+                }
+            }
+            return null;
         }
     }
 }

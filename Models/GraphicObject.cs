@@ -13,6 +13,8 @@ namespace FigCrafterApp.Models
     [JsonDerivedType(typeof(PathObject), typeDiscriminator: "Path")]
     [JsonDerivedType(typeof(GroupObject), typeDiscriminator: "Group")]
     [JsonDerivedType(typeof(ImageObject), typeDiscriminator: "Image")]
+    [JsonDerivedType(typeof(EraserRectObject), typeDiscriminator: "EraserRect")]
+
     public abstract class GraphicObject : INotifyPropertyChanged, INotifyPropertyChanging
     {
         private float _x;
@@ -1378,12 +1380,59 @@ namespace FigCrafterApp.Models
 
             return false;
         }
-
+        
         public override GraphicObject Clone()
         {
             var clone = new PathObject();
             CopyPropertiesTo(clone);
             clone.PathData = PathData;
+            return clone;
+        }
+    }
+
+    public class EraserRectObject : GraphicObject
+    {
+        public override void Draw(SKCanvas canvas)
+        {
+            canvas.Save();
+            TransformCanvas(canvas);
+
+            using var fillPaint = new SKPaint
+            {
+                Color = new SKColor(255, 0, 0, 40),
+                Style = SKPaintStyle.Fill,
+                IsAntialias = true
+            };
+            using var strokePaint = new SKPaint
+            {
+                Color = new SKColor(255, 0, 0, 180),
+                Style = SKPaintStyle.Stroke,
+                StrokeWidth = 0.5f / CurrentZoomLevel,
+                PathEffect = SKPathEffect.CreateDash(new float[] { 4f / CurrentZoomLevel, 4f / CurrentZoomLevel }, 0),
+                IsAntialias = true
+            };
+            canvas.DrawRect(X, Y, Width, Height, fillPaint);
+            canvas.DrawRect(X, Y, Width, Height, strokePaint);
+
+            if (IsSelected)
+            {
+                DrawSelectionBox(canvas, new SKRect(X, Y, X + Width, Y + Height));
+            }
+
+            canvas.Restore();
+        }
+
+        public override bool HitTest(SKPoint point)
+        {
+            var p = UntransformPoint(point);
+            var rect = new SKRect(X, Y, X + Width, Y + Height);
+            return rect.Contains(p.X, p.Y);
+        }
+
+        public override GraphicObject Clone()
+        {
+            var clone = new EraserRectObject();
+            CopyPropertiesTo(clone);
             return clone;
         }
     }
