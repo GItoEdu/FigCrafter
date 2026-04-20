@@ -472,6 +472,28 @@ namespace FigCrafterApp.Views
 
                 bool isShiftHeld = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
 
+                if (vm.CurrentTool == DrawingTool.Select && !isShiftHeld)
+                {
+                    var activeErasers = vm.SelectedObjects.OfType<EraserRectObject>().ToList();
+
+                    if (activeErasers.Count > 0 && (hitObject == null || !activeErasers.Contains(hitObject)))
+                    {
+                        var commands = new List<IUndoableCommand>();
+                        foreach (var grouping in activeErasers.GroupBy(vm.FindLayer))
+                        {
+                            if (grouping.Key != null)
+                                commands.Add(new RemoveObjectsCommand(grouping.Key.GraphicObjects, grouping.ToList()));
+                        }
+
+                        if (commands.Count > 0)
+                        {
+                            vm.ExecuteCommand(commands.Count == 1 ? commands[0] : new CompositeCommand(commands));
+                        }
+
+                        vm.ClearSelection();
+                    }
+                }
+
                 if (hitObject != null)
                 {
                     if (vm.CurrentTool == DrawingTool.Select)
