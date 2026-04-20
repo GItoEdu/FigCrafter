@@ -177,8 +177,6 @@ namespace FigCrafterApp.Views
             _isDragging = false;
             _isResizing = false;
             _isCropping = false;
-            _isErasing = false;
-            _eraserTarget = null;
             _resizeHandleIndex = -1;
             _cropHandleIndex = -1;
 
