@@ -1327,8 +1327,8 @@ namespace FigCrafterApp.Views
                         // 引いた直線が水平になるようにキャンバス全体を逆回転させる
                         float rotationAngle = -angleDeg;
 
-                        float cx = (float)(vmAdd.WidthMm / 2.0);
-                        float cy = (float)(vmAdd.HeightMm / 2.0);
+                        float cx = (straightenLine.X + straightenLine.EndX) / 2.0f;
+                        float cy = (straightenLine.Y + straightenLine.EndY) / 2.0f;
 
                         // 専用コマンドで全オブジェクトを回転
                         vmAdd.ExecuteCommand(new RotateCanvasCommand(vmAdd, rotationAngle, cx, cy));
