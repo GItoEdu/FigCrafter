@@ -99,23 +99,29 @@ namespace FigCrafterApp.ViewModels
         {
             if (ActiveDocument == null) return;
 
-            // ダイアログにViewModelを渡す
-            var settings = new Views.PrintSettingsDialog(ActiveDocument);
-            settings.Owner = System.Windows.Application.Current.MainWindow;
-            
-            if (settings.ShowDialog() == true)
+            try
             {
-                var printDialog = new PrintDialog();
-                if (printDialog.ShowDialog() == true)
+                var settings = new Views.PrintSettingsDialog(ActiveDocument);
+                settings.Owner = System.Windows.Application.Current.MainWindow;
+                
+                if (settings.ShowDialog() == true)
                 {
-                    var visual = ActiveDocument.GetPrintVisual(
-                        settings.PrintScale, 
-                        settings.AutoFit,
-                        printDialog.PrintableAreaWidth,
-                        printDialog.PrintableAreaHeight);
+                    var printDialog = new PrintDialog();
+                    if (printDialog.ShowDialog() == true)
+                    {
+                        var visual = ActiveDocument.GetPrintVisual(
+                            settings.PrintScale, 
+                            settings.AutoFit,
+                            printDialog.PrintableAreaWidth,
+                            printDialog.PrintableAreaHeight);
 
-                    printDialog.PrintVisual(visual, ActiveDocument.Title);
+                        printDialog.PrintVisual(visual, ActiveDocument.Title);
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"印刷処理中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

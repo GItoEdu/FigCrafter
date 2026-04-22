@@ -1,17 +1,19 @@
 <Window x:Class="FigCrafterApp.Views.PrintSettingsDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="印刷設定" Height="450" Width="700" 
+        Title="印刷設定" Height="500" Width="750" 
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         Background="#FF2D2D30" Foreground="White">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="280"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Column="0" Margin="20">
-            <TextBlock Text="印刷倍率 (%)" Margin="0,0,0,10" FontSize="14" FontWeight="Bold"/>
+            <TextBlock Text="印刷設定" Margin="0,0,0,20" FontSize="18" FontWeight="Bold"/>
+            
+            <TextBlock Text="印刷倍率 (%)" Margin="0,0,0,10" FontSize="14"/>
             <DockPanel>
                 <TextBox x:Name="ScaleTextBox" Width="60" Text="100" VerticalAlignment="Center" 
                          Background="#FF3E3E42" Foreground="White" BorderThickness="1" Padding="3"
@@ -24,29 +26,24 @@
             <CheckBox x:Name="AutoFitCheckBox" Content="用紙に合わせて自動調整" Foreground="White" 
                       Margin="0,20,0,0" Checked="SettingsChanged" Unchecked="SettingsChanged"/>
             
-            <TextBlock Text="※A4用紙（210x297mm）想定" Foreground="Gray" FontSize="10" Margin="0,10,0,0"/>
+            <TextBlock Text="※A4用紙（210x297mm）想定" Foreground="Gray" FontSize="11" Margin="0,15,0,0"/>
 
-            <Border VerticalAlignment="Bottom" Margin="0,150,0,0">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="印刷" Width="80" Click="Print_Click" IsDefault="True" Margin="0,0 autor,10,0"
-                            Background="#FF007ACC" Foreground="White" BorderThickness="0" Height="30"/>
-                    <Button Content="キャンセル" Width="80" IsCancel="True"
-                            Background="#FF3E3E42" Foreground="White" BorderThickness="0" Height="30"/>
-                </StackPanel>
-            </Border>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,180,0,0">
+                <Button Content="印刷" Width="80" Click="Print_Click" IsDefault="True" Margin="0,0,10,0"
+                        Background="#FF007ACC" Foreground="White" BorderThickness="0" Height="30"/>
+                <Button Content="キャンセル" Width="80" IsCancel="True"
+                        Background="#FF3E3E42" Foreground="White" BorderThickness="0" Height="30"/>
+            </StackPanel>
         </StackPanel>
 
         <Border Grid.Column="1" Background="#FF1E1E1E" Margin="10" BorderBrush="#FF3E3E42" BorderThickness="1">
-            <Grid>
-                <TextBlock Text="プレビュー" Foreground="#55FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="20"/>
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                    <Image x:Name="PreviewImage" Margin="10" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image.Effect>
-                            <DropShadowEffect BlurRadius="10" ShadowDepth="0" Opacity="0.5"/>
-                        </Image.Effect>
-                    </Image>
-                </ScrollViewer>
-            </Grid>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <Image x:Name="PreviewImage" Margin="20" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Image.Effect>
+                        <DropShadowEffect BlurRadius="15" ShadowDepth="0" Opacity="0.7"/>
+                    </Image.Effect>
+                </Image>
+            </ScrollViewer>
         </Border>
     </Grid>
 </Window>

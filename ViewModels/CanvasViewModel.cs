@@ -1493,84 +1493,13 @@ namespace FigCrafterApp.ViewModels
             MarkAsSaved();
         }
 
-        /// <summary>
-        /// 印刷用の Visual を生成します。
-        /// </summary>
-        public Visual GetPrintVisual(double scale, bool autoFit, double printableWidth, double printableHeight)
-        {
-            // 300 DPI相当でレンダリング（印刷品質確保のため）
-            float dpi = 300f;
-            float mmToPx = dpi / 25.4f;
-            
-            if (autoFit)
-            {
-                double zoomX = printableWidth / (WidthMm * (96.0 / 25.4));
-                double zoomY = printableHeight / (HeightMm * (96.0 / 25.4));
-                scale = Math.Min(zoomX, zoomY);
-            }
-
-            int width = (int)Math.Ceiling(WidthMm * mmToPx);
-            int height = (int)Math.Ceiling(HeightMm * mmToPx);
-
-            using var bitmap = new SKBitmap(width, height);
-            using var canvas = new SKCanvas(bitmap);
-            canvas.Scale(mmToPx);
-            canvas.Clear(SKColors.White);
-
-            // 選択状態を一時的に解除して描画
-            var selectedStates = new List<(GraphicObject obj, bool wasSelected)>();
-            foreach (var layer in Layers)
-            {
-                foreach (var obj in layer.GraphicObjects)
-                {
-                    selectedStates.Add((obj, obj.IsSelected));
-                    obj.IsSelected = false;
-                }
-            }
-
-            for (int i = Layers.Count - 1; i >= 0; i--)
-            {
-                var layer = Layers[i];
-                if (!layer.IsVisible) continue;
-                foreach (var obj in layer.GraphicObjects)
-                {
-                    obj.Draw(canvas);
-                }
-            }
-
-            // 選択状態を復元
-            foreach (var (obj, wasSelected) in selectedStates)
-            {
-                obj.IsSelected = wasSelected;
-            }
-
-            // SkiaBitmap を WPF の BitmapSource に変換
-            var imageSource = bitmap.ToWriteableBitmap();
-
-            var drawingVisual = new DrawingVisual();
-            using (var dc = drawingVisual.RenderOpen())
-            {
-                // WPFの座標系 (96DPI) に合わせてスケールを適用して描画
-                double w = WidthMm * (96.0 / 25.4) * scale;
-                double h = HeightMm * (96.0 / 25.4) * scale;
-                dc.DrawImage(imageSource, new Rect(0, 0, w, h));
-            }
-
-            return drawingVisual;
-        }
-
-        /// <summary>
-        /// 印刷設定ダイアログ表示用のプレビュー画像を生成します
-        /// </summary>
+        
         public BitmapSource GeneratePreviewImage(double scale, bool autoFit)
         {
-            // プレビューなので標準DPIで十分
             float dpi = 96f;
             float mmToPx = dpi / 25.4f;
-            
-            // A4サイズの仮想用紙(px)
-            double paperWidthPx = 210 * mmToPx;
-            double paperHeightPx = 297 * mmToPx;
+            double paperWidthPx = 210 * mmToPx; // A4幅
+            double paperHeightPx = 297 * mmToPx; // A4高さ
 
             if (autoFit)
             {
@@ -1579,30 +1508,55 @@ namespace FigCrafterApp.ViewModels
                 scale = Math.Min(zoomX, zoomY);
             }
 
-            // コンテンツの描画サイズ
-            int contentWidth = (int)Math.Ceiling(WidthMm * mmToPx * scale);
-            int contentHeight = (int)Math.Ceiling(HeightMm * mmToPx * scale);
-
-            // 用紙の大きさに合わせたビットマップを作成
             using var bitmap = new SKBitmap((int)paperWidthPx, (int)paperHeightPx);
             using var canvas = new SKCanvas(bitmap);
+            canvas.Clear(SKColors.White);
             
-            canvas.Clear(SKColors.White); // 紙の白
-            
-            // スケールを適用してコンテンツを描画
             canvas.Scale((float)(mmToPx * scale));
-
-            // 描画処理（既存のDrawロジック）
             RenderToCanvas(canvas);
 
-            return bitmap.ToWriteableBitmap(); // 拡張メソッドを使用
+            return bitmap.ToWriteableBitmap();
+        }
+
+        public Visual GetPrintVisual(double scale, bool autoFit, double printableWidth, double printableHeight)
+        {
+            float dpi = 300f; // 印刷用高解像度
+            float mmToPx = dpi / 25.4f;
+
+            if (autoFit)
+            {
+                // プリンタの有効印字領域に合わせてスケール計算
+                double zoomX = printableWidth / (WidthMm * (96.0 / 25.4));
+                double zoomY = printableHeight / (HeightMm * (96.0 / 25.4));
+                scale = Math.Min(zoomX, zoomY);
+            }
+
+            int w = (int)Math.Ceiling(WidthMm * mmToPx);
+            int h = (int)Math.Ceiling(HeightMm * mmToPx);
+
+            using var bitmap = new SKBitmap(w, h);
+            using var canvas = new SKCanvas(bitmap);
+            canvas.Clear(SKColors.White);
+            canvas.Scale(mmToPx);
+            RenderToCanvas(canvas);
+
+            var drawingVisual = new DrawingVisual();
+            using (var dc = drawingVisual.RenderOpen())
+            {
+                var imageSource = bitmap.ToWriteableBitmap();
+                // 画面解像度(96DPI)基準のサイズにスケーリングして描画
+                double renderW = WidthMm * (96.0 / 25.4) * scale;
+                double renderH = HeightMm * (96.0 / 25.4) * scale;
+                dc.DrawImage(imageSource, new Rect(0, 0, renderW, renderH));
+            }
+            return drawingVisual;
         }
 
         private void RenderToCanvas(SKCanvas canvas)
         {
-            // 選択状態を隠して全レイヤーを描画する共通ロジック
-            var selectedStates = Layers.SelectMany(l => l.GraphicObjects).Select(o => new { Obj = o, State = o.IsSelected }).ToList();
-            foreach (var s in selectedStates) s.Obj.IsSelected = false;
+            // 選択状態を一時的に解除して描画
+            var selectedObjects = Layers.SelectMany(l => l.GraphicObjects).Where(o => o.IsSelected).ToList();
+            foreach (var obj in selectedObjects) obj.IsSelected = false;
 
             for (int i = Layers.Count - 1; i >= 0; i--)
             {
@@ -1610,7 +1564,8 @@ namespace FigCrafterApp.ViewModels
                 foreach (var obj in Layers[i].GraphicObjects) obj.Draw(canvas);
             }
 
-            foreach (var s in selectedStates) s.Obj.IsSelected = s.State;
+            // 選択状態を復元
+            foreach (var obj in selectedObjects) obj.IsSelected = true;
         }
     }
 }

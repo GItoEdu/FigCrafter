@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media.Imaging;
 using FigCrafterApp.ViewModels;
 
 namespace FigCrafterApp.Views
@@ -23,23 +22,21 @@ namespace FigCrafterApp.Views
         private void SettingsChanged(object sender, RoutedEventArgs e)
         {
             if (!_isInitialized) return;
-            
-            // スライダーとテキストボックスを同期
-            if (sender == ScaleSlider)
+
+            if (sender == ScaleSlider && ScaleTextBox != null)
                 ScaleTextBox.Text = ((int)ScaleSlider.Value).ToString();
-            
+
             UpdatePreview();
         }
 
         private void UpdatePreview()
         {
+            if (ScaleTextBox == null || PreviewImage == null) return;
+
             if (double.TryParse(ScaleTextBox.Text, out double val))
             {
                 PrintScale = val / 100.0;
                 AutoFit = AutoFitCheckBox.IsChecked ?? false;
-                
-                // ViewModelからプレビュー用のBitmapを取得
-                // プレビュー用なのでDPIは低め(96DPI)で要求
                 PreviewImage.Source = _viewModel.GeneratePreviewImage(PrintScale, AutoFit);
             }
         }
