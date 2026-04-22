@@ -1324,15 +1324,16 @@ namespace FigCrafterApp.Views
                         float angleRad = (float)Math.Atan2(dy, dx);
                         float angleDeg = angleRad * 180.0f / (float)Math.PI;
 
-                        if (_selectedObject != null)
-                        {
-                            // 引いた直線が水平（0度）になるように逆回転させる
-                            float oldRotation = _selectedObject.Rotation;
-                            float newRotation = oldRotation - angleDeg;
-                            newRotation = (newRotation % 360 + 360) % 360;
-                            vmAdd.ExecuteCommand(new RotateCommand(_selectedObject, oldRotation, newRotation));
-                        }
+                        // 引いた直線が水平になるようにキャンバス全体を逆回転させる
+                        float rotationAngle = -angleDeg;
+
+                        float cx = (float)(vmAdd.WidthMm / 2.0);
+                        float cy = (float)(vmAdd.HeightMm / 2.0);
+
+                        // 専用コマンドで全オブジェクトを回転
+                        vmAdd.ExecuteCommand(new RotateCanvasCommand(vmAdd, rotationAngle, cx, cy));
                     }
+
                     _tempObject = null;
                     vmAdd.CurrentTool = DrawingTool.Select;
                     SkiaElement.ReleaseMouseCapture();
