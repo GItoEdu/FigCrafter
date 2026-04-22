@@ -1558,5 +1558,59 @@ namespace FigCrafterApp.ViewModels
 
             return drawingVisual;
         }
+
+        /// <summary>
+        /// 印刷設定ダイアログ表示用のプレビュー画像を生成します
+        /// </summary>
+        public BitmapSource GeneratePreviewImage(double scale, bool autoFit)
+        {
+            // プレビューなので標準DPIで十分
+            float dpi = 96f;
+            float mmToPx = dpi / 25.4f;
+            
+            // A4サイズの仮想用紙(px)
+            double paperWidthPx = 210 * mmToPx;
+            double paperHeightPx = 297 * mmToPx;
+
+            if (autoFit)
+            {
+                double zoomX = paperWidthPx / (WidthMm * mmToPx);
+                double zoomY = paperHeightPx / (HeightMm * mmToPx);
+                scale = Math.Min(zoomX, zoomY);
+            }
+
+            // コンテンツの描画サイズ
+            int contentWidth = (int)Math.Ceiling(WidthMm * mmToPx * scale);
+            int contentHeight = (int)Math.Ceiling(HeightMm * mmToPx * scale);
+
+            // 用紙の大きさに合わせたビットマップを作成
+            using var bitmap = new SKBitmap((int)paperWidthPx, (int)paperHeightPx);
+            using var canvas = new SKCanvas(bitmap);
+            
+            canvas.Clear(SKColors.White); // 紙の白
+            
+            // スケールを適用してコンテンツを描画
+            canvas.Scale((float)(mmToPx * scale));
+
+            // 描画処理（既存のDrawロジック）
+            RenderToCanvas(canvas);
+
+            return bitmap.ToWriteableBitmap(); // 拡張メソッドを使用
+        }
+
+        private void RenderToCanvas(SKCanvas canvas)
+        {
+            // 選択状態を隠して全レイヤーを描画する共通ロジック
+            var selectedStates = Layers.SelectMany(l => l.GraphicObjects).Select(o => new { Obj = o, State = o.IsSelected }).ToList();
+            foreach (var s in selectedStates) s.Obj.IsSelected = false;
+
+            for (int i = Layers.Count - 1; i >= 0; i--)
+            {
+                if (!Layers[i].IsVisible) continue;
+                foreach (var obj in Layers[i].GraphicObjects) obj.Draw(canvas);
+            }
+
+            foreach (var s in selectedStates) s.Obj.IsSelected = s.State;
+        }
     }
 }
