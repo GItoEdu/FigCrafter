@@ -99,7 +99,8 @@ namespace FigCrafterApp.ViewModels
         {
             if (ActiveDocument == null) return;
 
-            var settings = new Views.PrintSettingsDialog();
+            // ダイアログにViewModelを渡す
+            var settings = new Views.PrintSettingsDialog(ActiveDocument);
             settings.Owner = System.Windows.Application.Current.MainWindow;
             
             if (settings.ShowDialog() == true)
