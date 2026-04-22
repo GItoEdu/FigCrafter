@@ -106,7 +106,7 @@ namespace FigCrafterApp.ViewModels
                 
                 if (settings.ShowDialog() == true)
                 {
-                    var printDialog = new PrintDialog();
+                    var printDialog = new System.Windows.Controls.PrintDialog();
                     if (printDialog.ShowDialog() == true)
                     {
                         var visual = ActiveDocument.GetPrintVisual(
@@ -119,9 +119,10 @@ namespace FigCrafterApp.ViewModels
                     }
                 }
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
-                MessageBox.Show($"印刷処理中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                // System.Windows. を明示的に付与してエラーを解消
+                System.Windows.MessageBox.Show($"印刷処理中にエラーが発生しました:\n{ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
 
