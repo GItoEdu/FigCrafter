@@ -6,6 +6,8 @@ using SkiaSharp;
 using FigCrafterApp.Models;
 using FigCrafterApp.Commands;
 using FigCrafterApp.Serialization;
+using System.Windows;
+using SkiaSharp.Views.WPF;
 
 namespace FigCrafterApp.ViewModels
 {
@@ -1543,7 +1545,7 @@ namespace FigCrafterApp.ViewModels
             }
 
             // SkiaBitmap を WPF の BitmapSource に変換
-            var imageSource = SKImage.FromBitmap(bitmap).ToBitmapSource();
+            var imageSource = bitmap.ToWriteableBitmap();
 
             var drawingVisual = new DrawingVisual();
             using (var dc = drawingVisual.RenderOpen())
