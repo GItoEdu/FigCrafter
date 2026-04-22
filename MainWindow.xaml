@@ -232,6 +232,10 @@
                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Eraser}}"/>
                 <RadioButton Content="&#xE123;" FontFamily="Segoe Fluent Icons" ToolTip="トリミング" Style="{StaticResource ToolButtonStyle}"
                             IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.CanvasCrop}}"/>
+                <RadioButton ToolTip="水平器" Style="{StaticResource ToolButtonStyle}"
+                            IsChecked="{Binding ActiveDocument.CurrentTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static vm:DrawingTool.Straighten}}">
+                    <Path Data="M12,2L4.5,20.29L5.21,21L12,18L18.79,21L19.5,20.29L12,2Z" Fill="White" Stretch="Uniform" Width="16" Height="16"/>
+                </RadioButton>
             </StackPanel>
         </Border>
 
