@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using SkiaSharp;
 using FigCrafterApp.Models;
 using FigCrafterApp.Commands;
@@ -1487,6 +1489,72 @@ namespace FigCrafterApp.ViewModels
 
             // ロード直後は保存済み状態とする
             MarkAsSaved();
+        }
+
+        /// <summary>
+        /// 印刷用の Visual を生成します。
+        /// </summary>
+        public Visual GetPrintVisual(double scale, bool autoFit, double printableWidth, double printableHeight)
+        {
+            // 300 DPI相当でレンダリング（印刷品質確保のため）
+            float dpi = 300f;
+            float mmToPx = dpi / 25.4f;
+            
+            if (autoFit)
+            {
+                double zoomX = printableWidth / (WidthMm * (96.0 / 25.4));
+                double zoomY = printableHeight / (HeightMm * (96.0 / 25.4));
+                scale = Math.Min(zoomX, zoomY);
+            }
+
+            int width = (int)Math.Ceiling(WidthMm * mmToPx);
+            int height = (int)Math.Ceiling(HeightMm * mmToPx);
+
+            using var bitmap = new SKBitmap(width, height);
+            using var canvas = new SKCanvas(bitmap);
+            canvas.Scale(mmToPx);
+            canvas.Clear(SKColors.White);
+
+            // 選択状態を一時的に解除して描画
+            var selectedStates = new List<(GraphicObject obj, bool wasSelected)>();
+            foreach (var layer in Layers)
+            {
+                foreach (var obj in layer.GraphicObjects)
+                {
+                    selectedStates.Add((obj, obj.IsSelected));
+                    obj.IsSelected = false;
+                }
+            }
+
+            for (int i = Layers.Count - 1; i >= 0; i--)
+            {
+                var layer = Layers[i];
+                if (!layer.IsVisible) continue;
+                foreach (var obj in layer.GraphicObjects)
+                {
+                    obj.Draw(canvas);
+                }
+            }
+
+            // 選択状態を復元
+            foreach (var (obj, wasSelected) in selectedStates)
+            {
+                obj.IsSelected = wasSelected;
+            }
+
+            // SkiaBitmap を WPF の BitmapSource に変換
+            var imageSource = SKImage.FromBitmap(bitmap).ToBitmapSource();
+
+            var drawingVisual = new DrawingVisual();
+            using (var dc = drawingVisual.RenderOpen())
+            {
+                // WPFの座標系 (96DPI) に合わせてスケールを適用して描画
+                double w = WidthMm * (96.0 / 25.4) * scale;
+                double h = HeightMm * (96.0 / 25.4) * scale;
+                dc.DrawImage(imageSource, new Rect(0, 0, w, h));
+            }
+
+            return drawingVisual;
         }
     }
 }

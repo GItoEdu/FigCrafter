@@ -34,6 +34,8 @@
         <KeyBinding Key="C" Modifiers="Control+Shift" Command="{Binding ShowContrastDialogCommand}"/>
         <!-- Ctrl+0: ウィンドウに合わせる -->
         <KeyBinding Key="D0" Modifiers="Control" Command="{Binding ActiveDocument.ZoomToFitCommand}"/>
+        <!-- Ctrl+P: 印刷 -->
+        <KeyBinding Key="P" Modifiers="Control" Command="{Binding PrintCommand}"/>
     </Window.InputBindings>
 
     <Window.Resources>
@@ -142,6 +144,7 @@
                 <MenuItem Header="上書き保存 (_S)" Command="{Binding SaveProjectCommand}" InputGestureText="Ctrl+S"/>
                 <MenuItem Header="別名で保存..." Command="{Binding SaveAsProjectCommand}" InputGestureText="Ctrl+Shift+S"/>
                 <Separator/>
+                <MenuItem Header="印刷 (_P)..." Command="{Binding PrintCommand}" InputGestureText="Ctrl+P"/>
                 <MenuItem Header="エクスポート..." Command="{Binding ExportMixedCommand}"/>
             </MenuItem>
             <MenuItem Header="編集(_E)">
@@ -213,6 +216,7 @@
                 <Button Content="&#xE8B7;" FontFamily="Segoe Fluent Icons" ToolTip="開く / インポート (Ctrl+O)" Command="{Binding OpenProjectCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
                 <Button Content="&#xE74E;" FontFamily="Segoe Fluent Icons" ToolTip="上書き保存 (Ctrl+S)" Command="{Binding SaveProjectCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
                 <Button Content="&#xE792;" FontFamily="Segoe Fluent Icons" ToolTip="別名で保存 (Ctrl+Shift+S)" Command="{Binding SaveAsProjectCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
+                <Button Content="&#xE749;" FontFamily="Segoe Fluent Icons" ToolTip="印刷 (Ctrl+P)" Command="{Binding PrintCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
                 <Button Content="&#xEE71;" FontFamily="Segoe Fluent Icons" ToolTip="エクスポート (PNG/PDF/TIF)" Command="{Binding ExportMixedCommand}" Style="{StaticResource ToolActionButtonStyle}"/>
 
                 <!-- セパレータ -->

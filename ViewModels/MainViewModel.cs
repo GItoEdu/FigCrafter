@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using System.Windows.Controls;
 using Microsoft.Win32;
 using SkiaSharp;
 using FigCrafterApp.Models;
@@ -55,6 +56,7 @@ namespace FigCrafterApp.ViewModels
         public ICommand IncreaseStrokeWidthCommand { get; }
         public ICommand DecreaseStrokeWidthCommand { get; }
         public ICommand SetStrokeWidthCommand { get; }
+        public ICommand PrintCommand { get; }
 
         public MainViewModel()
         {
@@ -81,6 +83,7 @@ namespace FigCrafterApp.ViewModels
                 }
             });
 
+            PrintCommand = new RelayCommand(p => ExecutePrint());
             // 起動時は何も初期化しない (空の状態から開始)
             // AddNewDocument();
         }
@@ -90,6 +93,29 @@ namespace FigCrafterApp.ViewModels
             var newDoc = new CanvasViewModel($"名称未設定 {Documents.Count + 1}");
             Documents.Add(newDoc);
             ActiveDocument = newDoc;
+        }
+
+        private void ExecutePrint()
+        {
+            if (ActiveDocument == null) return;
+
+            var settings = new Views.PrintSettingsDialog();
+            settings.Owner = System.Windows.Application.Current.MainWindow;
+            
+            if (settings.ShowDialog() == true)
+            {
+                var printDialog = new PrintDialog();
+                if (printDialog.ShowDialog() == true)
+                {
+                    var visual = ActiveDocument.GetPrintVisual(
+                        settings.PrintScale, 
+                        settings.AutoFit,
+                        printDialog.PrintableAreaWidth,
+                        printDialog.PrintableAreaHeight);
+
+                    printDialog.PrintVisual(visual, ActiveDocument.Title);
+                }
+            }
         }
 
         private void CloseDocument(CanvasViewModel? doc)
