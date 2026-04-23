@@ -1509,10 +1509,21 @@ namespace FigCrafterApp.ViewModels
                 scale = Math.Min(zoomX, zoomY);
             }
 
+            // コンテンツの描画サイズを計算
+            double contentWidthPx = WidthMm * mmToPx * scale;
+            double contentHeightPx = HeightMm * mmToPx * scale;
+
+            // 中央に配置するためのオフセット計算
+            float offsetX = (float)((paperWidthPx - contentWidthPx) / 2);
+            float offsetY = (float)((paperHeightPx - contentHeightPx) / 2);
+
             using var bitmap = new SKBitmap((int)paperWidthPx, (int)paperHeightPx);
             using var canvas = new SKCanvas(bitmap);
             canvas.Clear(SKColors.White); // 紙の地色
             
+            // 中央へ移動
+            canvas.Translate(offsetX, offsetY);
+
             // スケールを適用して描画
             canvas.Scale((float)(mmToPx * scale));
             RenderToCanvas(canvas);
@@ -1522,12 +1533,11 @@ namespace FigCrafterApp.ViewModels
 
         public Visual GetPrintVisual(double scale, bool autoFit, double printableWidth, double printableHeight)
         {
-            float dpi = 300f; // 印刷用高解像度
+            float dpi = 300f;
             float mmToPx = dpi / 25.4f;
 
             if (autoFit)
             {
-                // プリンタの有効印字領域 (WPF単位: 1/96 inch) に合わせてスケール計算
                 double zoomX = printableWidth / (WidthMm * (96.0 / 25.4));
                 double zoomY = printableHeight / (HeightMm * (96.0 / 25.4));
                 scale = Math.Min(zoomX, zoomY);
@@ -1546,10 +1556,17 @@ namespace FigCrafterApp.ViewModels
             using (var dc = drawingVisual.RenderOpen())
             {
                 var imageSource = bitmap.ToWriteableBitmap();
-                // 画面解像度(96DPI)基準のサイズにスケーリングして描画
+                
+                // WPFの単位(1/96インチ)での描画サイズ
                 double renderW = WidthMm * (96.0 / 25.4) * scale;
                 double renderH = HeightMm * (96.0 / 25.4) * scale;
-                dc.DrawImage(imageSource, new Rect(0, 0, renderW, renderH));
+
+                // 印字可能領域のの中央に配置するためのオフセット計算
+                double offsetX = (printableWidth - renderW) / 2;
+                double offsetY = (printableHeight - renderH) / 2;
+
+                // 計算したオフセット位置に描画
+                dc.DrawImage(imageSource, new Rect(offsetX, offsetY, renderW, renderH));
             }
             return drawingVisual;
         }
