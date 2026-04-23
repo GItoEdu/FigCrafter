@@ -471,31 +471,13 @@ namespace FigCrafterApp.Views
                 }
 
                 bool isShiftHeld = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
-
-                if (vm.CurrentTool == DrawingTool.Select && !isShiftHeld)
-                {
-                    var activeErasers = vm.SelectedObjects.OfType<EraserRectObject>().ToList();
-
-                    if (activeErasers.Count > 0 && (hitObject == null || !activeErasers.Contains(hitObject)))
-                    {
-                        var commands = new List<IUndoableCommand>();
-                        foreach (var grouping in activeErasers.GroupBy(vm.FindLayer))
-                        {
-                            if (grouping.Key != null)
-                                commands.Add(new RemoveObjectsCommand(grouping.Key.GraphicObjects, grouping.ToList()));
-                        }
-
-                        if (commands.Count > 0)
-                        {
-                            vm.ExecuteCommand(commands.Count == 1 ? commands[0] : new CompositeCommand(commands));
-                        }
-
-                        vm.ClearSelection();
-                    }
-                }
+                bool clickedAlreadySelectedObject = false;
 
                 if (hitObject != null)
                 {
+                    // クリックしたオブジェクトが「すでに選択されていたか」を記録
+                    clickedAlreadySelectedObject = vm.SelectedObjects.Contains(hitObject);
+
                     if (vm.CurrentTool == DrawingTool.Select)
                     {
                         if (isShiftHeld)
@@ -506,8 +488,9 @@ namespace FigCrafterApp.Views
                         }
                         else
                         {
-                            if (!vm.SelectedObjects.Contains(hitObject))
+                            if (!clickedAlreadySelectedObject)
                             {
+                                // 未選択のオブジェクトをクリックした場合は単一選択
                                 vm.SelectObject(hitObject);
                             }
                             _selectedObject = hitObject;
@@ -521,26 +504,32 @@ namespace FigCrafterApp.Views
                         // 何もない場所をクリック: 全選択解除
                         vm.ClearSelection();
                         _selectedObject = null;
-                        
-                        // 範囲選択開始
+                    }
+                }
+                
+                if (vm.CurrentTool == DrawingTool.Select)
+                {
+                    if (hitObject != null && clickedAlreadySelectedObject && !isShiftHeld)
+                    {
+                        // 既に選択されていたオブジェクトをクリックした場合は「移動」モードへ
+                        _isDragging = true;
+                        _originalDragRect = GetBoundingRect(_selectedObject);
+                        _originalDragCorners = _selectedObject.GetTransformedCorners();
+                        _preDragPositions.Clear();
+                        foreach (var obj in vm.SelectedObjects)
+                        {
+                            _preDragPositions.Add((obj, obj.X, obj.Y));
+                        }
+                        SkiaElement.CaptureMouse();
+                    }
+                    else if (!isShiftHeld)
+                    {
+                        // 未選択オブジェクトのクリック、または何もない場所のクリック時は「範囲選択」モードへ
                         _isSelecting = true;
                         _selectionRect = new SKRect(_startPoint.X, _startPoint.Y, _startPoint.X, _startPoint.Y);
                         SkiaElement.CaptureMouse();
                         SkiaElement.InvalidateVisual();
                     }
-                }
-                
-                if (_selectedObject != null && !isShiftHeld && vm.CurrentTool == DrawingTool.Select)
-                {
-                    _isDragging = true;
-                    _originalDragRect = GetBoundingRect(_selectedObject);
-                    _originalDragCorners = _selectedObject.GetTransformedCorners();
-                    _preDragPositions.Clear();
-                    foreach (var obj in vm.SelectedObjects)
-                    {
-                        _preDragPositions.Add((obj, obj.X, obj.Y));
-                    }
-                    SkiaElement.CaptureMouse();
                 }
                 
                 return;

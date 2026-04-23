@@ -305,7 +305,32 @@ namespace FigCrafterApp.Models
         {
             var p = UntransformPoint(point);
             var rect = new SKRect(X, Y, X + Width, Y + Height);
-            return rect.Contains(p.X, p.Y);
+            
+            // まずバウンディングボックスの枠内か判定
+            if (!rect.Contains(p.X, p.Y)) return false;
+
+            // 消しゴムの透過マスクがある場合はピクセルレベルで判定
+            if (_eraserMask != null)
+            {
+                // ローカル座標からマスク画像のピクセル座標へ変換
+                float scaleX = CropWidth / Width;
+                float scaleY = CropHeight / Height;
+
+                int pxX = (int)(CropX + (p.X - X) * scaleX);
+                int pxY = (int)(CropY + (p.Y - Y) * scaleY);
+
+                if (pxX >= 0 && pxX < _eraserMask.Width && pxY >= 0 && pxY < _eraserMask.Height)
+                {
+                    // 該当ピクセルのアルファ値が0（完全透明）の場合は当たっていないとみなす
+                    var color = _eraserMask.GetPixel(pxX, pxY);
+                    if (color.Alpha == 0)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         public override GraphicObject Clone()
