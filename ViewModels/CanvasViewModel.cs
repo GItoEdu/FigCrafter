@@ -1503,6 +1503,7 @@ namespace FigCrafterApp.ViewModels
 
             if (autoFit)
             {
+                // 紙のサイズに対してコンテンツが収まるスケールを計算
                 double zoomX = paperWidthPx / (WidthMm * mmToPx);
                 double zoomY = paperHeightPx / (HeightMm * mmToPx);
                 scale = Math.Min(zoomX, zoomY);
@@ -1510,8 +1511,9 @@ namespace FigCrafterApp.ViewModels
 
             using var bitmap = new SKBitmap((int)paperWidthPx, (int)paperHeightPx);
             using var canvas = new SKCanvas(bitmap);
-            canvas.Clear(SKColors.White);
+            canvas.Clear(SKColors.White); // 紙の地色
             
+            // スケールを適用して描画
             canvas.Scale((float)(mmToPx * scale));
             RenderToCanvas(canvas);
 
@@ -1525,7 +1527,7 @@ namespace FigCrafterApp.ViewModels
 
             if (autoFit)
             {
-                // プリンタの有効印字領域に合わせてスケール計算
+                // プリンタの有効印字領域 (WPF単位: 1/96 inch) に合わせてスケール計算
                 double zoomX = printableWidth / (WidthMm * (96.0 / 25.4));
                 double zoomY = printableHeight / (HeightMm * (96.0 / 25.4));
                 scale = Math.Min(zoomX, zoomY);
@@ -1554,18 +1556,27 @@ namespace FigCrafterApp.ViewModels
 
         private void RenderToCanvas(SKCanvas canvas)
         {
-            // 選択状態を一時的に解除して描画
+            // 選択されているオブジェクトをリストアップし、一時的に選択解除（枠線を描画しないため）
             var selectedObjects = Layers.SelectMany(l => l.GraphicObjects).Where(o => o.IsSelected).ToList();
             foreach (var obj in selectedObjects) obj.IsSelected = false;
 
-            for (int i = Layers.Count - 1; i >= 0; i--)
+            try
             {
-                if (!Layers[i].IsVisible) continue;
-                foreach (var obj in Layers[i].GraphicObjects) obj.Draw(canvas);
+                // 背面のレイヤーから順に描画
+                for (int i = Layers.Count - 1; i >= 0; i--)
+                {
+                    if (!Layers[i].IsVisible) continue;
+                    foreach (var obj in Layers[i].GraphicObjects)
+                    {
+                        obj.Draw(canvas);
+                    }
+                }
             }
-
-            // 選択状態を復元
-            foreach (var obj in selectedObjects) obj.IsSelected = true;
+            finally
+            {
+                // 描画が終わったら選択状態を復元
+                foreach (var obj in selectedObjects) obj.IsSelected = true;
+            }
         }
     }
 }

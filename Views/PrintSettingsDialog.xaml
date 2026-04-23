@@ -37,13 +37,11 @@
         </StackPanel>
 
         <Border Grid.Column="1" Background="#FF1E1E1E" Margin="10" BorderBrush="#FF3E3E42" BorderThickness="1">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                <Image x:Name="PreviewImage" Margin="20" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Image.Effect>
-                        <DropShadowEffect BlurRadius="15" ShadowDepth="0" Opacity="0.7"/>
-                    </Image.Effect>
-                </Image>
-            </ScrollViewer>
+            <Image x:Name="PreviewImage" Margin="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Image.Effect>
+                    <DropShadowEffect BlurRadius="15" ShadowDepth="0" Opacity="0.7"/>
+                </Image.Effect>
+            </Image>
         </Border>
     </Grid>
 </Window>
