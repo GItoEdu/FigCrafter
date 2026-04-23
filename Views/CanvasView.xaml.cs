@@ -509,7 +509,7 @@ namespace FigCrafterApp.Views
                 
                 if (vm.CurrentTool == DrawingTool.Select)
                 {
-                    if (hitObject != null && clickedAlreadySelectedObject && !isShiftHeld)
+                    if (hitObject != null && clickedAlreadySelectedObject && !isShiftHeld && _selectedObject != null)
                     {
                         // 既に選択されていたオブジェクトをクリックした場合は「移動」モードへ
                         _isDragging = true;
